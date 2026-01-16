@@ -11,10 +11,12 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "Config/ConfigSectionReader.h"
 #include "Diagnostics/Logger.h"
 #include "Meteors/BaseMeteors.h"
 #include "Meteors/MeteorsFactory.h"
 #include "Meteors/MeteorsRegistry.h"
+#include "SceneGame/GameplayConfig.h"
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -424,20 +426,10 @@ namespace MeteorsSpace
 
     bool MeteorsSpawner::LoadPhaseSpawnConfig(const std::string& path)
     {
-        std::ifstream file(path);
-        if (!file.is_open())
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "スポーン設定 '" << path << "' を開けなかったよ\n";
-            DebugTrace(oss.str());
-            return false;
-        }
-
         m_phaseConfigs.clear();
         m_growthIntervalSeconds = kDefaultGrowthIntervalSeconds;
         m_growthStep = kDefaultGrowthStep;
         bool parseError = false;
-        std::string line;
         std::unordered_set<std::string> registeredKindsNormalized;
         if (m_factory)
         {
@@ -453,282 +445,66 @@ namespace MeteorsSpace
             defaultWeightLookup[entry.kind] = entry.weight;
         }
 
-        int phaseIndex = 0;
-        while (std::getline(file, line))
+        std::ifstream file(path);
+        if (!file.is_open())
         {
-            if (line.empty())
+            std::ostringstream oss;
+            oss << kLogPrefix << "スポーン設定 '" << path << "' を開けなかったよ\n";
+            DebugTrace(oss.str());
+            return false;
+        }
+
+        std::vector<Config::SectionLine> lines;
+        const bool hasSection = Config::ReadSectionLines(path, GameplayConfig::kSectionSpawnPhases, lines);
+
+        int phaseIndex = 0;
+        PhaseSpawnConfig config{};
+        std::optional<int> currentPhaseLabel;
+        bool hasActivePhase = false;
+        bool hasWeights = false;
+        bool hasSpawnInterval = false;
+        bool hasBurstInterval = false;
+        bool hasSimultaneous = false;
+        bool hasLiveTarget = false;
+        bool hasInitialPerLane = false;
+        bool hasPhaseStartBonus = false;
+        bool hasMeteorSeekSpeed = false;
+        bool hasMeteorSeekSpread = false;
+
+        const auto resetPhaseState = [&]()
+        {
+            config = PhaseSpawnConfig{};
+            currentPhaseLabel.reset();
+            hasActivePhase = false;
+            hasWeights = false;
+            hasSpawnInterval = false;
+            hasBurstInterval = false;
+            hasSimultaneous = false;
+            hasLiveTarget = false;
+            hasInitialPerLane = false;
+            hasPhaseStartBonus = false;
+            hasMeteorSeekSpeed = false;
+            hasMeteorSeekSpread = false;
+        };
+
+        const auto finalizePhase = [&]()
+        {
+            if (!hasActivePhase)
             {
-                continue;
-            }
-
-            std::istringstream stream(line);
-            std::string token;
-            PhaseSpawnConfig config{};
-            bool hasWeights = false;
-            bool hasSpawnInterval = false;
-            bool hasBurstInterval = false;
-            bool hasSimultaneous = false;
-            bool hasLiveTarget = false;
-            bool hasInitialPerLane = false;
-            bool hasPhaseStartBonus = false;
-            bool hasMeteorSeekSpeed = false;
-            bool hasMeteorSeekSpread = false;
-
-            while (std::getline(stream, token, ','))
-            {
-                token = TrimToken(token);
-                if (token.empty())
-                {
-                    continue;
-                }
-
-                const auto separator = token.find('=');
-                if (separator == std::string::npos)
-                {
-                    continue;
-                }
-
-                const std::string key = TrimToken(token.substr(0, separator));
-                const std::string value = TrimToken(token.substr(separator + 1));
-                if (key.empty())
-                {
-                    continue;
-                }
-
-                const std::string normalizedKey = NormalizeKey(key);
-                if (normalizedKey == "spawn_interval")
-                {
-                    try
-                    {
-                        config.spawnIntervalSeconds = std::stof(value);
-                        hasSpawnInterval = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "burst_interval")
-                {
-                    try
-                    {
-                        config.burstIntervalSeconds = std::stof(value);
-                        hasBurstInterval = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "simultaneous")
-                {
-                    try
-                    {
-                        config.simultaneousSpawnCount = std::stoi(value);
-                        hasSimultaneous = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "live_target")
-                {
-                    try
-                    {
-                        config.simultaneousLiveTarget = std::stoi(value);
-                        hasLiveTarget = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "initial_per_lane")
-                {
-                    try
-                    {
-                        config.initialSpawnPerLane = std::stoi(value);
-                        hasInitialPerLane = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "phase_start_bonus_per_lane")
-                {
-                    try
-                    {
-                        config.phaseStartBonusPerLane = std::stoi(value);
-                        hasPhaseStartBonus = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "meteor_seek_speed")
-                {
-                    float speed = 0.0f;
-                    if (TryParseFloat(value, &speed))
-                    {
-                        config.meteorSeekSpeed = std::max(0.0f, speed);
-                        hasMeteorSeekSpeed = true;
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "meteor_seek_spread_deg" || normalizedKey == "meteor_seek_spread_degrees")
-                {
-                    float spread = 0.0f;
-                    if (TryParseFloat(value, &spread))
-                    {
-                        config.meteorSeekSpreadDegrees = std::max(0.0f, spread);
-                        hasMeteorSeekSpread = true;
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "weights")
-                {
-                    bool weightError = false;
-                    config.weights = ParseWeights(value, &weightError);
-                    if (weightError)
-                    {
-                        parseError = true;
-                    }
-                    else
-                    {
-                        hasWeights = true;
-                    }
-                }
-                else if (normalizedKey == "auto_spawn_interval_factor")
-                {
-                    float factor = 0.0f;
-                    if (TryParseFloat(value, &factor))
-                    {
-                        m_autoSpawnIntervalFactor = factor;
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "auto_burst_interval_factor")
-                {
-                    float factor = 0.0f;
-                    if (TryParseFloat(value, &factor))
-                    {
-                        m_autoBurstIntervalFactor = factor;
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "auto_simultaneous_increment")
-                {
-                    try
-                    {
-                        m_autoSimultaneousIncrement = std::stoi(value);
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "auto_simultaneous_cap")
-                {
-                    try
-                    {
-                        m_autoSimultaneousCap = std::stoi(value);
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "growth_interval_seconds" || normalizedKey == "growthintervalseconds")
-                {
-                    float intervalSeconds = 0.0f;
-                    if (TryParseFloat(value, &intervalSeconds))
-                    {
-                        m_growthIntervalSeconds = SanitizeGrowthIntervalSeconds(intervalSeconds);
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "growth_step" || normalizedKey == "growthstep")
-                {
-                    try
-                    {
-                        m_growthStep = SanitizeGrowthStep(std::stoi(value));
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "spawn_origin_offset")
-                {
-                    float3 offset{};
-                    if (ParseFloat3Value(value, offset))
-                    {
-                        if (!m_spawnOriginsPrimary.empty())
-                        {
-                            for (auto& origin : m_spawnOriginsPrimary)
-                            {
-                                origin.x += offset.x;
-                                origin.y += offset.y;
-                                origin.z += offset.z;
-                            }
-                        }
-                        if (!m_spawnOriginsSecondary.empty())
-                        {
-                            for (auto& origin : m_spawnOriginsSecondary)
-                            {
-                                origin.x += offset.x;
-                                origin.y += offset.y;
-                                origin.z += offset.z;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "camera_spawn_offset" || normalizedKey == "spawn_camera_offset")
-                {
-                    float offset = 0.0f;
-                    if (TryParseFloat(value, &offset))
-                    {
-                        m_spawnCameraOffset = std::max(0.0f, offset);
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
+                return;
             }
 
             if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
                 && !hasInitialPerLane && !hasPhaseStartBonus && !hasMeteorSeekSpeed && !hasMeteorSeekSpread)
             {
-                continue;
+                return;
             }
 
+            const int phaseLabel = currentPhaseLabel.value_or(phaseIndex);
             if (!hasWeights)
             {
                 std::ostringstream warn;
-                warn << kLogPrefix << "phase " << phaseIndex << " に weight がないのでデフォルトを入れるね\n";
+                warn << kLogPrefix << "phase " << phaseLabel << " に weight がないのでデフォルトを入れるね\n";
                 DebugTrace(warn.str());
                 config.weights = BuildDefaultWeights();
             }
@@ -742,10 +518,269 @@ namespace MeteorsSpace
                 config.simultaneousLiveTarget = config.simultaneousSpawnCount;
             }
 
-            EnsureRegisteredWeights(config, phaseIndex, registeredKindsNormalized, defaultWeightLookup);
+            EnsureRegisteredWeights(config, phaseLabel, registeredKindsNormalized, defaultWeightLookup);
             m_phaseConfigs.push_back(config);
             ++phaseIndex;
+        };
+
+        resetPhaseState();
+
+        for (const auto& entry : lines)
+        {
+            if (entry.key.empty())
+            {
+                continue;
+            }
+
+            const std::string normalizedKey = NormalizeKey(entry.key);
+            if (normalizedKey == "phase")
+            {
+                finalizePhase();
+                resetPhaseState();
+                hasActivePhase = true;
+                try
+                {
+                    currentPhaseLabel = std::stoi(entry.value);
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                    currentPhaseLabel.reset();
+                }
+                continue;
+            }
+
+            if (!hasActivePhase)
+            {
+                hasActivePhase = true;
+            }
+
+            if (normalizedKey == "spawn_interval" || normalizedKey == "interval")
+            {
+                try
+                {
+                    config.spawnIntervalSeconds = std::stof(entry.value);
+                    hasSpawnInterval = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "burst_interval" || normalizedKey == "burstinterval")
+            {
+                try
+                {
+                    config.burstIntervalSeconds = std::stof(entry.value);
+                    hasBurstInterval = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "simultaneous")
+            {
+                try
+                {
+                    config.simultaneousSpawnCount = std::stoi(entry.value);
+                    hasSimultaneous = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "live_target" || normalizedKey == "livetarget")
+            {
+                try
+                {
+                    config.simultaneousLiveTarget = std::stoi(entry.value);
+                    hasLiveTarget = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "initial_per_lane" || normalizedKey == "initialperlane")
+            {
+                try
+                {
+                    config.initialSpawnPerLane = std::stoi(entry.value);
+                    hasInitialPerLane = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "phase_start_bonus_per_lane" || normalizedKey == "phasestartbonusperlane")
+            {
+                try
+                {
+                    config.phaseStartBonusPerLane = std::stoi(entry.value);
+                    hasPhaseStartBonus = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "meteor_seek_speed" || normalizedKey == "meteorseekspeed")
+            {
+                float speed = 0.0f;
+                if (TryParseFloat(entry.value, &speed))
+                {
+                    config.meteorSeekSpeed = std::max(0.0f, speed);
+                    hasMeteorSeekSpeed = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "meteor_seek_spread_deg" || normalizedKey == "meteor_seek_spread_degrees"
+                || normalizedKey == "meteorseekspreaddeg" || normalizedKey == "meteorseekspreaddegrees")
+            {
+                float spread = 0.0f;
+                if (TryParseFloat(entry.value, &spread))
+                {
+                    config.meteorSeekSpreadDegrees = std::max(0.0f, spread);
+                    hasMeteorSeekSpread = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "weights")
+            {
+                bool weightError = false;
+                config.weights = ParseWeights(entry.value, &weightError);
+                if (weightError)
+                {
+                    parseError = true;
+                }
+                else
+                {
+                    hasWeights = true;
+                }
+            }
+            else if (normalizedKey == "auto_spawn_interval_factor")
+            {
+                float factor = 0.0f;
+                if (TryParseFloat(entry.value, &factor))
+                {
+                    m_autoSpawnIntervalFactor = factor;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "auto_burst_interval_factor")
+            {
+                float factor = 0.0f;
+                if (TryParseFloat(entry.value, &factor))
+                {
+                    m_autoBurstIntervalFactor = factor;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "auto_simultaneous_increment")
+            {
+                try
+                {
+                    m_autoSimultaneousIncrement = std::stoi(entry.value);
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "auto_simultaneous_cap")
+            {
+                try
+                {
+                    m_autoSimultaneousCap = std::stoi(entry.value);
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "growth_interval_seconds" || normalizedKey == "growthintervalseconds")
+            {
+                float intervalSeconds = 0.0f;
+                if (TryParseFloat(entry.value, &intervalSeconds))
+                {
+                    m_growthIntervalSeconds = SanitizeGrowthIntervalSeconds(intervalSeconds);
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "growth_step" || normalizedKey == "growthstep")
+            {
+                try
+                {
+                    m_growthStep = SanitizeGrowthStep(std::stoi(entry.value));
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "spawn_origin_offset")
+            {
+                float3 offset{};
+                if (ParseFloat3Value(entry.value, offset))
+                {
+                    if (!m_spawnOriginsPrimary.empty())
+                    {
+                        for (auto& origin : m_spawnOriginsPrimary)
+                        {
+                            origin.x += offset.x;
+                            origin.y += offset.y;
+                            origin.z += offset.z;
+                        }
+                    }
+                    if (!m_spawnOriginsSecondary.empty())
+                    {
+                        for (auto& origin : m_spawnOriginsSecondary)
+                        {
+                            origin.x += offset.x;
+                            origin.y += offset.y;
+                            origin.z += offset.z;
+                        }
+                    }
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "camera_spawn_offset" || normalizedKey == "spawn_camera_offset"
+                || normalizedKey == "cameraspawnoffset" || normalizedKey == "spawncameraoffset")
+            {
+                float offset = 0.0f;
+                if (TryParseFloat(entry.value, &offset))
+                {
+                    m_spawnCameraOffset = std::max(0.0f, offset);
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
         }
+
+        finalizePhase();
 
         const float loadedAutoSpawnFactor = m_autoSpawnIntervalFactor;
         const float loadedAutoBurstFactor = m_autoBurstIntervalFactor;
@@ -763,9 +798,18 @@ namespace MeteorsSpace
         }
         LogAutoGenerationPolicy("config-load");
 
+        if (!hasSection)
+        {
+            std::ostringstream warn;
+            warn << kLogPrefix << "'" << path << "' に section '" << GameplayConfig::kSectionSpawnPhases
+                << "' が見つからないか空だったよ\n";
+            DebugTrace(warn.str());
+        }
+
         std::ostringstream oss;
-        oss << kLogPrefix << "'" << path << "' から " << m_phaseConfigs.size()
-            << " 個のスポーンフェーズを読んだよ (parseError=" << std::boolalpha << parseError << ")\n";
+        oss << kLogPrefix << "'" << path << "' section '" << GameplayConfig::kSectionSpawnPhases << "' から "
+            << m_phaseConfigs.size() << " 個のスポーンフェーズを読んだよ (lines=" << lines.size()
+            << ", parseError=" << std::boolalpha << parseError << ")\n";
         DebugTrace(oss.str());
         return !parseError;
     }
