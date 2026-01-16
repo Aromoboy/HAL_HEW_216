@@ -1221,7 +1221,6 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
                         DirectX::XMFLOAT3(fruitPos.x, fruitPos.y, fruitPos.z),
                         linkColor);
                 }
-                drawCross(link.anchorWorld, 0.12f, z);
             }
         }
     }
