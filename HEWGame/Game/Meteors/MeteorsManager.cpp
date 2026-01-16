@@ -122,6 +122,35 @@ namespace MeteorsSpace
         return m_registry.GetByState(state);
     }
 
+    std::shared_ptr<ActiveMeteors> MeteorsManager::FindByEntity(Entities::PhysicalEntity* entity) const
+    {
+        if (!entity)
+        {
+            return nullptr;
+        }
+
+        const MeteorsState states[] = {
+            MeteorsState::Active,
+            MeteorsState::Stacked,
+            MeteorsState::Ground,
+            MeteorsState::Carried
+        };
+
+        for (MeteorsState state : states)
+        {
+            const auto& list = m_registry.GetByState(state);
+            for (const auto& meteors : list)
+            {
+                if (meteors && meteors.get() == entity)
+                {
+                    return meteors;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
     float MeteorsManager::GetHighestStackedHeight() const
     {
         return m_registry.GetHighestStackedHeight();

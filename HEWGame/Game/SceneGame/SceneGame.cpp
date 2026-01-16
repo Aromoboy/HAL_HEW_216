@@ -113,6 +113,26 @@ namespace
             return t * t * (3.0f - 2.0f * t);
         }
 
+        int ResolveKillScore(const std::optional<MeteorsSpace::MeteorsType>& meteorsType)
+        {
+            if (!meteorsType)
+            {
+                return 0;
+            }
+
+            switch (*meteorsType)
+            {
+            case MeteorsSpace::MeteorsType::Mercury:
+                return 300;
+            case MeteorsSpace::MeteorsType::Meteor:
+                return 200;
+            case MeteorsSpace::MeteorsType::Meteorite:
+                return 100;
+            }
+
+            return 0;
+        }
+
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
@@ -995,7 +1015,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             case SceneGameContactHandler::PlayerContactSource::Meteor:
                 if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
                 {
-                    const auto meteors = contact->meteor.lock();
+                    auto meteors = contact->meteor.lock();
+                    if (!meteors && m_meteorsManager && contact->other)
+                    {
+                        meteors = m_meteorsManager->FindByEntity(contact->other);
+                    }
                     if (meteors)
                     {
                         m_pendingMeteorRemovals.push_back(meteors);
