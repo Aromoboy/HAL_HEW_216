@@ -44,6 +44,8 @@ namespace MeteorsSpace
         int ComputeDesiredLiveTarget(int remainingToStack) const;
         int GetBatchStackTarget() const;
         int GetStackedInBatch() const;
+        void DecrementStackedCount();
+        void RecountStackedInBatch();
 
         void OnStateChanged(const std::shared_ptr<ActiveMeteors>& meteors, MeteorsState previousState, MeteorsState newState);
         void OnMeteorsRemoved(int remainingToStack, int liveAfterRemoval, const char* context);
