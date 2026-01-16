@@ -32,6 +32,7 @@ virtual void ConfigureUpdates();
 virtual void Update(const Core::UpdateContext& ctx) = 0;
 virtual void DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
 virtual void DrawOverlay();
+void ConfigureInitialFrameClamp(float maxStepDt);
 void RegisterSceneUpdateNode(Core::UpdatePhase phase, int priority);
 void UnregisterSceneUpdateNode();
 Core::IUpdatable* GetSceneUpdateNode();
@@ -67,6 +68,8 @@ bool m_sceneUpdateRegistered;
 class CameraUpdateNode;
 std::unique_ptr<CameraUpdateNode> m_cameraUpdateNode;
 bool m_cameraUpdateRegistered;
+float m_initialFrameClampMaxDt = 0.0f;
+bool m_initialFrameProcessed = false;
 };
 }
 

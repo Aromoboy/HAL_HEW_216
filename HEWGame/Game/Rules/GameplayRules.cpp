@@ -2,6 +2,7 @@
 
 #include "GameFlow/PhaseManager.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <limits>
@@ -28,16 +29,22 @@ namespace GameplayRules
         const float sanitizedElapsedSeconds = (std::isfinite(input.elapsedSeconds) && input.elapsedSeconds > 0.0f)
             ? input.elapsedSeconds
             : 0.0f;
-        const float timeMultiplier = std::pow(12.0f, std::floor(sanitizedElapsedSeconds / 12.0f));
+        constexpr float kMinTimeMultiplier = 1.0f;
+        constexpr float kMaxTimeMultiplier = 1.0e6f;
+        const float rawTimeMultiplier = std::pow(12.0f, std::floor(sanitizedElapsedSeconds / 12.0f));
+        const float timeMultiplier = std::clamp(rawTimeMultiplier, kMinTimeMultiplier, kMaxTimeMultiplier);
         const float baseScore = (result.state.peakTowerHeight * totalMultiplier) + static_cast<float>(input.killScore);
         result.score = static_cast<int>(std::lround(baseScore * timeMultiplier));
 
+        constexpr float kLogMultiplierEpsilon = 0.01f;
+        constexpr int kLogScoreDeltaThreshold = 25;
         const bool phaseMultiplierChanged = !std::isfinite(result.state.lastScoreLogMultiplier)
-            || std::fabs(result.state.lastScoreLogMultiplier - phaseMultiplier) > std::numeric_limits<float>::epsilon();
+            || std::fabs(result.state.lastScoreLogMultiplier - phaseMultiplier) > kLogMultiplierEpsilon;
         const bool timeMultiplierChanged = !std::isfinite(result.state.lastScoreLogTimeMultiplier)
-            || std::fabs(result.state.lastScoreLogTimeMultiplier - timeMultiplier) > std::numeric_limits<float>::epsilon();
+            || std::fabs(result.state.lastScoreLogTimeMultiplier - timeMultiplier) > kLogMultiplierEpsilon;
         const bool killScoreChanged = result.state.lastScoreLogKillScore != input.killScore;
-        if (result.score != result.state.lastScoreLogValue || phaseMultiplierChanged || timeMultiplierChanged || killScoreChanged)
+        const int scoreDelta = std::abs(result.score - result.state.lastScoreLogValue);
+        if (scoreDelta >= kLogScoreDeltaThreshold || phaseMultiplierChanged || timeMultiplierChanged || killScoreChanged)
         {
             if (input.log)
             {

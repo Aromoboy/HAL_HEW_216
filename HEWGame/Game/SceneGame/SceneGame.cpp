@@ -478,6 +478,13 @@ bool SceneGame::Load(Core::Input& input)
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
+    if (m_physicsBinder)
+    {
+        if (auto* physicsMachine = m_physicsBinder->GetPhysicsMachine())
+        {
+            ConfigureInitialFrameClamp(physicsMachine->GetTuningParameters().maxStepDt);
+        }
+    }
     m_drawSystem = std::move(composition->drawSystem);
     m_meteorsManager = std::move(composition->meteorsManager);
     m_uiManager = std::move(composition->uiManager);
@@ -1435,7 +1442,7 @@ void SceneGame::FireMissile()
     shapeConfig.bodyType = b2_dynamicBody;
     shapeConfig.fixedRotation = m_missileSettings.fixedRotation;
     shapeConfig.allowRotation = !m_missileSettings.fixedRotation;
-    shapeConfig.linearDamping = m_missileSettings.linearDamping;
+    shapeConfig.linearDamping = 0.0f;
     shapeConfig.angularDamping = m_missileSettings.angularDamping;
     shapeConfig.density = m_missileSettings.density;
     shapeConfig.friction = m_missileSettings.friction;
@@ -1466,7 +1473,7 @@ void SceneGame::FireMissile()
         m_physicsBinder->UnregisterPhysicsBody(missile.get());
         return;
     }
-    missile->SetGravityScale(m_missileSettings.gravityScale);
+    missile->SetGravityScale(0.0f);
     missile->SetLinearVelocity(float3{ forward.x * m_missileSettings.missileSpeed, forward.y * m_missileSettings.missileSpeed, 0.0f });
 
     std::vector<b2Filter> originalFilters;
@@ -1573,6 +1580,21 @@ void SceneGame::UpdateMissiles(float deltaSeconds)
                 bounds.min.x > screenMaxX ||
                 bounds.max.y < screenMinY ||
                 bounds.min.y > screenMaxY;
+        }
+
+        if (instance.entity && m_missileSettings.missileSpeed > 0.0f)
+        {
+            const float3 velocity = instance.entity->GetLinearVelocity();
+            const float speedSq = (velocity.x * velocity.x) + (velocity.y * velocity.y);
+            if (speedSq > 0.0001f)
+            {
+                const float invSpeed = 1.0f / std::sqrt(speedSq);
+                instance.entity->SetLinearVelocity(float3{
+                    velocity.x * invSpeed * m_missileSettings.missileSpeed,
+                    velocity.y * invSpeed * m_missileSettings.missileSpeed,
+                    0.0f
+                });
+            }
         }
 
         if (instance.remainingSeconds > 0.0f && instance.entity && !outOfBounds)

@@ -114,7 +114,7 @@ bool ResultRenderer::CreateTextResources()
     m_prevFont = SelectObject(m_memoryDC, m_font);
 
     SetBkMode(m_memoryDC, TRANSPARENT);
-    SetTextColor(m_memoryDC, RGB(0, 0, 0));
+    SetTextColor(m_memoryDC, RGB(255, 255, 255));
 
     return true;
 #endif
@@ -186,7 +186,7 @@ void ResultRenderer::UpdateBitmap(const ResultDisplayData& data)
     textRect.right = static_cast<LONG>(m_config.textureWidth) - static_cast<LONG>(m_config.innerPaddingPixels);
     textRect.bottom = static_cast<LONG>(m_config.textureHeight) - static_cast<LONG>(m_config.innerPaddingPixels);
 
-    SetTextColor(m_memoryDC, RGB(0, 0, 0));
+    SetTextColor(m_memoryDC, RGB(255, 255, 255));
     DrawTextA(m_memoryDC, hudText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
 
     GdiFlush();
