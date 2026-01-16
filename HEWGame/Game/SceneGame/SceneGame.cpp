@@ -85,19 +85,6 @@ namespace
             return settings;
         }
 
-        bool ReadOsaraColliderDebugFlag()
-        {
-                const char* value = std::getenv("r.DebugOsaraColliders");
-                if (!value)
-                {
-                        return true;
-                }
-
-                return std::atoi(value) != 0;
-        }
-
-        bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
-
         bool IsFiniteFloat(float value)
         {
             return std::isfinite(value) != 0;
@@ -496,17 +483,6 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
-
-#if defined(_DEBUG)
-    {
-        std::ostringstream debugFlagLog;
-        debugFlagLog << kLogPrefix
-            << "[ColliderDebug] Stage colliders r.DebugOsaraColliders="
-            << (g_RegisterOsaraColliders ? 1 : 0)
-            << " (default=1). Toggle overlay with F5 (r.DebugDrawEnabled) and colliders with F4 (r.DebugColliders).\n";
-        DebugTrace(debugFlagLog.str());
-    }
-#endif
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
@@ -944,26 +920,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         }
     }
 
-    for (auto& obj : m_stageObjects)
-    {
-        //Osara以外のモデルスキップ
-        if (!IsOsara(obj))
-        {
-            continue;
-        }
-
-        obj.swaiTime += deltaTime;
-
-        obj.transform.position.y
-            = obj.baseY + std::sin(obj.swaiTime) * obj.OsaraSwayingpower.y;
-
-        //当たり判定も動かす
-        if (obj.physicsEntity)
-        {
-            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
-        }
-    }
-
     m_playerController.UpdatePlayerBounds({
         player.get(),
         m_gameCamera.get(),
@@ -1057,7 +1013,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
             {
                 uiData.hud.showGlueDebug = true;
-                uiData.hud.glueActiveCreamAnchors = glueSnapshot.activeCreamAnchors;
                 uiData.hud.glueActiveFruitGlue = glueSnapshot.activeFruitGlue;
                 uiData.hud.glueFrozenFruit = glueSnapshot.frozenFruit;
                 uiData.hud.glueCreatePerSec = glueSnapshot.createPerSec;
@@ -1227,12 +1182,9 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
             drawState(SweetsSpace::SweetsState::Carried);
         }
 
-        if (g_RegisterOsaraColliders)
+        for (const auto& entity : m_stagePhysicsEntities)
         {
-            for (const auto& entity : m_stagePhysicsEntities)
-            {
-                drawEntity(entity.get());
-            }
+            drawEntity(entity.get());
         }
     }
 
@@ -1292,28 +1244,9 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
         {
             const float stagePlaneZ = (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ)) ? *m_stagePlaneZ : 0.0f;
-            const DirectX::XMFLOAT4 anchorColor(1.0f, 0.85f, 0.2f, 0.95f);
             const DirectX::XMFLOAT4 linkColor(0.2f, 1.0f, 0.3f, 0.85f);
             const Color creamColor = MakeColor(0.2f, 0.6f, 1.0f, 0.9f);
             const Color fruitColor = MakeColor(0.8f, 0.3f, 1.0f, 0.9f);
-
-            const auto drawCross = [&](const b2Vec2& point, float size, float z)
-            {
-                const DirectX::XMFLOAT3 center(point.x, point.y, z);
-                Geometory::AddLine(
-                    DirectX::XMFLOAT3(center.x - size, center.y, center.z),
-                    DirectX::XMFLOAT3(center.x + size, center.y, center.z),
-                    anchorColor);
-                Geometory::AddLine(
-                    DirectX::XMFLOAT3(center.x, center.y - size, center.z),
-                    DirectX::XMFLOAT3(center.x, center.y + size, center.z),
-                    anchorColor);
-            };
-
-            for (const b2Vec2& anchor : glueSnapshot.creamAnchors)
-            {
-                drawCross(anchor, 0.15f, stagePlaneZ);
-            }
 
             for (const auto& link : glueSnapshot.fruitLinks)
             {
@@ -1470,7 +1403,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                             renderTransform.rotation.z += obj.currentRotation;
                     }
 
-                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
+                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get());
                 }
                 else
                 {
@@ -2041,10 +1974,4 @@ void SceneGame::Initialize(const Stage::StageData& stageData)
     oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
         << " second=" << m_heightBonusSeconds << "\n";
     ::DebugTrace(oss.str());
-}
-
-//Osara探す？やつ
-bool SceneGame::IsOsara(const StageObject& obj)
-{
-    return obj.modelPath.find("osara") != std::string::npos;
 }

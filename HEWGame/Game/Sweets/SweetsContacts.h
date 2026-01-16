@@ -34,9 +34,7 @@ namespace SweetsSpace
                 bool fruitFrozen{ false };
             };
 
-            std::vector<b2Vec2> creamAnchors;
             std::vector<GlueLink> fruitLinks;
-            int activeCreamAnchors{ 0 };
             int activeFruitGlue{ 0 };
             int frozenFruit{ 0 };
             float createPerSec{ 0.0f };
@@ -51,7 +49,6 @@ namespace SweetsSpace
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
-        bool IsAnchoredToCake(const ActiveSweets& sweets) const;
 
         void ClearContactState(ActiveSweets* sweets);
         void ClearSweetsContact(ActiveSweets* sweets);
@@ -167,10 +164,8 @@ namespace SweetsSpace
         void UpdateBreakableJoints();
         void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
         void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
-        void LogGlueCreateCreamToCake(const ActiveSweets* cream, const Entities::PhysicalEntity* cake, const b2Vec2& anchorWorld) const;
         void LogGlueCreateFruitToCream(const ActiveSweets* cream, const ActiveSweets* fruit, const b2Vec2& anchorWorld) const;
         void CleanupInvalidJoint(const b2ContactId& contactId, CreamWeldEntry& entry);
-        void CleanupInvalidAnchor(ActiveSweets* cream);
         void RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream);
         void RemovePendingGlueForSweets(ActiveSweets* sweets);
         void TickGlueCooldowns(float dt);
@@ -184,8 +179,6 @@ namespace SweetsSpace
         std::unordered_set<ActiveSweets*> m_hasSweetsContact;
         std::unordered_map<b2ContactId, PendingGlue, ContactIdHash, ContactIdEqual> m_pendingGlue;
         std::unordered_map<b2ContactId, CreamWeldEntry, ContactIdHash, ContactIdEqual> m_creamWeldJoints;
-        std::unordered_map<ActiveSweets*, b2JointId> m_creamAnchorJoints;
-        std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
         std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
         std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
         std::unordered_map<ActiveSweets*, float> m_glueCooldown;

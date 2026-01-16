@@ -200,7 +200,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Engine\Core\Entities\Entity.cpp" />
     <ClCompile Include="Engine\Core\Entities\PhysicalEntity.cpp" />
     <ClCompile Include="Engine\Core\FullscreenManager.cpp" />
-    <ClCompile Include="Engine\Core\Gamepad.cpp" />
     <ClCompile Include="Engine\Core\IndexBuffer.cpp" />
     <ClCompile Include="Engine\Core\Input.cpp" />
     <ClCompile Include="Engine\Core\InputMap.cpp" />
@@ -317,7 +316,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Engine\Core\Entities\Entity.h" />
     <ClInclude Include="Engine\Core\Entities\PhysicalEntity.h" />
     <ClInclude Include="Engine\Core\FullscreenManager.h" />
-    <ClInclude Include="Engine\Core\Gamepad.h" />
     <ClInclude Include="Engine\Core\IUpdatable.h" />
     <ClInclude Include="Engine\Core\IndexBuffer.h" />
     <ClInclude Include="Engine\Core\Input.h" />

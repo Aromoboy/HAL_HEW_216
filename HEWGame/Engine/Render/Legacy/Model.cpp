@@ -581,17 +581,6 @@ void Model::MakeBoneNodes(const void* ptr)
 	// ノード作成
 	m_nodes.clear();
 	FuncAssimpNodeConvert(reinterpret_cast<const aiScene*>(ptr)->mRootNode, INDEX_NONE, DirectX::XMMatrixIdentity());
-
-	// アニメーション計算領域に、ノード数分の初期データを作成
-	Transform init = {
-		DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f),
-		DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f),
-		DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)
-	};
-	for (int i = 0; i < MAX_TRANSFORM; ++i)
-	{
-		m_nodeTransform[i].resize(m_nodes.size(), init);
-	}
 }
 
 void Model::MakeWeight(const void* ptr, int meshIdx)

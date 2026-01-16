@@ -98,6 +98,144 @@ namespace GameplayProgression
         return result;
     }
 
+    GuidelineCheckResult CheckGuidelineCrossing(const GuidelineInput& input, GuidelineState state)
+    {
+        GuidelineCheckResult result{};
+        result.state = std::move(state);
+        result.triggerHeight = 0.0f;
+
+        if (!input.sweetsManager)
+        {
+            return result;
+        }
+
+        if (!(result.state.heightMeters > 0.0f))
+        {
+            return result;
+        }
+
+        if (result.state.cooldownRemainingSeconds > 0.0f)
+        {
+            return result;
+        }
+
+        const SweetsSpace::SweetsState states[] = {
+            SweetsSpace::SweetsState::Active,
+            SweetsSpace::SweetsState::Stacked,
+            SweetsSpace::SweetsState::Ground,
+            SweetsSpace::SweetsState::Carried,
+        };
+
+        std::shared_ptr<SweetsSpace::ActiveSweets> crossedSweets;
+
+        for (SweetsSpace::SweetsState stateValue : states)
+        {
+            if (stateValue == SweetsSpace::SweetsState::Carried)
+            {
+                continue;
+            }
+
+            auto& list = input.sweetsManager->GetByState(stateValue);
+            for (const auto& sweets : list)
+            {
+                if (!sweets || sweets->IsPendingDestroy())
+                {
+                    continue;
+                }
+
+                if (!input.sweetsManager->HasEverCollidedWithSweets(*sweets))
+                {
+                    continue;
+                }
+
+                sweets->SyncColliderBounds();
+                const AABB bounds = sweets->GetAABB();
+                if (bounds.max.y >= result.state.heightMeters)
+                {
+                    if (result.state.triggeredThisHeight.insert(sweets.get()).second)
+                    {
+                        crossedSweets = sweets;
+                        result.triggerHeight = bounds.max.y;
+                        break;
+                    }
+                }
+            }
+
+            if (crossedSweets)
+            {
+                break;
+            }
+        }
+
+        if (crossedSweets)
+        {
+            result.state.cooldownRemainingSeconds = result.state.cooldownDurationSeconds;
+            input.sweetsManager->OnSweetsPassedGuideline(crossedSweets);
+            result.crossed = true;
+            return result;
+        }
+
+        return result;
+    }
+
+    GuidelineState OnGuidelineCrossed(const GuidelineInput& input, GuidelineState state)
+    {
+        if (!(state.heightMeters > 0.0f) || !(state.stepMeters > 0.0f))
+        {
+            state.triggerCooldownSeconds = input.globalCooldownSeconds;
+            return state;
+        }
+
+        state.heightMeters += kGuidelineHeightIncrementMeters;
+        if (input.guidelineActor)
+        {
+            auto& transform = input.guidelineActor->GetTransform();
+            transform.position.x = input.guidelineCenterX;
+            transform.position.y = state.heightMeters;
+        }
+        state.triggeredThisHeight.clear();
+        state.cooldownRemainingSeconds = 0.0f;
+        state.triggerCooldownSeconds = input.globalCooldownSeconds;
+        return state;
+    }
+
+    std::deque<PendingTimeBonus> ApplyGuidelineBonus(const GuidelineInput& input,
+                                                     std::deque<PendingTimeBonus> pendingBonuses,
+                                                     float triggerHeight)
+    {
+        if (!(input.timeBonusSeconds > 0.0f))
+        {
+            return pendingBonuses;
+        }
+
+        PendingTimeBonus bonus{};
+        bonus.seconds = input.timeBonusSeconds;
+        bonus.triggerHeight = triggerHeight;
+        pendingBonuses.push_back(bonus);
+
+        if (input.log)
+        {
+            std::ostringstream oss;
+            oss << input.logPrefix << "[Countdown] guidelineBonus +=" << std::fixed << std::setprecision(2)
+                << bonus.seconds << "s triggerHeight=" << triggerHeight
+                << "m queue=" << pendingBonuses.size() << "\n";
+            input.log(oss.str());
+        }
+
+        return pendingBonuses;
+    }
+
+    GuidelineAdvanceResult HandleGuidelineAdvance(const GuidelineInput& input,
+                                                  GuidelineState state,
+                                                  std::deque<PendingTimeBonus> pendingBonuses,
+                                                  float triggerHeight)
+    {
+        GuidelineAdvanceResult result{};
+        result.pendingBonuses = ApplyGuidelineBonus(input, std::move(pendingBonuses), triggerHeight);
+        result.state = OnGuidelineCrossed(input, std::move(state));
+        return result;
+    }
+
     TowerTelemetryResult UpdateTowerHeightTelemetry(const TowerTelemetryInput& input,
                                                     TowerTelemetryState state)
     {

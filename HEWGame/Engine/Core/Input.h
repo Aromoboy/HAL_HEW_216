@@ -3,10 +3,7 @@
 #include <Windows.h>
 #include <array>
 #include <cstdint>
-#include <Xinput.h>
-
 #include "Core/ActionId.h"
-#include "Core/Gamepad.h"
 #include "Core/InputMap.h"
 #include "Core/UpdateNode.h"
 
@@ -14,8 +11,6 @@
 // - 本クラスは Core::UpdateNode を継承し、UpdatePhase::Input で最初に入力を集約する役割を担う 
 // - UpdateContext には時間情報のみを保持し、入力参照は各システムから明示的に渡す 
 // - ゲームループの更新順序を崩さないため、ポーリングは OnUpdate 内でのみ行い、他フェーズは取得済み状態を参照する方針 
-
-#pragma comment(lib, "xinput.lib")
 
 namespace Core
 {
@@ -56,9 +51,6 @@ namespace Core
         // 初期化に失敗した場合は安全側に倒すためゼロクリアする 
         void PollKeyboardState();
 
-        // XInput ゲームパッドをポーリングする 接続状態が変わった際はデバッグログで通知 
-        void PollPadState(int index = 0);
-
         // 現フレーム/前フレームの状態を参照するヘルパー 未初期化時は false になる 
         InputMap::ActionState GetActionState(ActionId action) const;
 
@@ -70,7 +62,6 @@ namespace Core
         std::array<BYTE, 256> m_previousKeys;
         bool m_initialized;
 
-        Gamepad m_pad;
         InputMap m_map;
         std::uint64_t m_lastPolledFrame = 0;
 
