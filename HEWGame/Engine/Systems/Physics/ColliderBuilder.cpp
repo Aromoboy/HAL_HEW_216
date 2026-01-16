@@ -179,8 +179,10 @@ namespace
         collider.colliderId = colliderId;
         collider.shapeDef = registryDefinition->shapeDef;
 
+        const bool applyScale = colliderId != "player";
+        const float3 shapeScale = applyScale ? request.transform.scale : float3{ 1.0f, 1.0f, 1.0f };
         collider.shapes.reserve(registryDefinition->shapes.size());
-        const float uniformScale = std::max(request.transform.scale.x, request.transform.scale.y);
+        const float uniformScale = std::max(shapeScale.x, shapeScale.y);
         for (const auto& shape : registryDefinition->shapes)
         {
             Physics::ColliderShapeDescriptor scaledShape{};
@@ -194,7 +196,7 @@ namespace
                 if (!shape.vertices.empty())
                 {
                     const b2Vec2& center = shape.vertices.front();
-                    scaledShape.vertices.push_back(b2Vec2{ center.x * request.transform.scale.x, center.y * request.transform.scale.y });
+                    scaledShape.vertices.push_back(b2Vec2{ center.x * shapeScale.x, center.y * shapeScale.y });
                 }
                 break;
             }
@@ -205,7 +207,7 @@ namespace
                 scaledShape.vertices.reserve(shape.vertices.size());
                 for (const auto& vertex : shape.vertices)
                 {
-                    scaledShape.vertices.push_back(b2Vec2{ vertex.x * request.transform.scale.x, vertex.y * request.transform.scale.y });
+                    scaledShape.vertices.push_back(b2Vec2{ vertex.x * shapeScale.x, vertex.y * shapeScale.y });
                 }
                 break;
             }
@@ -214,7 +216,9 @@ namespace
             collider.shapes.push_back(std::move(scaledShape));
         }
 
-        const float3 scaledOffset = request.scaleOffset ? ScaleVector(request.offset, request.transform.scale) : request.offset;
+        const float3 scaledOffset = (request.scaleOffset && applyScale)
+            ? ScaleVector(request.offset, request.transform.scale)
+            : request.offset;
         collider.colliderOffset = b2Vec2{ scaledOffset.x, scaledOffset.y };
 
         Physics::Box2DShapeConfig shapeConfig{};
@@ -229,7 +233,7 @@ namespace
         FootprintAccumulator footprint{};
         const float paddedThickness = std::max(
             kMinGeneratedThickness,
-            (tuning.fallbackSize.z + tuning.fallbackPadding.z * 2.0f) * request.transform.scale.z);
+            (tuning.fallbackSize.z + tuning.fallbackPadding.z * 2.0f) * shapeScale.z);
         footprint.ExpandHalfZ(paddedThickness);
 
         for (const auto& shape : collider.shapes)
