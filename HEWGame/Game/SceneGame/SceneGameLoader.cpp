@@ -275,6 +275,7 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
             config.playerMovementSettings.turnRate,
             config.playerMovementSettings.rollResponse,
             config.playerMovementSettings.inputSmoothing);
+        result.player->SetWrapMargin(config.playerMovementSettings.wrapMargin);
         if (config.physicsBinder && boxColliderComponent && playerShapeConfig && colliderReady)
         {
             config.physicsBinder->RegisterPhysicsBody(*result.player);
