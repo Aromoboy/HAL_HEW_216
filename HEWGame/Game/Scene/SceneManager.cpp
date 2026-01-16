@@ -213,6 +213,7 @@ namespace SceneSpace
         , m_sceneEntered(false)
         , m_lastTransitionState(SceneTransitionController::State::Idle)
     {
+        m_soundManager = std::make_unique<SoundManagerEX>();
     }
 
     void SceneManager::SetInitialScene(std::unique_ptr<IScene> scene)
