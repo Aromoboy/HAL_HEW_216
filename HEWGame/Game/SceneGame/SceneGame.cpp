@@ -38,6 +38,7 @@
 #include <chrono>
 #include <initializer_list>
 #include <cmath>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -82,6 +83,7 @@ namespace
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr uint16_t kPlayerCategoryMask = 0x0002;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
             settings.fixedPosition = false;
@@ -1125,6 +1127,30 @@ void SceneGame::FireMissile()
     missile->SetGravityScale(m_missileSettings.gravityScale);
     missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
 
+    std::vector<b2Filter> originalFilters;
+    bool playerFilterIgnored = false;
+    if (missile->GetTag() == "projectile_missile")
+    {
+        b2Transform bodyTransform{};
+        std::vector<b2ShapeId> shapes;
+        if (missile->CollectBox2DShapes(shapes, bodyTransform))
+        {
+            originalFilters.reserve(shapes.size());
+            for (const b2ShapeId shapeId : shapes)
+            {
+                const b2Filter filter = b2Shape_GetFilter(shapeId);
+                originalFilters.push_back(filter);
+                if ((filter.maskBits & kPlayerCategoryMask) != 0u)
+                {
+                    b2Filter updatedFilter = filter;
+                    updatedFilter.maskBits = static_cast<uint16_t>(filter.maskBits & ~kPlayerCategoryMask);
+                    b2Shape_SetFilter(shapeId, updatedFilter);
+                    playerFilterIgnored = true;
+                }
+            }
+        }
+    }
+
     m_drawSystem->RegisterRenderable(*missile);
 
 #if defined(_DEBUG)
@@ -1141,7 +1167,12 @@ void SceneGame::FireMissile()
     }
 #endif
 
-    m_activeMissiles.push_back(MissileInstance{ std::move(missile), kMissileLifetimeSeconds });
+    MissileInstance instance{};
+    instance.entity = std::move(missile);
+    instance.remainingSeconds = kMissileLifetimeSeconds;
+    instance.originalFilters = std::move(originalFilters);
+    instance.playerFilterIgnored = playerFilterIgnored;
+    m_activeMissiles.push_back(std::move(instance));
     m_fireMissileHintEnabled = true;
 }
 
@@ -1170,6 +1201,26 @@ void SceneGame::UpdateMissiles(float deltaSeconds)
     auto shouldRemove = [&](MissileInstance& instance)
     {
         instance.remainingSeconds -= deltaSeconds;
+        instance.ignorePlayerSeconds = std::max(0.0f, instance.ignorePlayerSeconds - deltaSeconds);
+        if (instance.playerFilterIgnored && instance.ignorePlayerSeconds <= 0.0f)
+        {
+            if (instance.entity && instance.entity->GetTag() == "projectile_missile")
+            {
+                b2Transform bodyTransform{};
+                std::vector<b2ShapeId> shapes;
+                if (instance.entity->CollectBox2DShapes(shapes, bodyTransform))
+                {
+                    const auto restoreCount = std::min(shapes.size(), instance.originalFilters.size());
+                    for (size_t i = 0; i < restoreCount; ++i)
+                    {
+                        b2Shape_SetFilter(shapes[i], instance.originalFilters[i]);
+                    }
+                }
+            }
+
+            instance.playerFilterIgnored = false;
+            instance.originalFilters.clear();
+        }
         bool outOfBounds = false;
         if (hasScreenBounds && instance.entity)
         {

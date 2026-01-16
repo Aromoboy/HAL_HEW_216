@@ -27,6 +27,7 @@
 #include "SceneGameConfigTypes.h"
 #include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
+#include <box2d/types.h>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -169,6 +170,9 @@ protected:
     {
         std::shared_ptr<Entities::PhysicalEntity> entity;
         float remainingSeconds = 0.0f;
+        float ignorePlayerSeconds = 3.0f;
+        std::vector<b2Filter> originalFilters;
+        bool playerFilterIgnored = false;
     };
     std::vector<MissileInstance> m_activeMissiles;
     // クリアできたかどうかの判定
