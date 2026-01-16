@@ -83,9 +83,10 @@ namespace
         {
             return false;
         }
+        constexpr UINT kMaxTextureDimension = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
         if (width == 0 || height == 0 ||
-            width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
-            height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
+            width > kMaxTextureDimension ||
+            height > kMaxTextureDimension)
         {
             return false;
         }
