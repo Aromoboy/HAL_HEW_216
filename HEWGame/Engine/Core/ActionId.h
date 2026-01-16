@@ -7,6 +7,7 @@ namespace Core
         MoveX,
         RotateYaw,
         Drop,
+        FireMissile,
         Confirm,
         Cancel,
         Pause,

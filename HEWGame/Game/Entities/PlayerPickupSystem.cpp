@@ -339,10 +339,9 @@ namespace Entities
     void PlayerPickupSystem::HandleCarryInput(Player& player, PlayerModel& model, const Core::UpdateContext& ctx, Core::Input& input)
     {
         const bool dropTriggered = input.IsTrigger(Core::ActionId::Drop);
-        const bool confirmTriggered = input.IsTrigger(Core::ActionId::Confirm);
 
         const bool carriedChanged = m_carrieds.size() != m_lastCarryInputLoggedCount;
-        const bool shouldLogEntry = carriedChanged || dropTriggered || confirmTriggered;
+        const bool shouldLogEntry = carriedChanged || dropTriggered;
 
         if (shouldLogEntry)
         {
@@ -350,7 +349,7 @@ namespace Entities
             oss << kPlayerLogPrefix << "HandleCarryInput enter carried=" << m_carrieds.size()
                 << "/" << m_maxCarry
                 << " dropTrigger=" << dropTriggered
-                << " confirmTrigger=" << confirmTriggered << "\n";
+                << "\n";
             PlayerDebugTrace(oss.str());
 
             m_lastCarryInputLoggedCount = m_carrieds.size();
@@ -369,20 +368,6 @@ namespace Entities
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "DropCarriedSweets invoked\n");
             DropCarriedSweets(player);
             return;
-        }
-
-        if (confirmTriggered)
-        {
-            std::ostringstream oss;
-            oss << kPlayerLogPrefix << "Confirm evaluated carried=" << m_carrieds.size()
-                << " maxCarry=" << m_maxCarry << "\n";
-            PlayerDebugTrace(oss.str());
-        }
-
-        if (confirmTriggered && m_carrieds.size() < m_maxCarry)
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "TryPickupNearest invoked\n");
-            TryPickupNearest(player);
         }
     }
 

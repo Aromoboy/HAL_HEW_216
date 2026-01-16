@@ -37,6 +37,7 @@ namespace Core
         m_bindings[ActionId::MoveX] = MakeBinding(0, 1.0f);
         m_bindings[ActionId::RotateYaw] = MakeBinding(0, 1.0f);
         m_bindings[ActionId::Drop] = MakeBinding('Q', 1.0f);
+        m_bindings[ActionId::FireMissile] = MakeBinding('E', 1.0f);
         m_bindings[ActionId::Confirm] = MakeBinding(VK_RETURN, 1.0f);
         m_bindings[ActionId::Cancel] = MakeBinding(VK_ESCAPE, 1.0f);
         m_bindings[ActionId::Pause] = MakeBinding(VK_SPACE, 1.0f);
@@ -56,7 +57,8 @@ namespace Core
         m_axisKeys[ActionId::MoveMenu] = { VK_UP, VK_DOWN }; 
 
         m_actionKeys[ActionId::Drop] = { 'Q' };
-        m_actionKeys[ActionId::Confirm] = { static_cast<unsigned char>('E'), VK_RETURN };
+        m_actionKeys[ActionId::FireMissile] = { static_cast<unsigned char>('E') };
+        m_actionKeys[ActionId::Confirm] = { VK_RETURN };
         m_actionKeys[ActionId::Cancel] = { VK_ESCAPE };
         m_actionKeys[ActionId::Pause] = { VK_SPACE };
         m_actionKeys[ActionId::Retry] = { static_cast<unsigned char>('R') };
