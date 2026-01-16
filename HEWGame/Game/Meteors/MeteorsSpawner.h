@@ -37,6 +37,7 @@ namespace MeteorsSpace
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveMeteorsCap(int cap);
         void SetCameraBounds(float minX, float maxX, float minY, float maxY);
+        void SetPlayerWorldPosition(const float3& position);
         void NotifyPhaseChanged(int newPhase);
 
         int CountLiveMeteors() const;
@@ -118,6 +119,8 @@ namespace MeteorsSpace
         float m_cameraMaxX{ 0.0f };
         float m_cameraMinY{ 0.0f };
         float m_cameraMaxY{ 0.0f };
+        float3 m_cachedPlayerPosition{ 0.0f, 0.0f, 0.0f };
+        bool m_hasCachedPlayerPosition{ false };
         bool m_warnedMissingSpawnOrigins{ false };
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_spawnPausedDueToLiveMeteors{ false };
