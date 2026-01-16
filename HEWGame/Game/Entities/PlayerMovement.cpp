@@ -70,6 +70,22 @@ namespace
         return Add(current, Scale(delta, scale));
     }
 
+    float MoveTowards(float current, float target, float maxDelta)
+    {
+        if (!(maxDelta > 0.0f) || !std::isfinite(maxDelta))
+        {
+            return current;
+        }
+
+        const float delta = target - current;
+        if (std::fabs(delta) <= maxDelta)
+        {
+            return target;
+        }
+
+        return current + (delta > 0.0f ? maxDelta : -maxDelta);
+    }
+
     float3 ClampSpeed(const float3& velocity, float maxSpeed)
     {
         if (!(maxSpeed > 0.0f) || !std::isfinite(maxSpeed))
@@ -164,7 +180,7 @@ namespace Entities
 
         bool isMovingNow = false;
 
-        if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
+        if (ctx.dt > 0.0f)
         {
             if (hasInput)
             {
@@ -177,6 +193,13 @@ namespace Entities
                 m_currentHeading = WrapRadians(m_currentHeading);
             }
 
+            const float headingDelta = std::remainder(desiredHeading - m_currentHeading, kTwoPi);
+            const float turnIntensity = hasInput
+                ? std::clamp(headingDelta / m_rollInputRange, -1.0f, 1.0f)
+                : 0.0f;
+            const float targetRoll = turnIntensity * m_rollMaxRadians;
+            m_currentRoll = MoveTowards(m_currentRoll, targetRoll, m_rollResponse * ctx.dt);
+
             const float3 desiredInput{
                 horizontal * effectiveHorizontalSpeed,
                 vertical * effectiveVerticalSpeed,
@@ -186,13 +209,17 @@ namespace Entities
             const float3 forward = ForwardFromYaw(m_currentHeading);
             const float3 desired = Scale(forward, desiredSpeed);
 
+            float3 updatedRotation = player.GetTransform().rotation;
+            updatedRotation.x = m_baseRotation.x + m_currentRoll;
+
             if (hasInput)
             {
-                float3 targetRotation = m_baseRotation;
-                targetRotation.z += m_currentHeading;
+                float3 targetRotation = updatedRotation;
+                targetRotation.z = m_baseRotation.z + m_currentHeading;
 
                 if (hasBody)
                 {
+                    player.SetRotation(updatedRotation);
                     const float3 currentPosition = player.GetTransform().position;
                     player.SetTransformViaPhysics(currentPosition, targetRotation);
                 }
@@ -201,21 +228,28 @@ namespace Entities
                     player.SetRotation(targetRotation);
                 }
             }
-
-            const float3 currentVelocity = hasBody ? player.GetLinearVelocity() : m_fallbackVelocity;
-            const float acceleration = hasInput ? m_accel : m_brake;
-            const float maxDelta = acceleration * ctx.dt;
-            float3 nextVelocity = MoveTowards(currentVelocity, desired, maxDelta);
-            nextVelocity = ClampSpeed(nextVelocity, m_maxSpeed);
-
-            if (hasBody)
-            {
-                player.SetLinearVelocity(nextVelocity);
-            }
             else
             {
-                m_fallbackVelocity = nextVelocity;
-                player.ApplyTranslation(Scale(nextVelocity, ctx.dt));
+                player.SetRotation(updatedRotation);
+            }
+
+            if (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f)
+            {
+                const float3 currentVelocity = hasBody ? player.GetLinearVelocity() : m_fallbackVelocity;
+                const float acceleration = hasInput ? m_accel : m_brake;
+                const float maxDelta = acceleration * ctx.dt;
+                float3 nextVelocity = MoveTowards(currentVelocity, desired, maxDelta);
+                nextVelocity = ClampSpeed(nextVelocity, m_maxSpeed);
+
+                if (hasBody)
+                {
+                    player.SetLinearVelocity(nextVelocity);
+                }
+                else
+                {
+                    m_fallbackVelocity = nextVelocity;
+                    player.ApplyTranslation(Scale(nextVelocity, ctx.dt));
+                }
             }
         }
         else

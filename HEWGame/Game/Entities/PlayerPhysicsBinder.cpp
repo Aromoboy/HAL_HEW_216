@@ -45,40 +45,9 @@ namespace Entities
         return m_isKinematic;
     }
 
-    void PlayerPhysicsBinder::SetMinimumY(float minY)
+    void PlayerPhysicsBinder::SetScreenBounds(float minX, float maxX, float minY, float maxY)
     {
-        if (!std::isfinite(minY))
-        {
-            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の最小 Y 指定を無視しました \n");
-            return;
-        }
-
-        if (m_hasMinimumY && std::fabs(m_minimumY - minY) < std::numeric_limits<float>::epsilon())
-        {
-            return;
-        }
-
-        m_hasMinimumY = true;
-        m_minimumY = minY;
-
-        std::ostringstream oss;
-        oss << kPlayerLogPrefix << "最小 Y を " << m_minimumY << " 単位に設定しました \n";
-        PlayerDebugTrace(oss.str());
-    }
-
-    float PlayerPhysicsBinder::GetMinimumY() const
-    {
-        return m_minimumY;
-    }
-
-    bool PlayerPhysicsBinder::HasMinimumY() const
-    {
-        return m_hasMinimumY;
-    }
-
-    void PlayerPhysicsBinder::SetScreenBounds(float minX, float maxX, std::optional<float> maxY)
-    {
-        if (!std::isfinite(minX) || !std::isfinite(maxX))
+        if (!std::isfinite(minX) || !std::isfinite(maxX) || !std::isfinite(minY) || !std::isfinite(maxY))
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のスクリーン範囲を無視しました \n");
             return;
@@ -86,21 +55,20 @@ namespace Entities
 
         const float sanitizedMinX = std::min(minX, maxX);
         const float sanitizedMaxX = std::max(minX, maxX);
+        const float sanitizedMinY = std::min(minY, maxY);
+        const float sanitizedMaxY = std::max(minY, maxY);
         const bool hadBounds = m_hasScreenBounds;
         const bool boundsChanged = !hadBounds
             || std::fabs(m_minScreenX - sanitizedMinX) > std::numeric_limits<float>::epsilon()
             || std::fabs(m_maxScreenX - sanitizedMaxX) > std::numeric_limits<float>::epsilon()
-            || (m_hasMaximumY != maxY.has_value())
-            || (maxY.has_value() && std::fabs(m_maximumY - *maxY) > std::numeric_limits<float>::epsilon());
+            || std::fabs(m_minScreenY - sanitizedMinY) > std::numeric_limits<float>::epsilon()
+            || std::fabs(m_maxScreenY - sanitizedMaxY) > std::numeric_limits<float>::epsilon();
 
         m_hasScreenBounds = true;
         m_minScreenX = sanitizedMinX;
         m_maxScreenX = sanitizedMaxX;
-        m_hasMaximumY = maxY.has_value() && std::isfinite(*maxY);
-        if (m_hasMaximumY)
-        {
-            m_maximumY = *maxY;
-        }
+        m_minScreenY = sanitizedMinY;
+        m_maxScreenY = sanitizedMaxY;
 
         if (!boundsChanged)
         {
@@ -109,47 +77,10 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "スクリーン範囲を minX=" << m_minScreenX
-            << " maxX=" << m_maxScreenX;
-        if (m_hasMaximumY)
-        {
-            oss << " maxY=" << m_maximumY;
-        }
+            << " maxX=" << m_maxScreenX
+            << " minY=" << m_minScreenY
+            << " maxY=" << m_maxScreenY;
         oss << "\n";
-        PlayerDebugTrace(oss.str());
-    }
-
-    void PlayerPhysicsBinder::ClampVerticalPosition(Player& player)
-    {
-        if (!m_hasMinimumY)
-        {
-            return;
-        }
-
-        if (!player.HasBox2DBody())
-        {
-            return;
-        }
-
-        const b2BodyId bodyId = player.GetBox2DBodyId();
-        const float3 bodyPosition = Player::ToWorldPosition(b2Body_GetPosition(bodyId));
-        if (bodyPosition.y >= m_minimumY)
-        {
-            return;
-        }
-
-        const float previousY = bodyPosition.y;
-        const float3 bodyVelocity = player.GetLinearVelocity();
-        b2Body_SetTransform(
-            bodyId,
-            Player::ToBox2DPosition(float3{ bodyPosition.x, m_minimumY, 0.0f }),
-            b2Body_GetRotation(bodyId));
-        float3 clampedVelocity = bodyVelocity;
-        clampedVelocity.y = 0.0f;
-        player.SetLinearVelocity(clampedVelocity);
-
-        std::ostringstream oss;
-        oss << kPlayerLogPrefix << "Y を " << previousY << " から最小 "
-            << m_minimumY << " に制限しました（プラットフォーム境界） \n";
         PlayerDebugTrace(oss.str());
     }
 
@@ -170,33 +101,43 @@ namespace Entities
         const float originalX = position.x;
         const float originalY = position.y;
 
-        const float clampedX = std::clamp(position.x, m_minScreenX, m_maxScreenX);
-        float clampedY = position.y;
-        if (m_hasMaximumY)
+        float wrappedX = position.x;
+        if (position.x < m_minScreenX)
         {
-            clampedY = std::min(clampedY, m_maximumY);
+            wrappedX = m_maxScreenX;
+        }
+        else if (position.x > m_maxScreenX)
+        {
+            wrappedX = m_minScreenX;
         }
 
-        if (clampedX == position.x && clampedY == position.y)
+        float wrappedY = position.y;
+        if (position.y < m_minScreenY)
+        {
+            wrappedY = m_maxScreenY;
+        }
+        else if (position.y > m_maxScreenY)
+        {
+            wrappedY = m_minScreenY;
+        }
+
+        if (wrappedX == position.x && wrappedY == position.y)
         {
             return;
         }
 
         b2Body_SetTransform(
             bodyId,
-            Player::ToBox2DPosition(float3{ clampedX, clampedY, 0.0f }),
+            Player::ToBox2DPosition(float3{ wrappedX, wrappedY, 0.0f }),
             b2Body_GetRotation(bodyId));
 
         std::ostringstream oss;
-        oss << kPlayerLogPrefix << "スクリーンクランプを適用しました prevX=" << originalX
+        oss << kPlayerLogPrefix << "スクリーンラップを適用しました prevX=" << originalX
             << " prevY=" << originalY
-            << " newX=" << clampedX
-            << " newY=" << clampedY
+            << " newX=" << wrappedX
+            << " newY=" << wrappedY
             << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
-        if (m_hasMaximumY)
-        {
-            oss << " maxY=" << m_maximumY;
-        }
+        oss << " boundsY=[" << m_minScreenY << ',' << m_maxScreenY << ']';
         oss << "\n";
         PlayerDebugTrace(oss.str());
     }
