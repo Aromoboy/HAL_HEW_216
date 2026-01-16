@@ -60,6 +60,7 @@ private:
     IXAudio2MasteringVoice* m_pMasterVoice;
     std::map<int, IXAudio2SourceVoice*> m_sourceVoices;  // ハンドルで管理
     int m_nextHandle;  // 次のハンドルID
+    bool m_mediaFoundationInitialized;
 
     void CleanupFinishedVoices();
 };
