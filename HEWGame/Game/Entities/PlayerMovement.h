@@ -30,6 +30,9 @@ namespace Entities
         float m_baseHorizontalMoveSpeed{ 0.0f };
         float m_baseVerticalMoveSpeed{ 0.0f };
         float m_speedMultiplier{ 1.0f };
+        float m_accel{ 35.0f };
+        float m_brake{ 8.0f };
+        float m_maxSpeed{ 25.0f };
         float m_facingSign{ 1.0f };
         float3 m_baseRotation{ 0.0f, 0.0f, 0.0f };
         bool m_hasBaseRotation{ false };
@@ -39,5 +42,6 @@ namespace Entities
         bool m_moveSoundFadingOut{ false };
         float m_moveSoundFadeTimer{ 0.0f };
         float m_moveSoundFadeDuration{ 0.4f };
+        float3 m_fallbackVelocity{ 0.0f, 0.0f, 0.0f };
     };
 }

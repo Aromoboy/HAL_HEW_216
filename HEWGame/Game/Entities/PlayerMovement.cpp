@@ -31,6 +31,61 @@ namespace
 #endif
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
+
+    float3 Add(const float3& a, const float3& b)
+    {
+        return float3{ a.x + b.x, a.y + b.y, a.z + b.z };
+    }
+
+    float3 Subtract(const float3& a, const float3& b)
+    {
+        return float3{ a.x - b.x, a.y - b.y, a.z - b.z };
+    }
+
+    float3 Scale(const float3& v, float s)
+    {
+        return float3{ v.x * s, v.y * s, v.z * s };
+    }
+
+    float Length(const float3& v)
+    {
+        return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    }
+
+    float3 MoveTowards(const float3& current, const float3& target, float maxDelta)
+    {
+        if (!(maxDelta > 0.0f) || !std::isfinite(maxDelta))
+        {
+            return current;
+        }
+
+        const float3 delta = Subtract(target, current);
+        const float distance = Length(delta);
+        if (distance <= maxDelta || distance <= std::numeric_limits<float>::epsilon())
+        {
+            return target;
+        }
+
+        const float scale = maxDelta / distance;
+        return Add(current, Scale(delta, scale));
+    }
+
+    float3 ClampSpeed(const float3& velocity, float maxSpeed)
+    {
+        if (!(maxSpeed > 0.0f) || !std::isfinite(maxSpeed))
+        {
+            return velocity;
+        }
+
+        const float speed = Length(velocity);
+        if (speed <= maxSpeed || speed <= std::numeric_limits<float>::epsilon())
+        {
+            return velocity;
+        }
+
+        const float scale = maxSpeed / speed;
+        return Scale(velocity, scale);
+    }
 }
 
 namespace Entities
@@ -64,16 +119,20 @@ namespace Entities
 
         if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
         {
-            if (horizontal != 0.0f || vertical != 0.0f)
+            const bool hasInput = (horizontal != 0.0f || vertical != 0.0f);
+            if (hasInput)
             {
                 isMovingNow = true;
+            }
 
-                const float3 desired{
-                    horizontal * effectiveHorizontalSpeed,
-                    vertical * effectiveVerticalSpeed,
-                    0.0f
-                };
+            const float3 desired{
+                horizontal * effectiveHorizontalSpeed,
+                vertical * effectiveVerticalSpeed,
+                0.0f
+            };
 
+            if (hasInput)
+            {
                 const float movementSq = desired.x * desired.x + desired.y * desired.y;
                 if (movementSq > std::numeric_limits<float>::epsilon())
                 {
@@ -91,24 +150,34 @@ namespace Entities
                         player.SetRotation(targetRotation);
                     }
                 }
-
-                if (hasBody)
-                    player.SetLinearVelocity(desired);
-                else
-                    player.ApplyTranslation(float3{
-                        desired.x * ctx.dt,
-                        desired.y * ctx.dt,
-                        desired.z * ctx.dt
-                        });
             }
-            else if (hasBody)
+
+            const float3 currentVelocity = hasBody ? player.GetLinearVelocity() : m_fallbackVelocity;
+            const float acceleration = hasInput ? m_accel : m_brake;
+            const float maxDelta = acceleration * ctx.dt;
+            float3 nextVelocity = MoveTowards(currentVelocity, desired, maxDelta);
+            nextVelocity = ClampSpeed(nextVelocity, m_maxSpeed);
+
+            if (hasBody)
+            {
+                player.SetLinearVelocity(nextVelocity);
+            }
+            else
+            {
+                m_fallbackVelocity = nextVelocity;
+                player.ApplyTranslation(Scale(nextVelocity, ctx.dt));
+            }
+        }
+        else
+        {
+            if (hasBody)
             {
                 player.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
             }
-        }
-        else if (hasBody)
-        {
-            player.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+            else
+            {
+                m_fallbackVelocity = { 0.0f, 0.0f, 0.0f };
+            }
         }
 
         // ===== 移動音（フェードアウト付き）=====
