@@ -150,6 +150,15 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         return;
     }
 
+    if (input->IsTrigger(Core::ActionId::Confirm))
+    {
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
+        }
+        return;
+    }
+
     if (input->IsTrigger(Core::ActionId::Cancel))
     {
         if (m_manager)
