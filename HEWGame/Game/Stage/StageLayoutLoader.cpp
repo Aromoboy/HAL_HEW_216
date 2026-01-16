@@ -119,6 +119,10 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         {
             DebugTrace(logPrefix + "Stage collider registry missing; falling back to cached definitions if any.\n");
         }
+        else
+        {
+            DebugTrace(logPrefix + "Stage collider registry loaded from '" + request.gameplayConfigPath + "'.\n");
+        }
     }
 
     std::string line;

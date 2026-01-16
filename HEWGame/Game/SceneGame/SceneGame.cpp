@@ -25,6 +25,7 @@
 #include "SceneGameLoader.h"
 #include "SceneGameUIOverlay.h"
 #include "SceneGameConfigLoader.h"
+#include "GameplayConfig.h"
 #include "UIManager.h"
 #include "PlayerController.h"
 #include "AppGame.h"
@@ -453,9 +454,19 @@ bool SceneGame::Load(Core::Input& input)
     loaderConfig.physicsBinder = m_physicsBinder.get();
     loaderConfig.drawSystem = m_drawSystem.get();
     loaderConfig.playerSpawnTransform = m_playerSpawnTransform;
+    loaderConfig.playerColliderTuning = SceneGameConfig::LoadPlayerColliderTuning(GameplayConfig::kConfigPath);
     loaderConfig.playerBaseHorizontalSpeed = m_playerBaseHorizontalSpeed;
     loaderConfig.playerBaseVerticalSpeed = m_playerBaseVerticalSpeed;
     loaderConfig.playerSpeedMultiplier = m_playerSpeedMultiplier;
+
+    {
+        const auto& registry = Physics::ColliderRegistry::Instance();
+        const bool registryHit = registry.Find("player").has_value();
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerCollider] Registry lookup before player load key='player' hit="
+            << std::boolalpha << registryHit << "\n";
+        DebugTrace(oss.str());
+    }
 
     SceneGameLoader::Result loaderResult = loader.Load(loaderConfig);
     m_uiOverlay.reset();
@@ -1107,6 +1118,7 @@ void SceneGame::FireMissile()
     missile->SetBoxColliderComponent(collider);
 
     m_physicsBinder->RegisterPhysicsBody(*missile);
+    missile->SetBox2DShapeConfig(shapeConfig);
     missile->SetGravityScale(m_missileSettings.gravityScale);
     missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
 
