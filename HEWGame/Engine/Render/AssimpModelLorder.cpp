@@ -90,11 +90,11 @@ namespace
         using MeteorsSpace::MeteorsType;
         switch (type)
         {
-        case MeteorsType::Strawberry:
+        case MeteorsType::Mercury:
             return "Assets/Texture/MercuryNM.jpg";
-        case MeteorsType::Blueberry:
+        case MeteorsType::Meteor:
             return "Assets/Texture/meteor.jpg";
-        case MeteorsType::Pineapple:
+        case MeteorsType::Meteorite:
             return "Assets/Texture/Meteorite_Diffuse.png";
         }
     }

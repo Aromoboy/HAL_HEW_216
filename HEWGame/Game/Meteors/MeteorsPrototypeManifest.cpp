@@ -113,11 +113,11 @@ namespace MeteorsSpace
 
     void MeteorsPrototypeManifest::ApplyDefaults()
     {
-        Register(MeteorsType::Strawberry, "Strawberry", "Assets/Model/Mercury.fbx",
+        Register(MeteorsType::Mercury, "Mercury", "Assets/Model/Mercury.fbx",
             "Mercury-inspired meteor sphere with cratered surface");
-        Register(MeteorsType::Blueberry, "Blueberry", "Assets/Model/meteor.fbx",
+        Register(MeteorsType::Meteor, "Meteor", "Assets/Model/meteor.fbx",
             "Meteor model with jagged rocky silhouette");
-        Register(MeteorsType::Pineapple, "Pineapple", "Assets/Model/Meteorite.fbx",
+        Register(MeteorsType::Meteorite, "Meteorite", "Assets/Model/Meteorite.fbx",
             "Meteorite chunk with uneven, fractured surface");
 
         RegisterExtra("Fairy", "Assets/Model/base.fbx", "Fighter jet prototype");
@@ -180,9 +180,9 @@ namespace MeteorsSpace
         const bool loaded = LoadOverridesFromConfig(configPath);
 
         const std::array<MeteorsType, 3> kTypes{
-            MeteorsType::Strawberry,
-            MeteorsType::Blueberry,
-            MeteorsType::Pineapple,
+            MeteorsType::Mercury,
+            MeteorsType::Meteor,
+            MeteorsType::Meteorite,
         };
         for (const auto type : kTypes)
         {
@@ -291,9 +291,9 @@ namespace MeteorsSpace
             }
             auto mapToMeteorsType = [](const std::string& normalized) -> std::optional<MeteorsType>
             {
-                if (normalized == NormalizeKey(ToString(MeteorsType::Strawberry))) return MeteorsType::Strawberry;
-                if (normalized == NormalizeKey(ToString(MeteorsType::Blueberry))) return MeteorsType::Blueberry;
-                if (normalized == NormalizeKey(ToString(MeteorsType::Pineapple))) return MeteorsType::Pineapple;
+                if (normalized == NormalizeKey(ToString(MeteorsType::Mercury))) return MeteorsType::Mercury;
+                if (normalized == NormalizeKey(ToString(MeteorsType::Meteor))) return MeteorsType::Meteor;
+                if (normalized == NormalizeKey(ToString(MeteorsType::Meteorite))) return MeteorsType::Meteorite;
                 return std::nullopt;
             };
 
@@ -435,12 +435,12 @@ namespace MeteorsSpace
     {
         switch (type)
         {
-        case MeteorsType::Strawberry:
-            return "Strawberry";
-        case MeteorsType::Blueberry:
-            return "Blueberry";
-        case MeteorsType::Pineapple:
-            return "Pineapple";
+        case MeteorsType::Mercury:
+            return "Mercury";
+        case MeteorsType::Meteor:
+            return "Meteor";
+        case MeteorsType::Meteorite:
+            return "Meteorite";
         default:
             return "Unknown";
         }
