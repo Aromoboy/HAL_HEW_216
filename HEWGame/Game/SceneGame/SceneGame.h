@@ -28,14 +28,17 @@
 #include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
 #include "Meteors/MeteorsTypes.h"
+#include "EffectSystem.h"
 #include <box2d/types.h>
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include"SettingScene.h"
-#include "ThirdParty/Effekseer/Effekseer.h"
+#include <Effekseer.h>
+#include <EffekseerRendererDX11.h>
 
 namespace Systems
 {
@@ -129,6 +132,8 @@ private:
     void ProcessPendingMissileRemovals();
     void ProcessPendingMeteorRemovals();
     std::shared_ptr<Entities::PhysicalEntity> FindMissileByEntity(Entities::PhysicalEntity* missile) const;
+    void InitializeEffectSystem();
+    void ShutdownEffectSystem();
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -155,6 +160,7 @@ protected:
     bool m_drawRegistered = false;
     bool m_meteorsRegistered = false;
     bool m_meteorsLateRegistered = false;
+    bool m_effectRegistered = false;
     bool m_loadFailed = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
@@ -166,6 +172,11 @@ protected:
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
+    std::unique_ptr<EffectSystem> m_effectSystem;
+    ::Effekseer::Backend::GraphicsDeviceRef m_effectDevice;
+    ::EffekseerRendererDX11::RendererRef m_effectRenderer;
+    ::Effekseer::ManagerRef m_effectManager;
+    std::unordered_map<std::string, EffectCreateData> m_effectMap;
     float m_backgroundScrollOriginY = 0.0f;
     std::optional<float> m_backgroundCameraLastY = std::nullopt;
     std::optional<float> m_cameraWrapMinY = std::nullopt;

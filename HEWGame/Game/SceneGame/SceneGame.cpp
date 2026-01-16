@@ -432,6 +432,9 @@ bool SceneGame::Load(Core::Input& input)
         return !m_loadFailed;
     }
 
+    m_effectMap.clear();
+    m_effectMap.try_emplace("explosion", EffectCreateData(u"Assets/Effect/slum_effect.efkefc", 0.75f));
+
     ID3D11Device* device = GetDevice();
     if (device)
     {
@@ -713,6 +716,8 @@ void SceneGame::OnEnter()
     oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 
+    InitializeEffectSystem();
+
     // BGMを再生（ループあり、音量1%）
     if (m_pManager)
     {
@@ -725,6 +730,19 @@ void SceneGame::OnExit()
     std::ostringstream oss;
     oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
+
+    if (m_effectManager != nullptr)
+    {
+        m_effectManager->StopAllEffects();
+    }
+
+    if (m_effectSystem != nullptr && m_effectRegistered)
+    {
+        Unregister(*m_effectSystem);
+        m_effectRegistered = false;
+    }
+
+    ShutdownEffectSystem();
 }
 
 
@@ -777,6 +795,19 @@ SceneGame::~SceneGame()
         }
         m_contactDispatchRegistered = false;
     }
+
+    if (m_effectManager != nullptr)
+    {
+        m_effectManager->StopAllEffects();
+    }
+
+    if (m_effectSystem != nullptr && m_effectRegistered)
+    {
+        Unregister(*m_effectSystem);
+        m_effectRegistered = false;
+    }
+
+    ShutdownEffectSystem();
 
     if (m_cameraRigRegistered && m_cameraRig)
     {
@@ -891,6 +922,11 @@ void SceneGame::ConfigureUpdates()
                 }
         }
 
+        if (m_effectSystem && !m_effectRegistered)
+        {
+                m_effectRegistered = Register(*m_effectSystem);
+        }
+
 
         if (player)
         {
@@ -928,6 +964,40 @@ void SceneGame::ConfigureUpdates()
         }
 
         SetStageState(StageState::Playing);
+}
+
+void SceneGame::InitializeEffectSystem()
+{
+    m_effectDevice = ::EffekseerRendererDX11::CreateGraphicsDevice(GetDevice(), GetContext());
+    m_effectRenderer = ::EffekseerRendererDX11::Renderer::Create(m_effectDevice, 8000);
+    m_effectManager = Effekseer::Manager::Create(8000);
+
+    if (m_effectRenderer == nullptr || m_effectManager == nullptr)
+    {
+        ShutdownEffectSystem();
+        return;
+    }
+
+    m_effectManager->SetSpriteRenderer(m_effectRenderer->CreateSpriteRenderer());
+    m_effectManager->SetRibbonRenderer(m_effectRenderer->CreateRibbonRenderer());
+    m_effectManager->SetRingRenderer(m_effectRenderer->CreateRingRenderer());
+    m_effectManager->SetTrackRenderer(m_effectRenderer->CreateTrackRenderer());
+    m_effectManager->SetModelRenderer(m_effectRenderer->CreateModelRenderer());
+
+    m_effectManager->SetTextureLoader(m_effectRenderer->CreateTextureLoader());
+    m_effectManager->SetModelLoader(m_effectRenderer->CreateModelLoader());
+    m_effectManager->SetMaterialLoader(m_effectRenderer->CreateMaterialLoader());
+    m_effectManager->SetCurveLoader(Effekseer::MakeRefPtr<Effekseer::CurveLoader>());
+
+    m_effectSystem = std::make_unique<EffectSystem>(m_effectRenderer, m_effectManager, m_effectMap);
+}
+
+void SceneGame::ShutdownEffectSystem()
+{
+    m_effectSystem.reset();
+    m_effectManager.Reset();
+    m_effectRenderer.Reset();
+    m_effectDevice.Reset();
 }
 
 void SceneGame::Update(const Core::UpdateContext& ctx)
@@ -987,6 +1057,16 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             m_playerBlinkTimer = 0.0f;
             m_playerBlinkAlpha = 0.35f;
         };
+        const auto spawnExplosion = [this](const float3& position)
+        {
+            if (m_effectSystem != nullptr)
+            {
+                m_effectSystem->SpawnEffect(EffectSystem::EffectCreateRequest(
+                    "explosion",
+                    position,
+                    float3{ 0.0f, 0.0f, 0.0f }));
+            }
+        };
 
         if (const auto missileContact = m_contactHandler.ConsumeMissileContact())
         {
@@ -1004,6 +1084,15 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 {
                     m_gameplayRules.AddKillScore(killScore);
                 }
+            }
+
+            if (meteors)
+            {
+                spawnExplosion(meteors->GetTransform().position);
+            }
+            else if (missile)
+            {
+                spawnExplosion(missile->GetTransform().position);
             }
         }
 
@@ -1052,6 +1141,15 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                     {
                         m_gameplayRules.AddKillScore(killScore);
                     }
+
+                    if (meteors)
+                    {
+                        spawnExplosion(meteors->GetTransform().position);
+                    }
+                    else if (contact->other)
+                    {
+                        spawnExplosion(contact->other->GetTransform().position);
+                    }
                 }
                 break;
             case SceneGameContactHandler::PlayerContactSource::Missile:
@@ -1065,6 +1163,10 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         }
                     }
                     damage = 4;
+                    if (contact->other)
+                    {
+                        spawnExplosion(contact->other->GetTransform().position);
+                    }
                 }
                 break;
             }
@@ -2051,9 +2153,14 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 return;
         }
 
-        m_drawSystem->RenderQueued(activeCamera);
+    m_drawSystem->RenderQueued(activeCamera);
 
-        m_drawSystem->DebugDrawQueued(activeCamera);
+    if (m_effectSystem != nullptr)
+    {
+        m_effectSystem->Draw(activeCamera.get());
+    }
+
+    m_drawSystem->DebugDrawQueued(activeCamera);
 
 #if defined(_DEBUG)
         DrawPhysicsDebugOverlay(activeCamera);
