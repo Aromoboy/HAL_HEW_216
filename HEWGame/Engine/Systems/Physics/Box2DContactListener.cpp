@@ -426,7 +426,13 @@ namespace Systems
 
                 if (void* userData = b2Shape_GetUserData(shapeId))
                 {
-                        return static_cast<Entities::PhysicalEntity*>(userData);
+                        auto* entity = static_cast<Entities::PhysicalEntity*>(userData);
+                        if (!m_physicsMachine || !m_physicsMachine->IsRegisteredEntityPointer(entity))
+                        {
+                                return nullptr;
+                        }
+
+                        return entity;
                 }
 
                 const b2BodyId bodyId = b2Shape_GetBody(shapeId);
@@ -437,6 +443,11 @@ namespace Systems
 
                 if (Entities::PhysicalEntity* fromBody = GetEntityForBody(bodyId))
                 {
+                        if (!m_physicsMachine || !m_physicsMachine->IsRegisteredEntityPointer(fromBody))
+                        {
+                                return nullptr;
+                        }
+
                         return fromBody;
                 }
 

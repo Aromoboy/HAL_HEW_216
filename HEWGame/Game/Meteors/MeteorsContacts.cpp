@@ -423,7 +423,13 @@ namespace MeteorsSpace
 
         if (void* userData = b2Shape_GetUserData(shapeId))
         {
-            return static_cast<Entities::PhysicalEntity*>(userData);
+            auto* entity = static_cast<Entities::PhysicalEntity*>(userData);
+            if (!m_physicsMachine || !m_physicsMachine->IsRegisteredEntityPointer(entity))
+            {
+                return nullptr;
+            }
+
+            return entity;
         }
 
         const b2BodyId bodyId = b2Shape_GetBody(shapeId);
@@ -434,7 +440,13 @@ namespace MeteorsSpace
 
         if (void* bodyData = b2Body_GetUserData(bodyId))
         {
-            return static_cast<Entities::PhysicalEntity*>(bodyData);
+            auto* entity = static_cast<Entities::PhysicalEntity*>(bodyData);
+            if (!m_physicsMachine || !m_physicsMachine->IsRegisteredEntityPointer(entity))
+            {
+                return nullptr;
+            }
+
+            return entity;
         }
 
         if (!m_physicsMachine)
