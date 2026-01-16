@@ -88,6 +88,16 @@ namespace Entities
         m_physicsBinder.SetScreenBounds(minX, maxX, minY, maxY);
     }
 
+    void Player::SetRenderAlpha(float alpha)
+    {
+        m_renderAlpha = alpha;
+    }
+
+    float Player::GetRenderAlpha() const
+    {
+        return m_renderAlpha;
+    }
+
     void Player::RegisterWrapDeltaY(float deltaY)
     {
         if (!std::isfinite(deltaY))

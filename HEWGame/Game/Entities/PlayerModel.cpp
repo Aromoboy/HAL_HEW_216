@@ -16,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <utility>
 #include <vector>
 #include <DirectXMath.h>
 
@@ -298,7 +299,33 @@ namespace Entities
             return;
         }
 
+        const float clampedAlpha = std::clamp(player.GetRenderAlpha(), 0.0f, 1.0f);
+        std::vector<std::pair<std::shared_ptr<MaterialDX>, DirectX::XMFLOAT4>> restoreMaterials;
+        if (clampedAlpha < 1.0f)
+        {
+            const unsigned int materialCount = player.m_model->GetMeshCount();
+            restoreMaterials.reserve(materialCount);
+            for (unsigned int i = 0; i < materialCount; ++i)
+            {
+                auto material = player.m_model->GetMaterial(static_cast<int>(i)).lock();
+                if (!material)
+                {
+                    continue;
+                }
+
+                DirectX::XMFLOAT4 diffuse = material->GetDiffuse();
+                restoreMaterials.emplace_back(material, diffuse);
+                diffuse.w *= clampedAlpha;
+                material->SetDiffuse(diffuse);
+            }
+        }
+
         renderer.Draw(*player.m_model, m_renderTransform, &camera);
+
+        for (const auto& [material, diffuse] : restoreMaterials)
+        {
+            material->SetDiffuse(diffuse);
+        }
     }
 
     Transform PlayerModel::GetRenderTransform() const

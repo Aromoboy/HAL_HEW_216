@@ -19,7 +19,7 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
                 m_meteorsManager->OnContactBegin(&a, &b, info);
             }
 
-            if (!m_playerEntity || m_playerHit)
+            if (!m_playerEntity)
             {
                 return;
             }
@@ -31,10 +31,10 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
                 return;
             }
 
-            const Entities::PhysicalEntity& other = playerIsA ? b : a;
-            if (other.GetCollisionLayer() == Collision::CollisionLayer::Meteors)
+            Entities::PhysicalEntity* other = playerIsA ? &b : &a;
+            if (other->GetCollisionLayer() == Collision::CollisionLayer::Meteors)
             {
-                m_playerHit = true;
+                m_playerContact = PlayerContactEvent{ other, PlayerContactType::Begin };
             }
         },
         [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const Systems::ContactEventInfo& info)
@@ -43,20 +43,40 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
             {
                 m_meteorsManager->OnContactEnd(&a, &b, info);
             }
+
+            if (!m_playerEntity)
+            {
+                return;
+            }
+
+            const bool playerIsA = (&a == m_playerEntity);
+            const bool playerIsB = (&b == m_playerEntity);
+            if (!playerIsA && !playerIsB)
+            {
+                return;
+            }
+
+            Entities::PhysicalEntity* other = playerIsA ? &b : &a;
+            if (other->GetCollisionLayer() == Collision::CollisionLayer::Meteors)
+            {
+                m_playerContact = PlayerContactEvent{ other, PlayerContactType::End };
+            }
         });
 }
 
-bool SceneGameContactHandler::ConsumePlayerHit()
+std::optional<SceneGameContactHandler::PlayerContactEvent> SceneGameContactHandler::ConsumePlayerContact()
 {
-    if (!m_playerHit)
+    if (!m_playerContact)
     {
-        return false;
+        return std::nullopt;
     }
-    m_playerHit = false;
-    return true;
+
+    std::optional<PlayerContactEvent> contact = m_playerContact;
+    m_playerContact = std::nullopt;
+    return contact;
 }
 
 void SceneGameContactHandler::Reset()
 {
-    m_playerHit = false;
+    m_playerContact = std::nullopt;
 }

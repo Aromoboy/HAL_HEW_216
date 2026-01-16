@@ -113,6 +113,37 @@ namespace
             return t * t * (3.0f - 2.0f * t);
         }
 
+        std::shared_ptr<MeteorsSpace::ActiveMeteors> FindMeteorsByEntity(
+            MeteorsSpace::MeteorsManager* manager,
+            Entities::PhysicalEntity* entity)
+        {
+            if (!manager || !entity)
+            {
+                return nullptr;
+            }
+
+            const MeteorsSpace::MeteorsState states[] = {
+                MeteorsSpace::MeteorsState::Active,
+                MeteorsSpace::MeteorsState::Stacked,
+                MeteorsSpace::MeteorsState::Ground,
+                MeteorsSpace::MeteorsState::Carried
+            };
+
+            for (MeteorsSpace::MeteorsState state : states)
+            {
+                auto& list = manager->GetByState(state);
+                for (const auto& meteors : list)
+                {
+                    if (meteors && meteors.get() == entity)
+                    {
+                        return meteors;
+                    }
+                }
+            }
+
+            return nullptr;
+        }
+
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
@@ -923,10 +954,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_clearPhaseCount
     };
     const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
-    if (m_stageState == StageState::Playing && m_contactHandler.ConsumePlayerHit())
-    {
-        SetStageState(StageState::TimeUp);
-    }
     if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
     {
         UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
@@ -947,6 +974,84 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 #endif
 
     float deltaTime = ctx.timer.DeltaTime();
+
+    if (m_stageState == StageState::Playing)
+    {
+        if (const auto contact = m_contactHandler.ConsumePlayerContact())
+        {
+            if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
+            {
+                std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), contact->meteor);
+                if (m_meteorsManager && meteors)
+                {
+                    m_meteorsManager->Erase(meteors);
+                }
+
+                if (!m_playerInvulnerable)
+                {
+                    const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
+                    const std::optional<MeteorsSpace::MeteorsType> meteorsType = contact->meteor
+                        ? manifest.Resolve(contact->meteor->GetTag())
+                        : std::nullopt;
+
+                    int damage = 1;
+                    if (meteorsType)
+                    {
+                        switch (*meteorsType)
+                        {
+                        case MeteorsSpace::MeteorsType::Mercury:
+                            damage = 3;
+                            break;
+                        case MeteorsSpace::MeteorsType::Meteor:
+                            damage = 2;
+                            break;
+                        case MeteorsSpace::MeteorsType::Meteorite:
+                            damage = 1;
+                            break;
+                        }
+                    }
+
+                    m_playerHp -= damage;
+                    m_playerInvulnerable = true;
+                    m_playerInvulnSeconds = 3.0f;
+                    m_playerBlinkTimer = 0.0f;
+                    m_playerBlinkAlpha = 0.35f;
+
+                    if (m_playerHp <= 0)
+                    {
+                        SetStageState(StageState::TimeUp);
+                    }
+                }
+            }
+        }
+    }
+
+    if (m_playerInvulnerable)
+    {
+        m_playerInvulnSeconds = std::max(0.0f, m_playerInvulnSeconds - deltaTime);
+        if (m_playerInvulnSeconds <= 0.0f)
+        {
+            m_playerInvulnerable = false;
+            m_playerBlinkTimer = 0.0f;
+            m_playerBlinkAlpha = 1.0f;
+        }
+        else
+        {
+            constexpr float kBlinkSpeed = 10.0f;
+            m_playerBlinkTimer += deltaTime;
+            const float pulse = std::sin(m_playerBlinkTimer * kBlinkSpeed) * 0.5f + 0.5f;
+            m_playerBlinkAlpha = Lerp(0.35f, 1.0f, pulse);
+        }
+    }
+    else
+    {
+        m_playerBlinkAlpha = 1.0f;
+    }
+
+    if (player)
+    {
+        player->SetRenderAlpha(m_playerBlinkAlpha);
+    }
 
     m_playerController.UpdatePlayerBounds({
         player.get(),
@@ -2343,6 +2448,13 @@ void SceneGame::ResetPlaySession()
             player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
             player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
+
+        m_playerHp = 10;
+        m_playerInvulnerable = false;
+        m_playerInvulnSeconds = 0.0f;
+        m_playerBlinkTimer = 0.0f;
+        m_playerBlinkAlpha = 1.0f;
+        player->SetRenderAlpha(m_playerBlinkAlpha);
     }
 
     if (player && m_cameraRig)
