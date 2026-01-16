@@ -144,6 +144,26 @@ namespace
             return nullptr;
         }
 
+        int ResolveKillScore(const std::optional<MeteorsSpace::MeteorsType>& meteorsType)
+        {
+            if (!meteorsType)
+            {
+                return 0;
+            }
+
+            switch (*meteorsType)
+            {
+            case MeteorsSpace::MeteorsType::Mercury:
+                return 150;
+            case MeteorsSpace::MeteorsType::Meteor:
+                return 75;
+            case MeteorsSpace::MeteorsType::Meteorite:
+                return 30;
+            }
+
+            return 0;
+        }
+
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
@@ -985,58 +1005,68 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), missileContact->meteor);
             if (m_meteorsManager && meteors)
             {
-                m_meteorsManager->RegisterProjectileHit(meteors);
+                const std::optional<MeteorsSpace::MeteorsType> destroyedType = m_meteorsManager->RegisterProjectileHit(meteors);
+                const int killScore = ResolveKillScore(destroyedType);
+                if (killScore > 0)
+                {
+                    m_gameplayRules.AddKillScore(killScore);
+                }
             }
         }
 
-        if (const auto contact = m_contactHandler.ConsumePlayerContact())
+ if (contact->source == SceneGameContactHandler::PlayerContactSource::Meteor)
+{
+    std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors =
+        FindMeteorsByEntity(m_meteorsManager.get(), contact->other);
+
+    const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
+    const std::optional<MeteorsSpace::MeteorsType> meteorsType = meteors
+        ? manifest.Resolve(meteors->GetTag())
+        : (contact->other ? manifest.Resolve(contact->other->GetTag()) : std::nullopt);
+
+    if (m_meteorsManager && meteors)
+    {
+        m_meteorsManager->Erase(meteors);
+    }
+
+    const int killScore = ResolveKillScore(meteorsType);
+    if (killScore > 0)
+    {
+        m_gameplayRules.AddKillScore(killScore);
+    }
+
+    if (!m_playerInvulnerable)
+    {
+        int damage = 1;
+        if (meteorsType)
         {
-            if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
+            switch (*meteorsType)
             {
-                if (contact->source == SceneGameContactHandler::PlayerContactSource::Meteor)
-                {
-                    std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), contact->other);
-                    if (m_meteorsManager && meteors)
-                    {
-                        m_meteorsManager->Erase(meteors);
-                    }
+            case MeteorsSpace::MeteorsType::Mercury:
+                damage = 3;
+                break;
+            case MeteorsSpace::MeteorsType::Meteor:
+                damage = 2;
+                break;
+            case MeteorsSpace::MeteorsType::Meteorite:
+                damage = 1;
+                break;
+            }
+        }
 
-                    if (!m_playerInvulnerable)
-                    {
-                        const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
-                        const std::optional<MeteorsSpace::MeteorsType> meteorsType = contact->other
-                            ? manifest.Resolve(contact->other->GetTag())
-                            : std::nullopt;
+        m_playerHp -= damage;
+        m_playerInvulnerable = true;
+        m_playerInvulnSeconds = 3.0f;
+        m_playerBlinkTimer = 0.0f;
+        m_playerBlinkAlpha = 0.35f;
 
-                        int damage = 1;
-                        if (meteorsType)
-                        {
-                            switch (*meteorsType)
-                            {
-                            case MeteorsSpace::MeteorsType::Mercury:
-                                damage = 3;
-                                break;
-                            case MeteorsSpace::MeteorsType::Meteor:
-                                damage = 2;
-                                break;
-                            case MeteorsSpace::MeteorsType::Meteorite:
-                                damage = 1;
-                                break;
-                            }
-                        }
+        if (m_playerHp <= 0)
+        {
+            SetStageState(StageState::TimeUp);
+        }
+    }
+}
 
-                        m_playerHp -= damage;
-                        m_playerInvulnerable = true;
-                        m_playerInvulnSeconds = 3.0f;
-                        m_playerBlinkTimer = 0.0f;
-                        m_playerBlinkAlpha = 0.35f;
-
-                        if (m_playerHp <= 0)
-                        {
-                            SetStageState(StageState::TimeUp);
-                        }
-                    }
-                }
                 else if (contact->source == SceneGameContactHandler::PlayerContactSource::Missile)
                 {
                     if (contact->other)
