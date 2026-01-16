@@ -3,6 +3,7 @@
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <limits>
 #include <filesystem>
 #include <memory>
@@ -213,6 +214,8 @@ namespace
 
         addOverride("base.fbx", "Assets/Texture/texture_diffuse.png");
         addOverride("assets/model/base.fbx", "Assets/Texture/texture_diffuse.png");
+        addOverride("missile.fbx", "Assets/Texture/Air to Air heat seeker_DefaultMaterial_BaseColor_sRGB.png");
+        addOverride("assets/model/missile.fbx", "Assets/Texture/Air to Air heat seeker_DefaultMaterial_BaseColor_sRGB.png");
 
         return overrides;
     }
@@ -300,6 +303,40 @@ namespace
         }
 
         return ResolveFallbackTexture(modelPath);
+    }
+
+    bool IsMissileModel(const std::string& modelPath)
+    {
+        const std::string normalized = NormalizeForKey(modelPath);
+        return normalized.find("missile.fbx") != std::string::npos;
+    }
+
+    void PreloadPbrTexturesForModel(const std::string& modelPath, ID3D11Device* device, TextureCache& textureCache)
+    {
+        if (!IsMissileModel(modelPath))
+        {
+            return;
+        }
+
+        const std::array<const char*, 5> kMissileTextures = {
+            "Assets/Texture/Air to Air heat seeker_DefaultMaterial_BaseColor_sRGB.png",
+            "Assets/Texture/Air to Air heat seeker_DefaultMaterial_Normal_Raw.png",
+            "Assets/Texture/Air to Air heat seeker_DefaultMaterial_Roughness_Raw.png",
+            "Assets/Texture/Air to Air heat seeker_DefaultMaterial_Metallic_Raw.png",
+            "Assets/Texture/Air to Air heat seeker_DefaultMaterial_Height_Raw.png"
+        };
+
+        for (const char* texturePath : kMissileTextures)
+        {
+            std::error_code ec;
+            if (!std::filesystem::exists(texturePath, ec) || ec)
+            {
+                continue;
+            }
+
+            std::wstring wfull(texturePath, texturePath + std::strlen(texturePath));
+            textureCache.Load(NormalizeForKey(texturePath), device, wfull);
+        }
     }
 
 
@@ -715,10 +752,15 @@ AssimpModelLorder::MakeMaterial(
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
     const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
+    const std::string modelPathForFallback = NormalizeSeparators(directory + modelFilename);
 
     if (!textureLoadingEnabled)
     {
         DebugLog::DebugMessage("[AssimpModelLoader] Texture loading disabled; materials will use null textures");
+    }
+    else
+    {
+        PreloadPbrTexturesForModel(modelPathForFallback, device, textureCache);
     }
 
     for (unsigned int i = 0; i < materials.size(); ++i)
@@ -726,8 +768,6 @@ AssimpModelLorder::MakeMaterial(
         DirectX::XMFLOAT4 diffuse;
         DirectX::XMFLOAT4 ambient;
         DirectX::XMFLOAT4 specular;
-
-        const std::string modelPathForFallback = NormalizeSeparators(directory + modelFilename);
 
         aiColor3D col;
         float shininess = 0.0f;

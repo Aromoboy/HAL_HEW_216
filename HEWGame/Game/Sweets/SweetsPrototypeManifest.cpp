@@ -139,6 +139,7 @@ namespace SweetsSpace
 
         RegisterExtra("Fairy", "Assets/Model/base.fbx", "Fighter jet prototype");
         RegisterExtraAlias("Fairy", "Player");
+        RegisterExtra("Missile", "Assets/Model/Missile.fbx", "Air-to-air heat seeker missile model");
     }
 
     void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description,
