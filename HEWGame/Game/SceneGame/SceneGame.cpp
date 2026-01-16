@@ -729,7 +729,7 @@ void SceneGame::OnEnter()
     // BGMを再生（ループあり、音量1%）
     if (auto* sound = SoundManagerEX::GetInstance())
     {
-        sound->PlaySoundEX("Assets/Audio/BGM_GameScene.ogg", true, 0.01f);  // ループ有効
+        sound->PlaySoundEX("Assets/Audio/BGM_GameScene.ogg", true, 0.5f);  // ループ有効
     }
 }
 
