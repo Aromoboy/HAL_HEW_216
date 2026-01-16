@@ -101,6 +101,10 @@ namespace MeteorsSpace
         float m_autoBurstIntervalFactor{ 0.0f };
         int m_autoSimultaneousIncrement{ 0 };
         int m_autoSimultaneousCap{ 0 };
+        float m_growthElapsedSeconds{ 0.0f };
+        float m_growthIntervalSeconds{ 0.0f };
+        int m_growthStep{ 0 };
+        int m_growthStepsApplied{ 0 };
         std::mt19937 m_random;
         bool m_pendingTopUpAfterDrop{ false };
 

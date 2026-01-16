@@ -52,6 +52,8 @@ namespace
     constexpr int kAutoSimultaneousIncrement = 1;
     constexpr int kAutoSimultaneousCap = 6;
     constexpr float kMinimumAutoGrowthFactor = 0.01f;
+    constexpr float kDefaultGrowthIntervalSeconds = 20.0f;
+    constexpr int kDefaultGrowthStep = 1;
     constexpr float kDefaultAutoGrowthFactor = 0.9f;
     constexpr int kDefaultAutoSimultaneousIncrement = 1;
     constexpr int kDefaultAutoSimultaneousCap = 6;
@@ -73,6 +75,20 @@ namespace
     int SanitizeSimultaneousCap(int value, int fallback = kDefaultAutoSimultaneousCap)
     {
         return (value > 0) ? value : fallback;
+    }
+
+    float SanitizeGrowthIntervalSeconds(float value, float fallback = kDefaultGrowthIntervalSeconds)
+    {
+        if (!(value > 0.0f))
+        {
+            return fallback;
+        }
+        return value;
+    }
+
+    int SanitizeGrowthStep(int value, int fallback = kDefaultGrowthStep)
+    {
+        return (value >= 0) ? value : fallback;
     }
 
     std::string TrimToken(const std::string& value)
@@ -250,6 +266,8 @@ namespace MeteorsSpace
         , m_autoBurstIntervalFactor(kAutoBurstIntervalFactor)
         , m_autoSimultaneousIncrement(kAutoSimultaneousIncrement)
         , m_autoSimultaneousCap(kAutoSimultaneousCap)
+        , m_growthIntervalSeconds(kDefaultGrowthIntervalSeconds)
+        , m_growthStep(kDefaultGrowthStep)
         , m_random(std::random_device{}())
         , m_liveMeteorsCap(kDefaultLiveMeteorsCap)
     {
@@ -284,14 +302,26 @@ namespace MeteorsSpace
             return;
         }
         const auto& config = m_phaseConfigs[m_activePhaseConfigIndex];
+
+        if (m_growthIntervalSeconds > 0.0f && m_growthStep > 0)
+        {
+            m_growthElapsedSeconds += deltaSeconds;
+            const int newSteps = static_cast<int>(m_growthElapsedSeconds / m_growthIntervalSeconds);
+            if (newSteps > 0)
+            {
+                m_growthElapsedSeconds -= m_growthIntervalSeconds * static_cast<float>(newSteps);
+                m_growthStepsApplied += newSteps;
+            }
+        }
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
         const int batchTarget = std::max(1, config.simultaneousSpawnCount);
         const int simultaneousTarget = std::max(1, config.simultaneousLiveTarget);
+        const int growthBonus = std::max(0, m_growthStepsApplied * m_growthStep);
 
-        m_simultaneousLiveTarget = simultaneousTarget;
-        m_batchStackTarget = batchTarget;
+        m_simultaneousLiveTarget = std::max(1, simultaneousTarget + growthBonus);
+        m_batchStackTarget = std::max(1, batchTarget + growthBonus);
 
         if (!m_batchCoolingDown && m_stackedInBatch >= m_batchStackTarget)
         {
@@ -403,6 +433,8 @@ namespace MeteorsSpace
         }
 
         m_phaseConfigs.clear();
+        m_growthIntervalSeconds = kDefaultGrowthIntervalSeconds;
+        m_growthStep = kDefaultGrowthStep;
         bool parseError = false;
         std::string line;
         std::unordered_set<std::string> registeredKindsNormalized;
@@ -592,6 +624,29 @@ namespace MeteorsSpace
                         parseError = true;
                     }
                 }
+                else if (normalizedKey == "growth_interval_seconds" || normalizedKey == "growthintervalseconds")
+                {
+                    float intervalSeconds = 0.0f;
+                    if (TryParseFloat(value, &intervalSeconds))
+                    {
+                        m_growthIntervalSeconds = SanitizeGrowthIntervalSeconds(intervalSeconds);
+                    }
+                    else
+                    {
+                        parseError = true;
+                    }
+                }
+                else if (normalizedKey == "growth_step" || normalizedKey == "growthstep")
+                {
+                    try
+                    {
+                        m_growthStep = SanitizeGrowthStep(std::stoi(value));
+                    }
+                    catch (const std::exception&)
+                    {
+                        parseError = true;
+                    }
+                }
                 else if (normalizedKey == "spawn_origin_offset")
                 {
                     float3 offset{};
@@ -685,6 +740,8 @@ namespace MeteorsSpace
         m_batchCoolingDown = false;
         m_batchStackTarget = std::max(1, m_batchStackTarget);
         m_simultaneousLiveTarget = std::max(1, m_simultaneousLiveTarget);
+        m_growthElapsedSeconds = 0.0f;
+        m_growthStepsApplied = 0;
         m_pendingTopUpAfterDrop = false;
         if (!m_spawnQueue.empty())
         {
