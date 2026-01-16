@@ -385,6 +385,11 @@ void PowerUpRenderer::DrawBackground(const CameraSpace::ICamera& camera)
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
+	if (!texture)
+	{
+		return;
+	}
+
 	// 各マトリクスと描画用のパラメーター
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
@@ -419,6 +424,11 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
+	if (!texture)
+	{
+		return;
+	}
+
 	// 各マトリクスと描画用のパラメーター
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
@@ -453,6 +463,11 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
+	if (!texture)
+	{
+		return;
+	}
+
 	// 各マトリクスと描画用のパラメーター
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
