@@ -2757,6 +2757,7 @@ namespace SceneGameConfig
                 << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
                 << ", creamGlueBreakForce=" << settings.creamGlueBreakForce
                 << ", creamGlueBreakImpulse=" << settings.creamGlueBreakImpulse
+                << ", meteorRepulseImpulse=" << settings.meteorRepulseImpulse
                 << ").\n";
             ::DebugTrace(oss.str());
             return settings;
@@ -2945,6 +2946,10 @@ namespace SceneGameConfig
                 {
                     settings.creamGlueBreakImpulse = std::max(0.0f, std::stof(value));
                 }
+                else if (key == "meteor_repulse_impulse" || key == "meteorRepulseImpulse")
+                {
+                    settings.meteorRepulseImpulse = std::max(0.0f, std::stof(value));
+                }
                 else if (key == "creamGlueImpactImpulseThreshold")
                 {
                     settings.creamGlueBreakImpulse = std::max(0.0f, std::stof(value));
@@ -3011,6 +3016,7 @@ namespace SceneGameConfig
             << ", creamGlueMaxSpeed=" << settings.creamGlueMaxSpeed
             << ", creamGlueBreakForce=" << settings.creamGlueBreakForce
             << ", creamGlueBreakImpulse=" << settings.creamGlueBreakImpulse
+            << ", meteorRepulseImpulse=" << settings.meteorRepulseImpulse
             << ").\n";
         ::DebugTrace(oss.str());
         return settings;

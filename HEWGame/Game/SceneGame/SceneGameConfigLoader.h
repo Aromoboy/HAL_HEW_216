@@ -34,6 +34,7 @@ namespace SceneGameConfig
         float creamGlueMaxSpeed = 0.0f;
         float creamGlueBreakForce = 0.0f;
         float creamGlueBreakImpulse = 0.0f;
+        float meteorRepulseImpulse = 0.0f;
     };
 
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);

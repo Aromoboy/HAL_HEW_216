@@ -186,6 +186,7 @@ namespace Systems
         m_tuning.creamGlueMaxSpeed = std::max(0.0f, tuning.creamGlueMaxSpeed);
         m_tuning.creamGlueBreakForce = std::max(0.0f, tuning.creamGlueBreakForce);
         m_tuning.creamGlueBreakImpulse = std::max(0.0f, tuning.creamGlueBreakImpulse);
+        m_tuning.meteorRepulseImpulse = std::max(0.0f, tuning.meteorRepulseImpulse);
         m_tuning.maxStepDt = (std::isfinite(tuning.maxStepDt) && tuning.maxStepDt > 0.0f)
             ? tuning.maxStepDt
             : (1.0f / 60.0f);
