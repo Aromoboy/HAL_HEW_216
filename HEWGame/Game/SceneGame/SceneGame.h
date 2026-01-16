@@ -12,7 +12,6 @@
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
 #include "GameplayRulesSystem.h"
-#include "GuidelineSystem.h"
 #include "PlayerController.h"
 #include "SceneGameContactHandler.h"
 #include "ModelRender.h"
@@ -93,7 +92,6 @@ public:
     Core::UpdateScheduler& GetScheduler() override;
     Core::Input* GetInput() override;
     Core::StepTimer* GetTimer() override;
-    bool IsOsara(const StageObject& obj);
 
 private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
@@ -107,7 +105,6 @@ private:
     void OnStageClear();
     void OnStageFail();
     void ResetPlaySession();
-    void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
     void Initialize(const Stage::StageData& stageData);
@@ -136,7 +133,6 @@ protected:
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     GameplayRulesSystem m_gameplayRules;
-    GuidelineSystem m_guidelineSystem;
     void BroadcastPhaseAdvance(int newPhase);
     void ForwardSweetsPhaseChange(int newPhase);
     StageState m_stageState = StageState::Intro;

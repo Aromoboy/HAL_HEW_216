@@ -21,13 +21,6 @@ struct StageObject
     std::shared_ptr<ModelDX> model;
     std::string colliderPresetId;
     std::string materialKey;
-
-    bool IsOsara = false;
-    float swaiTime = 0.0f;
-    //���M�̗h��
-    b2Vec2 OsaraSwayingpower{0.0f, 0.75f};
-    //�h���O�̌��̍��W
-    float baseY = 0.0f;
     std::shared_ptr<Entities::PhysicalEntity> physicsEntity;
 };
 

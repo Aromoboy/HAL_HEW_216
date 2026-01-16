@@ -4,8 +4,6 @@
 #include <Windows.h>
 
 #include <algorithm>
-#include <cmath>
-#include <Xinput.h>
 
 #ifndef VK_A
 #define VK_A 0x41
@@ -21,21 +19,14 @@
 #endif
 
 
-namespace
-{
-    constexpr float kAxisTriggerThreshold = 0.15f;
-}
-
 namespace Core
 {
     namespace
     {
-        Binding MakeBinding(int key, int btn, int axis, float sign)
+        Binding MakeBinding(int key, float sign)
         {
             Binding binding{};
             binding.key = key;
-            binding.btn = btn;
-            binding.axis = axis;
             binding.sign = sign;
             return binding;
         }
@@ -43,23 +34,22 @@ namespace Core
 
     InputMap::InputMap()
     {
-        m_bindings[ActionId::MoveX] = MakeBinding(0, 0, 0, 1.0f);
-        m_bindings[ActionId::RotateYaw] = MakeBinding(0, 0, 2, 1.0f);
-        m_bindings[ActionId::Drop] = MakeBinding('Q', 0, -1, 1.0f);
-        m_bindings[ActionId::Confirm] = MakeBinding(VK_RETURN, 0, -1, 1.0f);
-        m_bindings[ActionId::Cancel] = MakeBinding(VK_ESCAPE, 0, -1, 1.0f);
-        m_bindings[ActionId::Pause] = MakeBinding(VK_SPACE, 0, -1, 1.0f);
-        m_bindings[ActionId::Retry] = MakeBinding('R', 0, -1, 1.0f);
-        m_bindings[ActionId::DebugConsole] = MakeBinding(VK_F1, 0, -1, 1.0f);
-        m_bindings[ActionId::DebugToggle] = MakeBinding(VK_F5, 0, -1, 1.0f);
-        m_bindings[ActionId::ToggleFullscreen] = MakeBinding(VK_F11, 0, -1, 1.0f);
-        m_bindings[ActionId::Confirm] = MakeBinding(VK_RETURN, XINPUT_GAMEPAD_A, -1, 1.0f);
-        m_bindings[ActionId::CameraHeightToggle] = MakeBinding(VK_SPACE, 0, -1, 1.0f);
-        m_bindings[ActionId::SpeedBoost] = MakeBinding('1', 0, -1, 1.0f);
-        m_bindings[ActionId::SpeedReset] = MakeBinding('2', 0, -1, 1.0f);
-        m_bindings[ActionId::ColliderNudgeUp] = MakeBinding(VK_F2, 0, -1, 1.0f);
-        m_bindings[ActionId::ColliderNudgeDown] = MakeBinding(VK_F3, 0, -1, 1.0f);
-        m_bindings[ActionId::MoveMenu] = MakeBinding(0, 0, 2, 1.0f);
+        m_bindings[ActionId::MoveX] = MakeBinding(0, 1.0f);
+        m_bindings[ActionId::RotateYaw] = MakeBinding(0, 1.0f);
+        m_bindings[ActionId::Drop] = MakeBinding('Q', 1.0f);
+        m_bindings[ActionId::Confirm] = MakeBinding(VK_RETURN, 1.0f);
+        m_bindings[ActionId::Cancel] = MakeBinding(VK_ESCAPE, 1.0f);
+        m_bindings[ActionId::Pause] = MakeBinding(VK_SPACE, 1.0f);
+        m_bindings[ActionId::Retry] = MakeBinding('R', 1.0f);
+        m_bindings[ActionId::DebugConsole] = MakeBinding(VK_F1, 1.0f);
+        m_bindings[ActionId::DebugToggle] = MakeBinding(VK_F5, 1.0f);
+        m_bindings[ActionId::ToggleFullscreen] = MakeBinding(VK_F11, 1.0f);
+        m_bindings[ActionId::CameraHeightToggle] = MakeBinding(VK_SPACE, 1.0f);
+        m_bindings[ActionId::SpeedBoost] = MakeBinding('1', 1.0f);
+        m_bindings[ActionId::SpeedReset] = MakeBinding('2', 1.0f);
+        m_bindings[ActionId::ColliderNudgeUp] = MakeBinding(VK_F2, 1.0f);
+        m_bindings[ActionId::ColliderNudgeDown] = MakeBinding(VK_F3, 1.0f);
+        m_bindings[ActionId::MoveMenu] = MakeBinding(0, 1.0f);
 
         m_axisKeys[ActionId::MoveX] = { VK_A, VK_D };
         m_axisKeys[ActionId::RotateYaw] = { VK_S, VK_W };
@@ -81,7 +71,7 @@ namespace Core
         m_actionKeys[ActionId::ColliderNudgeDown] = { VK_F3 };
     }
 
-    float InputMap::GetAxis(ActionId action, const Input& input, const Gamepad& gamepad) const
+    float InputMap::GetAxis(ActionId action, const Input& input) const
     {
         float axisValue = 0.0f;
 
@@ -105,22 +95,12 @@ namespace Core
             {
                 axisValue += binding->sign * (input.IsKeyDown(static_cast<BYTE>(binding->key)) ? 1.0f : 0.0f);
             }
-
-            if (binding->btn != 0)
-            {
-                axisValue += binding->sign * (gamepad.IsButtonDown(static_cast<WORD>(binding->btn)) ? 1.0f : 0.0f);
-            }
-
-            if (binding->axis >= 0)
-            {
-                axisValue += GetAxisValue(binding->axis, gamepad, binding->sign);
-            }
         }
 
         return std::clamp(axisValue, -1.0f, 1.0f);
     }
 
-    InputMap::ActionState InputMap::GetState(ActionId action, const Input& input, const Gamepad& gamepad) const
+    InputMap::ActionState InputMap::GetState(ActionId action, const Input& input) const
     {
         bool current = false;
         bool previous = false;
@@ -133,18 +113,6 @@ namespace Core
                 previous |= input.WasKeyDown(static_cast<BYTE>(binding->key));
             }
 
-            if (binding->btn != 0)
-            {
-                current |= gamepad.IsButtonDown(static_cast<WORD>(binding->btn));
-                previous |= gamepad.WasButtonDown(static_cast<WORD>(binding->btn));
-            }
-
-            if (binding->axis >= 0)
-            {
-                const float axis = GetAxisValue(binding->axis, gamepad, binding->sign);
-                current |= std::fabs(axis) >= kAxisTriggerThreshold;
-                previous |= std::fabs(GetAxisValue(binding->axis, gamepad.GetPreviousState(), binding->sign)) >= kAxisTriggerThreshold;
-            }
         }
 
         const auto extra = m_actionKeys.find(action);
@@ -160,19 +128,19 @@ namespace Core
         return ActionState{ current, previous };
     }
 
-    bool InputMap::IsPressed(ActionId action, const Input& input, const Gamepad& gamepad) const
+    bool InputMap::IsPressed(ActionId action, const Input& input) const
     {
-        return GetState(action, input, gamepad).current;
+        return GetState(action, input).current;
     }
 
-    bool InputMap::WasPressed(ActionId action, const Input& input, const Gamepad& gamepad) const
+    bool InputMap::WasPressed(ActionId action, const Input& input) const
     {
-        return GetState(action, input, gamepad).previous;
+        return GetState(action, input).previous;
     }
 
-    bool InputMap::Is(ActionId action, const Input& input, const Gamepad& gamepad) const
+    bool InputMap::Is(ActionId action, const Input& input) const
     {
-        const auto state = GetState(action, input, gamepad);
+        const auto state = GetState(action, input);
         if (state.current && !state.previous)
         {
         }
@@ -192,35 +160,6 @@ namespace Core
             return nullptr;
         }
         return &it->second;
-    }
-
-    float InputMap::GetAxisValue(int axis, const Gamepad& gamepad, float sign) const
-    {
-        float value = 0.0f;
-        switch (axis)
-        {
-        case 0: value = gamepad.AxisLX(); break;
-        case 1: value = gamepad.AxisRX(); break;
-        case 2: value = gamepad.AxisLY(); break;
-        case 3: value = gamepad.AxisRY(); break;
-        default: value = 0.0f; break;
-        }
-        return value * sign;
-    }
-
-    float InputMap::GetAxisValue(int axis, const XINPUT_STATE& state, float sign) const
-    {
-        constexpr float kStickNorm = 32767.0f;
-        float value = 0.0f;
-        switch (axis)
-        {
-        case 0: value = state.Gamepad.sThumbLX / kStickNorm; break;
-        case 1: value = state.Gamepad.sThumbRX / kStickNorm; break;
-        case 2: value = state.Gamepad.sThumbLY / kStickNorm; break;
-        case 3: value = state.Gamepad.sThumbRY / kStickNorm; break;
-        default: value = 0.0f; break;
-        }
-        return value * sign;
     }
 
 }

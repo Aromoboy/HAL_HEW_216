@@ -23,7 +23,6 @@ struct HudDisplayData
     float moveSpeedUnitsPerSecond = 0.0f;
     int sweetsCount = 0;
     bool showGlueDebug = false;
-    int glueActiveCreamAnchors = 0;
     int glueActiveFruitGlue = 0;
     int glueFrozenFruit = 0;
     float glueCreatePerSec = 0.0f;

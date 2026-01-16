@@ -14,7 +14,6 @@
 #include "BaseCamera.h"
 #include "PerspectiveCamera.h"
 #include "SweetsManager.h"
-#include "Sweets/BaseSweets.h"
 #include "Render/Model.h"
 #include "Render/ModelBounds.h"
 #include "Entities/Player.h"
@@ -77,8 +76,6 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr float kGuidelineTimeBonusSeconds = 5.0f;
-        constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
@@ -87,19 +84,6 @@ namespace
             settings.lockYawPitch = true;
             return settings;
         }
-
-        bool ReadOsaraColliderDebugFlag()
-        {
-                const char* value = std::getenv("r.DebugOsaraColliders");
-                if (!value)
-                {
-                        return true;
-                }
-
-                return std::atoi(value) != 0;
-        }
-
-        bool g_RegisterOsaraColliders = ReadOsaraColliderDebugFlag();
 
         bool IsFiniteFloat(float value)
         {
@@ -407,20 +391,6 @@ bool SceneGame::Load(Core::Input& input)
     {
         m_blobShadowRenderer->SetSettings(m_blobShadowSettings);
     }
-    GuidelineSystem::Config guidelineConfig{};
-    guidelineConfig.heightMeters = composition->guidelineHeightMeters;
-    guidelineConfig.stepMeters = composition->guidelineStepMeters;
-    guidelineConfig.thicknessPixels = composition->guidelineThicknessPixels;
-    guidelineConfig.widthPaddingWorld = composition->guidelineWidthPaddingWorld;
-    guidelineConfig.zOffset = composition->guidelineZOffset;
-    guidelineConfig.spinAxis = composition->guidelineSpinAxis;
-    guidelineConfig.spinSpeedDegPerSec = composition->guidelineSpinSpeedDegPerSec;
-    guidelineConfig.cooldownDurationSeconds = composition->guidelineCooldownDurationSeconds;
-    guidelineConfig.cooldownRemainingSeconds = composition->guidelineCooldownRemainingSeconds;
-    guidelineConfig.centerX = composition->guidelineCenterX;
-    guidelineConfig.widthWorld = composition->guidelineWidthWorld;
-    guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
-    m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
 
     GameplayRulesSystem::Config gameplayRulesConfig{};
     gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
@@ -513,17 +483,6 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
-
-#if defined(_DEBUG)
-    {
-        std::ostringstream debugFlagLog;
-        debugFlagLog << kLogPrefix
-            << "[ColliderDebug] Stage colliders r.DebugOsaraColliders="
-            << (g_RegisterOsaraColliders ? 1 : 0)
-            << " (default=1). Toggle overlay with F5 (r.DebugDrawEnabled) and colliders with F4 (r.DebugColliders).\n";
-        DebugTrace(debugFlagLog.str());
-    }
-#endif
 
     RenderTarget* pRTV = GetDefaultRTV();
     DepthStencil* pDSV = GetDefaultDSV();
@@ -935,7 +894,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
     }
-    m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
     if (m_sweetsManager)
@@ -953,26 +911,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     const auto& platform = m_stageData.GetPlatform(0);
     const float stageFloorY = platform.center.y;
     float deltaTime = ctx.timer.DeltaTime();
-
-    for (auto& obj : m_stageObjects)
-    {
-        //Osara以外のモデルスキップ
-        if (!IsOsara(obj))
-        {
-            continue;
-        }
-
-        obj.swaiTime += deltaTime;
-
-        obj.transform.position.y
-            = obj.baseY + std::sin(obj.swaiTime) * obj.OsaraSwayingpower.y;
-
-        //当たり判定も動かす
-        if (obj.physicsEntity)
-        {
-            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
-        }
-    }
 
     m_playerController.UpdatePlayerBounds({
         player.get(),
@@ -1008,21 +946,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             SetStageState(StageState::Playing);
         }
         fRads.z += 0.001f;
-
-        const GuidelineSystem::UpdateInput guidelineInput{
-            m_sweetsManager.get(),
-            kGuidelineTimeBonusSeconds,
-            kGuidelineGlobalCooldownSeconds,
-            DebugTrace,
-            kLogPrefix
-        };
-        GuidelineSystem::UpdateResult guidelineResult =
-            m_guidelineSystem.Update(guidelineInput, {});
-        m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
-        if (guidelineResult.guidelineAdvanced)
-        {
-            UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
-        }
         break;
     }
     case StageState::TimeUp:
@@ -1074,7 +997,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
             {
                 uiData.hud.showGlueDebug = true;
-                uiData.hud.glueActiveCreamAnchors = glueSnapshot.activeCreamAnchors;
                 uiData.hud.glueActiveFruitGlue = glueSnapshot.activeFruitGlue;
                 uiData.hud.glueFrozenFruit = glueSnapshot.frozenFruit;
                 uiData.hud.glueCreatePerSec = glueSnapshot.createPerSec;
@@ -1110,13 +1032,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         return;
     }
 
-}
-
-
-void SceneGame::ResetGuidelineHeight()
-{
-    m_guidelineSystem.ResetHeight(m_stageData.GetGuidelineHeight(),
-                                  m_stageData.GetGuidelineStep());
 }
 
 
@@ -1251,12 +1166,9 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
             drawState(SweetsSpace::SweetsState::Carried);
         }
 
-        if (g_RegisterOsaraColliders)
+        for (const auto& entity : m_stagePhysicsEntities)
         {
-            for (const auto& entity : m_stagePhysicsEntities)
-            {
-                drawEntity(entity.get());
-            }
+            drawEntity(entity.get());
         }
     }
 
@@ -1316,28 +1228,9 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
         {
             const float stagePlaneZ = (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ)) ? *m_stagePlaneZ : 0.0f;
-            const DirectX::XMFLOAT4 anchorColor(1.0f, 0.85f, 0.2f, 0.95f);
             const DirectX::XMFLOAT4 linkColor(0.2f, 1.0f, 0.3f, 0.85f);
             const Color creamColor = MakeColor(0.2f, 0.6f, 1.0f, 0.9f);
             const Color fruitColor = MakeColor(0.8f, 0.3f, 1.0f, 0.9f);
-
-            const auto drawCross = [&](const b2Vec2& point, float size, float z)
-            {
-                const DirectX::XMFLOAT3 center(point.x, point.y, z);
-                Geometory::AddLine(
-                    DirectX::XMFLOAT3(center.x - size, center.y, center.z),
-                    DirectX::XMFLOAT3(center.x + size, center.y, center.z),
-                    anchorColor);
-                Geometory::AddLine(
-                    DirectX::XMFLOAT3(center.x, center.y - size, center.z),
-                    DirectX::XMFLOAT3(center.x, center.y + size, center.z),
-                    anchorColor);
-            };
-
-            for (const b2Vec2& anchor : glueSnapshot.creamAnchors)
-            {
-                drawCross(anchor, 0.15f, stagePlaneZ);
-            }
 
             for (const auto& link : glueSnapshot.fruitLinks)
             {
@@ -1481,7 +1374,20 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                     DebugTrace(std::string(kLogPrefix) + "描画中: " + obj.modelPath + "\n");
 #endif
 
-                    m_renderer->Draw(*obj.model, obj.transform, activeCamera.get(), nullptr);
+                    Transform renderTransform = obj.transform;
+                    
+                    // 回転アニメーションを適用
+                    if (obj.spinEnabled)
+                    {
+                        if (obj.spinAxis.y > 0.5f)  // Y軸回転
+                            renderTransform.rotation.y += obj.currentRotation;
+                        else if (obj.spinAxis.x > 0.5f)  // X軸回転
+                            renderTransform.rotation.x += obj.currentRotation;
+                        else if (obj.spinAxis.z > 0.5f)  // Z軸回転
+                            renderTransform.rotation.z += obj.currentRotation;
+                    }
+
+                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get());
                 }
                 else
                 {
@@ -1881,7 +1787,6 @@ void SceneGame::SetStageState(StageState newState)
     }
 
     m_stageState = newState;
-    ResetGuidelineHeight();
 
     switch (newState)
     {
@@ -1997,8 +1902,6 @@ void SceneGame::ResetPlaySession()
     }
 
     m_gameplayRules.ResetSession();
-    m_guidelineSystem.ResetSession();
-    ResetGuidelineHeight();
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
@@ -2055,10 +1958,4 @@ void SceneGame::Initialize(const Stage::StageData& stageData)
     oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
         << " second=" << m_heightBonusSeconds << "\n";
     ::DebugTrace(oss.str());
-}
-
-//Osara探す？やつ
-bool SceneGame::IsOsara(const StageObject& obj)
-{
-    return obj.modelPath.find("osara") != std::string::npos;
 }
