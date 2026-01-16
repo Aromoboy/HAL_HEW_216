@@ -32,6 +32,11 @@
 
 AssimpModelLorder::AssimpModelLorder() = default;
 
+AssimpModelLorder::AssimpModelLorder(std::chrono::milliseconds importTimeout)
+    : m_importTimeout(importTimeout)
+{
+}
+
 namespace
 {
     std::string NormalizePath(std::string value)
@@ -324,6 +329,21 @@ namespace
         std::string error;
     };
 
+    std::chrono::milliseconds CalculateImportTimeout(std::chrono::milliseconds baseTimeout, std::uintmax_t fileSizeBytes)
+    {
+        if (fileSizeBytes == 0)
+        {
+            return baseTimeout;
+        }
+
+        constexpr std::uintmax_t kBytesPerMegabyte = 1024 * 1024;
+        constexpr auto kExtraPerMb = std::chrono::milliseconds(250);
+        const std::uintmax_t megabytes = std::max<std::uintmax_t>(1, fileSizeBytes / kBytesPerMegabyte);
+        const auto sizeBased = baseTimeout + std::chrono::milliseconds(
+            static_cast<long long>(kExtraPerMb.count() * megabytes));
+        return std::max(baseTimeout, sizeBased);
+    }
+
 }
 
 // モデル読み込み
@@ -371,11 +391,13 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             return result;
         });
 
-    constexpr auto kImportTimeout = std::chrono::milliseconds(400);
-    if (future.wait_for(kImportTimeout) == std::future_status::timeout)
+    const auto importTimeout = CalculateImportTimeout(m_importTimeout, size);
+    if (future.wait_for(importTimeout) == std::future_status::timeout)
     {
-        DebugLog::DebugMessage(
-            "[AssimpModelLoader][ERROR] [CHECKPOINT B] インポートがタイムアウト 取り消して終了 path=" + path);
+        std::ostringstream oss;
+        oss << "[AssimpModelLoader][ERROR] [CHECKPOINT B] インポートがタイムアウト 取り消して終了 path=" << path
+            << " timeoutMs=" << importTimeout.count() << " fileSizeBytes=" << size;
+        DebugLog::DebugMessage(oss.str());
 
         std::thread([f = std::move(future)]() mutable
             {
@@ -396,7 +418,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             << " マテリアル=" << (pScene ? pScene->mNumMaterials : 0);
         if (!pScene)
         {
-            oss << " error='" << importResult.error << "'";
+            oss << " error='" << importResult.error << "' (timeout=false)";
         }
         DebugLog::DebugMessage(oss.str());
     }

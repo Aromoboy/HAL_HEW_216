@@ -47,6 +47,11 @@ namespace SceneGameConfig
         bool enableFxaa = false;
     };
 
+    struct ModelImportSettings
+    {
+        int importTimeoutMs = 2000;
+    };
+
     enum class RenderFadeEasing
     {
         Linear,
