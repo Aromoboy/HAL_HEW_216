@@ -95,6 +95,7 @@ public:
 private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
     void UpdateCameraBoundsForPhase(float heightMeters);
+    void UpdateBackgroundScrollOriginForWrap(float cameraY);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
     void DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
@@ -140,6 +141,9 @@ protected:
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
+    std::optional<float> m_backgroundCameraLastY = std::nullopt;
+    std::optional<float> m_cameraWrapMinY = std::nullopt;
+    std::optional<float> m_cameraWrapMaxY = std::nullopt;
     float m_heightBonusThresholdMeters = 0.0f;
     float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};

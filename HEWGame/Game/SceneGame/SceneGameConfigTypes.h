@@ -127,6 +127,7 @@ namespace SceneGameConfig
         float fovDegrees = 45.0f;
         float yawDegrees = 0.0f;
         float pitchDegrees = -10.0f;
+        bool wrapY = false;
         CameraClampSettings clamp{};
     };
 

@@ -44,6 +44,8 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_inheritRotation(true)
         , m_minYClamp(std::nullopt)
         , m_maxYClamp(std::nullopt)
+        , m_minYWrap(std::nullopt)
+        , m_maxYWrap(std::nullopt)
         , m_scrollY(0.0f)
         , m_hasScrollY(false)
 {
@@ -227,9 +229,30 @@ void CameraRig::SetClampY(std::optional<float> minY, std::optional<float> maxY)
         m_maxYClamp = maxY;
 }
 
+void CameraRig::SetWrapY(std::optional<float> minY, std::optional<float> maxY)
+{
+        m_minYWrap = minY;
+        m_maxYWrap = maxY;
+}
+
 float CameraRig::ClampScrollY(float scrollY) const
 {
         float clamped = scrollY;
+        if (m_minYWrap && m_maxYWrap && std::isfinite(*m_minYWrap) && std::isfinite(*m_maxYWrap))
+        {
+                const float minY = std::min(*m_minYWrap, *m_maxYWrap);
+                const float maxY = std::max(*m_minYWrap, *m_maxYWrap);
+                const float range = maxY - minY;
+                if (range > 0.0f)
+                {
+                        float offset = std::fmod(clamped - minY, range);
+                        if (offset < 0.0f)
+                        {
+                                offset += range;
+                        }
+                        return minY + offset;
+                }
+        }
         if (m_minYClamp && std::isfinite(*m_minYClamp) && clamped < *m_minYClamp)
         {
                 clamped = *m_minYClamp;

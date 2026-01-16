@@ -2555,6 +2555,14 @@ namespace SceneGameConfig
                     settings.clamp.maxY = *parsed;
                 }
             }
+            else if (key == GameplayConfig::kCameraRigKeyWrapY)
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.wrapY = parsedValue;
+                }
+            }
             else if (key == GameplayConfig::kCameraRigKeyFollowSpeed)
             {
                 if (auto parsed = TryParseFloatToken(value))
