@@ -36,6 +36,7 @@ namespace MeteorsSpace
             std::optional<float> spawnHeightOffset = std::nullopt);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveMeteorsCap(int cap);
+        void SetCameraBounds(float minX, float maxX, float minY, float maxY);
         void NotifyPhaseChanged(int newPhase);
 
         int CountLiveMeteors() const;
@@ -86,6 +87,7 @@ namespace MeteorsSpace
         std::vector<float3> m_spawnOriginsPrimary;
         std::vector<float3> m_spawnOriginsSecondary;
         float m_spawnHeightOffset{ 0.0f };
+        float m_spawnCameraOffset{ 0.0f };
         bool m_nextSpawnUsesPrimary{ true };
         std::size_t m_spawnOriginCursorPrimary{ 0 };
         std::size_t m_spawnOriginCursorSecondary{ 0 };
@@ -107,6 +109,11 @@ namespace MeteorsSpace
         float3 m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f };
         float3 m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f };
         int m_liveMeteorsCap{ 0 };
+        bool m_hasCameraBounds{ false };
+        float m_cameraMinX{ 0.0f };
+        float m_cameraMaxX{ 0.0f };
+        float m_cameraMinY{ 0.0f };
+        float m_cameraMaxY{ 0.0f };
         bool m_warnedMissingSpawnOrigins{ false };
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_spawnPausedDueToLiveMeteors{ false };

@@ -955,6 +955,17 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_meteorsManager.get(),
         ctx.dt
     });
+    if (m_meteorsManager)
+    {
+        float screenMinX = 0.0f;
+        float screenMaxX = 0.0f;
+        float screenMinY = 0.0f;
+        float screenMaxY = 0.0f;
+        if (m_playerController.TryGetCachedPlayerBounds(screenMinX, screenMaxX, screenMinY, screenMaxY))
+        {
+            m_meteorsManager->SetCameraBounds(screenMinX, screenMaxX, screenMinY, screenMaxY);
+        }
+    }
     if (player)
     {
         if (const auto wrapEvent = player->ConsumeWrapEvent())

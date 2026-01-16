@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cctype>
 #include <fstream>
 #include <iomanip>
@@ -621,6 +622,18 @@ namespace MeteorsSpace
                         parseError = true;
                     }
                 }
+                else if (normalizedKey == "camera_spawn_offset" || normalizedKey == "spawn_camera_offset")
+                {
+                    float offset = 0.0f;
+                    if (TryParseFloat(value, &offset))
+                    {
+                        m_spawnCameraOffset = std::max(0.0f, offset);
+                    }
+                    else
+                    {
+                        parseError = true;
+                    }
+                }
             }
 
             if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
@@ -733,6 +746,20 @@ namespace MeteorsSpace
         {
             m_spawnPausedDueToLiveMeteors = false;
         }
+    }
+
+    void MeteorsSpawner::SetCameraBounds(float minX, float maxX, float minY, float maxY)
+    {
+        if (!(std::isfinite(minX) && std::isfinite(maxX) && std::isfinite(minY) && std::isfinite(maxY)))
+        {
+            return;
+        }
+
+        m_hasCameraBounds = true;
+        m_cameraMinX = std::min(minX, maxX);
+        m_cameraMaxX = std::max(minX, maxX);
+        m_cameraMinY = std::min(minY, maxY);
+        m_cameraMaxY = std::max(minY, maxY);
     }
 
     void MeteorsSpawner::NotifyPhaseChanged(int newPhase)
@@ -1330,6 +1357,14 @@ namespace MeteorsSpace
         const float xJitter = (s_flipSpawnSign ? 1.0f : -1.0f) * xJitterDist(m_random);
         transform.position.x += xJitter;
         transform.position.y += m_spawnHeightOffset;
+        if (m_hasCameraBounds && m_spawnCameraOffset > 0.0f)
+        {
+            const float midpointX = (m_cameraMinX + m_cameraMaxX) * 0.5f;
+            const bool spawnLeft = transform.position.x <= midpointX;
+            transform.position.x = spawnLeft
+                ? (m_cameraMinX - m_spawnCameraOffset)
+                : (m_cameraMaxX + m_spawnCameraOffset);
+        }
         transform.rotation = float3{ 0.0f, 0.0f, 0.0f };
         transform.scale = float3{ 1.0f, 1.0f, 1.0f };
 

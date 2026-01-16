@@ -53,6 +53,7 @@ namespace
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
+    constexpr float kOutOfViewTimeoutSeconds = 25.0f;
 
     float ComputeSpeedSq(const Entities::PhysicalEntity& entity)
     {
@@ -292,6 +293,7 @@ namespace MeteorsSpace
             MeteorsState state;
         };
 
+        const float deltaSeconds = std::max(0.0f, ctx.dt);
         std::vector<PendingStateChange> stateChanges;
         std::vector<std::shared_ptr<ActiveMeteors>> missedMeteors;
         const auto horizontalBounds = GetHorizontalBounds();
@@ -300,6 +302,11 @@ namespace MeteorsSpace
         if (!m_registry)
         {
             return;
+        }
+
+        if (!m_hasCameraBounds)
+        {
+            m_outOfViewSeconds.clear();
         }
 
         for (auto& entry : m_registry->MutableStateMap())
@@ -326,6 +333,7 @@ namespace MeteorsSpace
 
                 if (meteors->IsPendingDestroy())
                 {
+                    m_outOfViewSeconds.erase(meteors.get());
                     ++it;
                     continue;
                 }
@@ -338,6 +346,7 @@ namespace MeteorsSpace
                         << " から meteors ptr=" << meteors.get() << " を片付けたよ \n";
                     DebugTrace(oss.str());
 #endif
+                    m_outOfViewSeconds.erase(meteors.get());
                     m_registry->Lookup().erase(meteors);
                     it = meteorsList.erase(it);
                     continue;
@@ -347,32 +356,61 @@ namespace MeteorsSpace
 
                 if (!isCarried)
                 {
-                    bool usedFallbackBounds = false;
-                    bool wasOutOfBounds = false;
-                    const bool wrapped = WrapMeteorsHorizontally(
-                        *meteors,
-                        horizontalBounds,
-                        m_horizontalBoundsMargin,
-                        fallbackHorizontalLimit,
-                        &usedFallbackBounds,
-                        &wasOutOfBounds);
-                    if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
+                    if (m_hasCameraBounds)
                     {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "水平境界のフォールバックを使うね 幅制限="
-                            << fallbackHorizontalLimit << " (半幅＋マージン) \n";
-                        DebugTrace(oss.str());
-                        m_warnedMissingHorizontalBounds = true;
+                        meteors->SyncColliderBounds();
+                        const AABB bounds = meteors->GetAABB();
+                        const bool isVisible = !(bounds.max.x < m_cameraMinX
+                            || bounds.min.x > m_cameraMaxX
+                            || bounds.max.y < m_cameraMinY
+                            || bounds.min.y > m_cameraMaxY);
+                        if (!isVisible)
+                        {
+                            float& timer = m_outOfViewSeconds[meteors.get()];
+                            timer += deltaSeconds;
+                            if (timer >= kOutOfViewTimeoutSeconds)
+                            {
+                                m_outOfViewSeconds.erase(meteors.get());
+                                RemoveMeteorsEntry(meteors, DeleteReason::Miss, "OutOfViewDespawn", true, nullptr);
+                                ++it;
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            m_outOfViewSeconds.erase(meteors.get());
+                        }
                     }
 
-                    if (wasOutOfBounds)
+                    if (m_horizontalWrapEnabled)
                     {
-                        if (!wrapped)
+                        bool usedFallbackBounds = false;
+                        bool wasOutOfBounds = false;
+                        const bool wrapped = WrapMeteorsHorizontally(
+                            *meteors,
+                            horizontalBounds,
+                            m_horizontalBoundsMargin,
+                            fallbackHorizontalLimit,
+                            &usedFallbackBounds,
+                            &wasOutOfBounds);
+                        if (usedFallbackBounds && !m_warnedMissingHorizontalBounds)
                         {
-                            missedMeteors.push_back(meteors);
+                            std::ostringstream oss;
+                            oss << kLogPrefix << "水平境界のフォールバックを使うね 幅制限="
+                                << fallbackHorizontalLimit << " (半幅＋マージン) \n";
+                            DebugTrace(oss.str());
+                            m_warnedMissingHorizontalBounds = true;
                         }
-                        ++it;
-                        continue;
+
+                        if (wasOutOfBounds)
+                        {
+                            if (!wrapped)
+                            {
+                                missedMeteors.push_back(meteors);
+                            }
+                            ++it;
+                            continue;
+                        }
                     }
 
                     const MeteorsState desiredState = EvaluateState(*meteors, bucketState, *m_contacts);
@@ -464,6 +502,7 @@ namespace MeteorsSpace
 
                     m_registry->Lookup().erase(meteors);
                     m_pendingLateDeletion.erase(watched);
+                    m_outOfViewSeconds.erase(meteors.get());
                     it = meteorsList.erase(it);
                     ++removed;
                     continue;
@@ -532,6 +571,21 @@ namespace MeteorsSpace
         return std::make_pair(m_minHorizontalBound, m_maxHorizontalBound);
     }
 
+    void MeteorsLifecycle::SetCameraBounds(float minX, float maxX, float minY, float maxY)
+    {
+        if (!(std::isfinite(minX) && std::isfinite(maxX) && std::isfinite(minY) && std::isfinite(maxY)))
+        {
+            DebugTrace(std::string(kLogPrefix) + "有限値じゃないカメラ境界の更新は無視したよ \n");
+            return;
+        }
+
+        m_hasCameraBounds = true;
+        m_cameraMinX = std::min(minX, maxX);
+        m_cameraMaxX = std::max(minX, maxX);
+        m_cameraMinY = std::min(minY, maxY);
+        m_cameraMaxY = std::max(minY, maxY);
+    }
+
     void MeteorsLifecycle::Erase(const std::shared_ptr<ActiveMeteors>& meteors)
     {
         if (!meteors || !m_registry)
@@ -550,6 +604,7 @@ namespace MeteorsSpace
             return;
         }
 
+        m_outOfViewSeconds.erase(meteors.get());
         meteors->MarkPendingDestroy();
     }
 
@@ -573,6 +628,7 @@ namespace MeteorsSpace
 
         std::size_t staged = 0;
         std::size_t alreadyPending = 0;
+        m_outOfViewSeconds.clear();
 
         for (auto& entry : m_registry->MutableStateMap())
         {
@@ -826,6 +882,7 @@ namespace MeteorsSpace
             return;
         }
 
+        m_outOfViewSeconds.erase(meteors.get());
         const MeteorsState previousState = found->second;
         if (m_contacts)
         {

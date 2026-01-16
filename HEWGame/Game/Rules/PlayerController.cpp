@@ -230,12 +230,6 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     input.player->SetScreenBounds(minX, maxX, minY, maxY);
 
-    if (input.meteorsManager)
-    {
-        // Meteors wrap horizontally using the same camera-derived bounds as the player.
-        input.meteorsManager->SetHorizontalBounds(minX, maxX);
-    }
-
     m_cachedPlayerMinX = minX;
     m_cachedPlayerMaxX = maxX;
     m_cachedPlayerMinY = minY;

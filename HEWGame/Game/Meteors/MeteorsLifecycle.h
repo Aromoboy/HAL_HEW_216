@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "Core/IUpdatable.h"
@@ -42,6 +43,7 @@ namespace MeteorsSpace
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
+        void SetCameraBounds(float minX, float maxX, float minY, float maxY);
 
         void Erase(const std::shared_ptr<ActiveMeteors>& meteors);
         void ClearAllMeteors();
@@ -75,6 +77,13 @@ namespace MeteorsSpace
         float m_maxHorizontalBound{ 0.0f };
         float m_horizontalBoundsMargin{ 0.0f };
         bool m_warnedMissingHorizontalBounds{ false };
+        bool m_horizontalWrapEnabled{ false };
+        bool m_hasCameraBounds{ false };
+        float m_cameraMinX{ 0.0f };
+        float m_cameraMaxX{ 0.0f };
+        float m_cameraMinY{ 0.0f };
+        float m_cameraMaxY{ 0.0f };
+        std::unordered_map<ActiveMeteors*, float> m_outOfViewSeconds;
         std::unordered_set<ActiveMeteors*> m_registeredPhysicsBodies;
     };
 }
