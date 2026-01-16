@@ -131,6 +131,7 @@ namespace MeteorsSpace
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
         void SetPlayerWorldPosition(const float3& position);
+        void RegisterProjectileHit(const std::shared_ptr<ActiveMeteors>& meteors);
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
         bool HasSupportingContact(const ActiveMeteors& meteors, bool* foundationOnly = nullptr) const;
@@ -158,6 +159,7 @@ namespace MeteorsSpace
         float3 m_cachedPlayerPosition{ 0.0f, 0.0f, 0.0f };
         bool m_hasCachedPlayerPosition{ false };
         std::mt19937 m_random;
+        std::unordered_map<ActiveMeteors*, int> m_meteorsHitCounts;
     };
 
 }

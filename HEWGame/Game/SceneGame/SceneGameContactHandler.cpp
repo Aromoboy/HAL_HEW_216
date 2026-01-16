@@ -19,6 +19,17 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
                 m_meteorsManager->OnContactBegin(&a, &b, info);
             }
 
+            const bool aIsMissile = (a.GetTag() == "projectile_missile");
+            const bool bIsMissile = (b.GetTag() == "projectile_missile");
+            if (aIsMissile && b.GetCollisionLayer() == Collision::CollisionLayer::Meteors)
+            {
+                m_missileContact = MissileContactEvent{ &a, &b };
+            }
+            else if (bIsMissile && a.GetCollisionLayer() == Collision::CollisionLayer::Meteors)
+            {
+                m_missileContact = MissileContactEvent{ &b, &a };
+            }
+
             if (!m_playerEntity)
             {
                 return;
@@ -76,7 +87,20 @@ std::optional<SceneGameContactHandler::PlayerContactEvent> SceneGameContactHandl
     return contact;
 }
 
+std::optional<SceneGameContactHandler::MissileContactEvent> SceneGameContactHandler::ConsumeMissileContact()
+{
+    if (!m_missileContact)
+    {
+        return std::nullopt;
+    }
+
+    std::optional<MissileContactEvent> contact = m_missileContact;
+    m_missileContact = std::nullopt;
+    return contact;
+}
+
 void SceneGameContactHandler::Reset()
 {
     m_playerContact = std::nullopt;
+    m_missileContact = std::nullopt;
 }

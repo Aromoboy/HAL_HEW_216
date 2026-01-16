@@ -979,6 +979,16 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
     if (m_stageState == StageState::Playing)
     {
+        if (const auto missileContact = m_contactHandler.ConsumeMissileContact())
+        {
+            RemoveMissileByEntity(missileContact->missile);
+            std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), missileContact->meteor);
+            if (m_meteorsManager && meteors)
+            {
+                m_meteorsManager->RegisterProjectileHit(meteors);
+            }
+        }
+
         if (const auto contact = m_contactHandler.ConsumePlayerContact())
         {
             if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
@@ -1419,16 +1429,49 @@ void SceneGame::UpdateMissiles(float deltaSeconds)
 
         if (instance.entity)
         {
-            if (m_drawSystem)
-            {
-                m_drawSystem->UnregisterRenderable(*instance.entity);
-            }
-            if (m_physicsBinder)
-            {
-                m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
-            }
+            UnregisterMissileInstance(instance);
         }
 
+        return true;
+    };
+
+    m_activeMissiles.erase(
+        std::remove_if(m_activeMissiles.begin(), m_activeMissiles.end(), shouldRemove),
+        m_activeMissiles.end());
+}
+
+void SceneGame::UnregisterMissileInstance(MissileInstance& instance)
+{
+    if (!instance.entity)
+    {
+        return;
+    }
+
+    if (m_drawSystem)
+    {
+        m_drawSystem->UnregisterRenderable(*instance.entity);
+    }
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
+    }
+}
+
+void SceneGame::RemoveMissileByEntity(Entities::PhysicalEntity* missile)
+{
+    if (!missile || m_activeMissiles.empty())
+    {
+        return;
+    }
+
+    auto shouldRemove = [&](MissileInstance& instance)
+    {
+        if (instance.entity.get() != missile)
+        {
+            return false;
+        }
+
+        UnregisterMissileInstance(instance);
         return true;
     };
 
@@ -1451,14 +1494,7 @@ void SceneGame::ClearMissiles()
             continue;
         }
 
-        if (m_drawSystem)
-        {
-            m_drawSystem->UnregisterRenderable(*instance.entity);
-        }
-        if (m_physicsBinder)
-        {
-            m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
-        }
+        UnregisterMissileInstance(instance);
     }
 
     m_activeMissiles.clear();
