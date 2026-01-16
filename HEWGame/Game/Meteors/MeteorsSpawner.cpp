@@ -468,8 +468,9 @@ namespace MeteorsSpace
         bool hasLiveTarget = false;
         bool hasInitialPerLane = false;
         bool hasPhaseStartBonus = false;
-        bool hasMeteorSeekSpeed = false;
-        bool hasMeteorSeekSpread = false;
+        bool hasMercurySpeed = false;
+        bool hasMeteorSpeed = false;
+        bool hasMeteoriteSpeed = false;
 
         const auto resetPhaseState = [&]()
         {
@@ -483,8 +484,9 @@ namespace MeteorsSpace
             hasLiveTarget = false;
             hasInitialPerLane = false;
             hasPhaseStartBonus = false;
-            hasMeteorSeekSpeed = false;
-            hasMeteorSeekSpread = false;
+            hasMercurySpeed = false;
+            hasMeteorSpeed = false;
+            hasMeteoriteSpeed = false;
         };
 
         const auto finalizePhase = [&]()
@@ -495,7 +497,8 @@ namespace MeteorsSpace
             }
 
             if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
-                && !hasInitialPerLane && !hasPhaseStartBonus && !hasMeteorSeekSpeed && !hasMeteorSeekSpread)
+                && !hasInitialPerLane && !hasPhaseStartBonus && !hasMercurySpeed && !hasMeteorSpeed
+                && !hasMeteoriteSpeed)
             {
                 return;
             }
@@ -627,27 +630,39 @@ namespace MeteorsSpace
                     parseError = true;
                 }
             }
-            else if (normalizedKey == "meteor_seek_speed" || normalizedKey == "meteorseekspeed")
+            else if (normalizedKey == "mercury_speed" || normalizedKey == "mercuryspeed")
             {
                 float speed = 0.0f;
                 if (TryParseFloat(entry.value, &speed))
                 {
-                    config.meteorSeekSpeed = std::max(0.0f, speed);
-                    hasMeteorSeekSpeed = true;
+                    config.mercurySpeed = std::max(0.0f, speed);
+                    hasMercurySpeed = true;
                 }
                 else
                 {
                     parseError = true;
                 }
             }
-            else if (normalizedKey == "meteor_seek_spread_deg" || normalizedKey == "meteor_seek_spread_degrees"
-                || normalizedKey == "meteorseekspreaddeg" || normalizedKey == "meteorseekspreaddegrees")
+            else if (normalizedKey == "meteor_speed" || normalizedKey == "meteorspeed")
             {
-                float spread = 0.0f;
-                if (TryParseFloat(entry.value, &spread))
+                float speed = 0.0f;
+                if (TryParseFloat(entry.value, &speed))
                 {
-                    config.meteorSeekSpreadDegrees = std::max(0.0f, spread);
-                    hasMeteorSeekSpread = true;
+                    config.meteorSpeed = std::max(0.0f, speed);
+                    hasMeteorSpeed = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "meteorite_speed" || normalizedKey == "meteoritespeed")
+            {
+                float speed = 0.0f;
+                if (TryParseFloat(entry.value, &speed))
+                {
+                    config.meteoriteSpeed = std::max(0.0f, speed);
+                    hasMeteoriteSpeed = true;
                 }
                 else
                 {
@@ -1254,8 +1269,9 @@ namespace MeteorsSpace
             << " liveTarget=" << config.simultaneousLiveTarget
             << " initialPerLane=" << config.initialSpawnPerLane
             << " phaseStartBonusPerLane=" << config.phaseStartBonusPerLane
-            << " seekSpeed=" << std::fixed << std::setprecision(2) << config.meteorSeekSpeed
-            << " seekSpreadDeg=" << std::fixed << std::setprecision(2) << config.meteorSeekSpreadDegrees
+            << " mercurySpeed=" << std::fixed << std::setprecision(2) << config.mercurySpeed
+            << " meteorSpeed=" << std::fixed << std::setprecision(2) << config.meteorSpeed
+            << " meteoriteSpeed=" << std::fixed << std::setprecision(2) << config.meteoriteSpeed
             << " weights=";
 
         if (config.weights.empty())

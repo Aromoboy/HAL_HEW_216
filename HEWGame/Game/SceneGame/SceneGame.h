@@ -27,6 +27,7 @@
 #include "SceneGameConfigTypes.h"
 #include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
+#include "Meteors/MeteorsTypes.h"
 #include <box2d/types.h>
 #include <cstddef>
 #include <memory>
@@ -95,6 +96,15 @@ public:
     Core::StepTimer* GetTimer() override;
 
 private:
+    struct MissileInstance
+    {
+        std::shared_ptr<Entities::PhysicalEntity> entity;
+        float remainingSeconds = 0.0f;
+        float ignorePlayerSeconds = 3.0f;
+        std::vector<b2Filter> originalFilters;
+        bool playerFilterIgnored = false;
+    };
+
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
     void UpdateCameraBoundsForPhase(float heightMeters);
     void UpdateBackgroundScrollOriginForWrap(float cameraY);
@@ -114,6 +124,11 @@ private:
     void ToggleGameplaySystems(bool enabled);
     int GetMeteorsCount() const;
     void Initialize(const Stage::StageData& stageData);
+    void UnregisterMissileInstance(MissileInstance& instance);
+    void RemoveMissileByEntity(const std::shared_ptr<Entities::PhysicalEntity>& missile);
+    void ProcessPendingMissileRemovals();
+    void ProcessPendingMeteorRemovals();
+    std::shared_ptr<Entities::PhysicalEntity> FindMissileByEntity(Entities::PhysicalEntity* missile) const;
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -173,15 +188,9 @@ protected:
     std::shared_ptr<Render::Model> m_missileModel;
     SceneGameConfig::MissileSettings m_missileSettings{};
     bool m_fireMissileHintEnabled = false;
-    struct MissileInstance
-    {
-        std::shared_ptr<Entities::PhysicalEntity> entity;
-        float remainingSeconds = 0.0f;
-        float ignorePlayerSeconds = 3.0f;
-        std::vector<b2Filter> originalFilters;
-        bool playerFilterIgnored = false;
-    };
     std::vector<MissileInstance> m_activeMissiles;
+    std::vector<std::weak_ptr<Entities::PhysicalEntity>> m_pendingMissileRemovals;
+    std::vector<std::weak_ptr<MeteorsSpace::ActiveMeteors>> m_pendingMeteorRemovals;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;

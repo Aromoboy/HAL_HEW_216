@@ -151,11 +151,16 @@ namespace MeteorsSpace
 
     void MeteorsManager::Erase(const std::shared_ptr<ActiveMeteors>& meteors)
     {
+        if (meteors)
+        {
+            m_meteorsHitCounts.erase(meteors.get());
+        }
         m_lifecycle.Erase(meteors);
     }
 
     void MeteorsManager::ClearAllMeteors()
     {
+        m_meteorsHitCounts.clear();
         m_lifecycle.ClearAllMeteors();
     }
 
@@ -225,6 +230,7 @@ namespace MeteorsSpace
         }
 
         meteors->SetWasEverCarried(false);
+        meteors->SetGravityScale(0.0f);
 
         if (!m_lifecycle.RegisterWithSystems(meteors))
         {
@@ -246,30 +252,34 @@ namespace MeteorsSpace
 
                 const auto& configs = m_spawner.GetPhaseConfigs();
                 const int activeIndex = m_spawner.GetActivePhaseConfigIndex();
-                if (activeIndex >= 0 && activeIndex < static_cast<int>(configs.size()) && m_hasCachedPlayerPosition)
+                if (activeIndex >= 0 && activeIndex < static_cast<int>(configs.size()))
                 {
                     const PhaseSpawnConfig& config = configs[activeIndex];
-                    if (config.meteorSeekSpeed > 0.0f)
+                    const auto resolvedType = MeteorsPrototypeManifest::Instance().Resolve(kind);
+                    float speed = 0.0f;
+                    if (resolvedType)
                     {
-                        const float dx = m_cachedPlayerPosition.x - position.x;
-                        const float dy = m_cachedPlayerPosition.y - position.y;
-                        const float distanceSq = dx * dx + dy * dy;
-                        if (distanceSq > 1e-6f)
+                        switch (*resolvedType)
                         {
-                            float angle = std::atan2(dy, dx);
-                            if (config.meteorSeekSpreadDegrees > 0.0f)
-                            {
-                                std::uniform_real_distribution<float> spreadDist(
-                                    -config.meteorSeekSpreadDegrees,
-                                    config.meteorSeekSpreadDegrees);
-                                constexpr float kDegToRad = 3.1415926535f / 180.0f;
-                                angle += spreadDist(m_random) * kDegToRad;
-                            }
-                            const b2Vec2 direction{ std::cos(angle), std::sin(angle) };
-                            const b2Vec2 velocity{ direction.x * config.meteorSeekSpeed,
-                                direction.y * config.meteorSeekSpeed };
-                            b2Body_SetLinearVelocity(bodyId, velocity);
+                        case MeteorsType::Mercury:
+                            speed = config.mercurySpeed;
+                            break;
+                        case MeteorsType::Meteor:
+                            speed = config.meteorSpeed;
+                            break;
+                        case MeteorsType::Meteorite:
+                            speed = config.meteoriteSpeed;
+                            break;
                         }
+                    }
+
+                    if (speed > 0.0f)
+                    {
+                        constexpr float kTwoPi = 6.28318530718f;
+                        std::uniform_real_distribution<float> angleDist(0.0f, kTwoPi);
+                        const float angle = angleDist(m_random);
+                        const b2Vec2 velocity{ std::cos(angle) * speed, std::sin(angle) * speed };
+                        b2Body_SetLinearVelocity(bodyId, velocity);
                     }
                 }
             }
@@ -325,6 +335,32 @@ namespace MeteorsSpace
     {
         m_cachedPlayerPosition = position;
         m_hasCachedPlayerPosition = true;
+    }
+
+    std::optional<MeteorsType> MeteorsManager::RegisterProjectileHit(const std::shared_ptr<ActiveMeteors>& meteors)
+    {
+        if (!meteors || meteors->IsPendingDestroy())
+        {
+            return std::nullopt;
+        }
+
+        const auto& manifest = MeteorsPrototypeManifest::Instance();
+        const std::optional<MeteorsType> meteorsType = manifest.Resolve(meteors->GetTag());
+        int requiredHits = 1;
+        if (meteorsType && *meteorsType == MeteorsType::Mercury)
+        {
+            requiredHits = 2;
+        }
+
+        const int hitCount = ++m_meteorsHitCounts[meteors.get()];
+        if (hitCount < requiredHits)
+        {
+            return std::nullopt;
+        }
+
+        m_lifecycle.RemoveMeteorsEntry(meteors, DeleteReason::Hit, "MissileHit", true, nullptr);
+        m_meteorsHitCounts.erase(meteors.get());
+        return meteorsType;
     }
 
     void MeteorsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,

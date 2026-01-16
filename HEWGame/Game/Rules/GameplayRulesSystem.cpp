@@ -31,6 +31,7 @@ void GameplayRulesSystem::ResetSession()
     m_maxTowerHeight = 0.0f;
     m_phaseUpCount = 0;
     m_isGameClear = false;
+    m_killScore = 0;
     m_pendingTimeBonuses.clear();
 }
 
@@ -107,6 +108,16 @@ GameplayRulesSystem::UpdateResult GameplayRulesSystem::Update(const UpdateInput&
     return result;
 }
 
+void GameplayRulesSystem::AddKillScore(int killScore)
+{
+    if (killScore <= 0)
+    {
+        return;
+    }
+
+    m_killScore += killScore;
+}
+
 int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager)
 {
     return ComputeScore(phaseManager, m_peakTowerHeight);
@@ -117,17 +128,23 @@ int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager, floa
     const GameplayRules::ScoreInput scoreInput{
         phaseManager,
         m_baseScorePerMeter,
+        m_elapsedPlaySeconds,
+        m_killScore,
         m_log,
         m_logPrefix
     };
     GameplayRules::ScoreState scoreState{
         peakHeight,
         m_lastScoreLogValue,
-        m_lastScoreLogMultiplier
+        m_lastScoreLogMultiplier,
+        m_lastScoreLogTimeMultiplier,
+        m_lastScoreLogKillScore
     };
     GameplayRules::ScoreResult scoreResult = GameplayRules::ComputeScore(scoreInput, scoreState);
     m_lastScoreLogValue = scoreResult.state.lastScoreLogValue;
     m_lastScoreLogMultiplier = scoreResult.state.lastScoreLogMultiplier;
+    m_lastScoreLogTimeMultiplier = scoreResult.state.lastScoreLogTimeMultiplier;
+    m_lastScoreLogKillScore = scoreResult.state.lastScoreLogKillScore;
     return scoreResult.score;
 }
 

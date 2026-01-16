@@ -113,37 +113,6 @@ namespace
             return t * t * (3.0f - 2.0f * t);
         }
 
-        std::shared_ptr<MeteorsSpace::ActiveMeteors> FindMeteorsByEntity(
-            MeteorsSpace::MeteorsManager* manager,
-            Entities::PhysicalEntity* entity)
-        {
-            if (!manager || !entity)
-            {
-                return nullptr;
-            }
-
-            const MeteorsSpace::MeteorsState states[] = {
-                MeteorsSpace::MeteorsState::Active,
-                MeteorsSpace::MeteorsState::Stacked,
-                MeteorsSpace::MeteorsState::Ground,
-                MeteorsSpace::MeteorsState::Carried
-            };
-
-            for (MeteorsSpace::MeteorsState state : states)
-            {
-                auto& list = manager->GetByState(state);
-                for (const auto& meteors : list)
-                {
-                    if (meteors && meteors.get() == entity)
-                    {
-                        return meteors;
-                    }
-                }
-            }
-
-            return nullptr;
-        }
-
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
@@ -549,7 +518,11 @@ bool SceneGame::Load(Core::Input& input)
     player = std::move(loaderResult.player);
     if (m_physicsBinder)
     {
-        m_contactHandler.Bind(*m_physicsBinder, m_meteorsManager.get(), player.get());
+        m_contactHandler.Bind(*m_physicsBinder, m_meteorsManager.get(), player.get(),
+            [this](Entities::PhysicalEntity* missile)
+            {
+                return FindMissileByEntity(missile);
+            });
     }
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
@@ -979,49 +952,112 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
     if (m_stageState == StageState::Playing)
     {
-        if (const auto contact = m_contactHandler.ConsumePlayerContact())
+        if (const auto missileContact = m_contactHandler.ConsumeMissileContact())
         {
-            if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
+            const auto missile = missileContact->missile.lock();
+            const auto meteors = missileContact->meteor.lock();
+            if (missile)
             {
-                std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors = FindMeteorsByEntity(m_meteorsManager.get(), contact->meteor);
-                if (m_meteorsManager && meteors)
+                m_pendingMissileRemovals.push_back(missile);
+            }
+            if (m_meteorsManager && meteors)
+            {
+                const std::optional<MeteorsSpace::MeteorsType> destroyedType = m_meteorsManager->RegisterProjectileHit(meteors);
+                const int killScore = ResolveKillScore(destroyedType);
+                if (killScore > 0)
                 {
-                    m_meteorsManager->Erase(meteors);
+                    m_gameplayRules.AddKillScore(killScore);
                 }
+            }
+        }
 
-                if (!m_playerInvulnerable)
+ if (contact->source == SceneGameContactHandler::PlayerContactSource::Meteor)
+{
+    std::shared_ptr<MeteorsSpace::ActiveMeteors> meteors =
+        FindMeteorsByEntity(m_meteorsManager.get(), contact->other);
+
+    const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
+    const std::optional<MeteorsSpace::MeteorsType> meteorsType = meteors
+        ? manifest.Resolve(meteors->GetTag())
+        : (contact->other ? manifest.Resolve(contact->other->GetTag()) : std::nullopt);
+
+    if (m_meteorsManager && meteors)
+    {
+        m_meteorsManager->Erase(meteors);
+    }
+
+    const int killScore = ResolveKillScore(meteorsType);
+    if (killScore > 0)
+    {
+        m_gameplayRules.AddKillScore(killScore);
+    }
+
+    if (!m_playerInvulnerable)
+    {
+        int damage = 1;
+        if (meteorsType)
+        {
+if (contact->source == SceneGameContactHandler::PlayerContactSource::Meteor &&
+    contact->type == SceneGameContactHandler::PlayerContactType::Begin)
+{
+    const auto meteors = contact->meteor.lock();
+    if (!meteors)
+    {
+        return;
+    }
+
+    // удаляем метеор отложенно
+    m_pendingMeteorRemovals.push_back(meteors);
+
+    if (!m_playerInvulnerable)
+    {
+        const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
+        const std::optional<MeteorsSpace::MeteorsType> meteorsType =
+            manifest.Resolve(meteors->GetTag());
+
+        int damage = 1;
+        if (meteorsType)
+        {
+            switch (*meteorsType)
+            {
+            case MeteorsSpace::MeteorsType::Mercury:    damage = 3; break;
+            case MeteorsSpace::MeteorsType::Meteor:     damage = 2; break;
+            case MeteorsSpace::MeteorsType::Meteorite:  damage = 1; break;
+            }
+        }
+
+        m_playerHp -= damage;
+        m_playerInvulnerable = true;
+        m_playerInvulnSeconds = 3.0f;
+        m_playerBlinkTimer = 0.0f;
+        m_playerBlinkAlpha = 0.35f;
+
+        if (m_playerHp <= 0)
+        {
+            SetStageState(StageState::TimeUp);
+        }
+    }
+}
+
+                else if (contact->source == SceneGameContactHandler::PlayerContactSource::Missile)
                 {
-                    const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
-                    const std::optional<MeteorsSpace::MeteorsType> meteorsType = contact->meteor
-                        ? manifest.Resolve(contact->meteor->GetTag())
-                        : std::nullopt;
-
-                    int damage = 1;
-                    if (meteorsType)
+                    if (contact->other)
                     {
-                        switch (*meteorsType)
-                        {
-                        case MeteorsSpace::MeteorsType::Mercury:
-                            damage = 3;
-                            break;
-                        case MeteorsSpace::MeteorsType::Meteor:
-                            damage = 2;
-                            break;
-                        case MeteorsSpace::MeteorsType::Meteorite:
-                            damage = 1;
-                            break;
-                        }
+                        RemoveMissileByEntity(contact->other);
                     }
 
-                    m_playerHp -= damage;
-                    m_playerInvulnerable = true;
-                    m_playerInvulnSeconds = 3.0f;
-                    m_playerBlinkTimer = 0.0f;
-                    m_playerBlinkAlpha = 0.35f;
-
-                    if (m_playerHp <= 0)
+                    if (!m_playerInvulnerable)
                     {
-                        SetStageState(StageState::TimeUp);
+                        m_playerHp -= 4;
+                        m_playerInvulnerable = true;
+                        m_playerInvulnSeconds = 3.0f;
+                        m_playerBlinkTimer = 0.0f;
+                        m_playerBlinkAlpha = 0.35f;
+
+                        if (m_playerHp <= 0)
+                        {
+                            SetStageState(StageState::TimeUp);
+                        }
                     }
                 }
             }
@@ -1192,6 +1228,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
 
     UpdateMissiles(ctx.dt);
+    ProcessPendingMissileRemovals();
+    ProcessPendingMeteorRemovals();
 
     if (input && input->IsKeyPress(VK_RETURN))
     {
@@ -1419,14 +1457,7 @@ void SceneGame::UpdateMissiles(float deltaSeconds)
 
         if (instance.entity)
         {
-            if (m_drawSystem)
-            {
-                m_drawSystem->UnregisterRenderable(*instance.entity);
-            }
-            if (m_physicsBinder)
-            {
-                m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
-            }
+            UnregisterMissileInstance(instance);
         }
 
         return true;
@@ -1435,6 +1466,103 @@ void SceneGame::UpdateMissiles(float deltaSeconds)
     m_activeMissiles.erase(
         std::remove_if(m_activeMissiles.begin(), m_activeMissiles.end(), shouldRemove),
         m_activeMissiles.end());
+}
+
+void SceneGame::UnregisterMissileInstance(MissileInstance& instance)
+{
+    if (!instance.entity)
+    {
+        return;
+    }
+
+    if (m_drawSystem)
+    {
+        m_drawSystem->UnregisterRenderable(*instance.entity);
+    }
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
+    }
+}
+
+void SceneGame::RemoveMissileByEntity(const std::shared_ptr<Entities::PhysicalEntity>& missile)
+{
+    if (!missile || m_activeMissiles.empty())
+    {
+        return;
+    }
+
+    auto shouldRemove = [&](MissileInstance& instance)
+    {
+        if (instance.entity != missile)
+        {
+            return false;
+        }
+
+        UnregisterMissileInstance(instance);
+        return true;
+    };
+
+    m_activeMissiles.erase(
+        std::remove_if(m_activeMissiles.begin(), m_activeMissiles.end(), shouldRemove),
+        m_activeMissiles.end());
+}
+
+void SceneGame::ProcessPendingMissileRemovals()
+{
+    if (m_pendingMissileRemovals.empty())
+    {
+        return;
+    }
+
+    for (const auto& pending : m_pendingMissileRemovals)
+    {
+        if (auto missile = pending.lock())
+        {
+            RemoveMissileByEntity(missile);
+        }
+    }
+
+    m_pendingMissileRemovals.clear();
+}
+
+void SceneGame::ProcessPendingMeteorRemovals()
+{
+    if (m_pendingMeteorRemovals.empty())
+    {
+        return;
+    }
+
+    if (m_meteorsManager)
+    {
+        for (const auto& pending : m_pendingMeteorRemovals)
+        {
+            if (auto meteors = pending.lock())
+            {
+                m_meteorsManager->Erase(meteors);
+            }
+        }
+    }
+
+    m_pendingMeteorRemovals.clear();
+}
+
+std::shared_ptr<Entities::PhysicalEntity> SceneGame::FindMissileByEntity(Entities::PhysicalEntity* missile) const
+{
+    if (!missile)
+    {
+        return nullptr;
+    }
+
+    for (const auto& instance : m_activeMissiles)
+    {
+        if (instance.entity && instance.entity.get() == missile)
+        {
+            return instance.entity;
+        }
+    }
+
+    return nullptr;
 }
 
 void SceneGame::ClearMissiles()
@@ -1451,14 +1579,7 @@ void SceneGame::ClearMissiles()
             continue;
         }
 
-        if (m_drawSystem)
-        {
-            m_drawSystem->UnregisterRenderable(*instance.entity);
-        }
-        if (m_physicsBinder)
-        {
-            m_physicsBinder->UnregisterPhysicsBody(instance.entity.get());
-        }
+        UnregisterMissileInstance(instance);
     }
 
     m_activeMissiles.clear();
