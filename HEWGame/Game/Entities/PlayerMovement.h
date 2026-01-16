@@ -36,6 +36,9 @@ namespace Entities
         float m_facingSign{ 1.0f };
         float3 m_baseRotation{ 0.0f, 0.0f, 0.0f };
         bool m_hasBaseRotation{ false };
+        float m_turnRate{ 4.0f };
+        float m_currentHeading{ 0.0f };
+        bool m_hasCurrentHeading{ false };
         bool m_missingBodyLogged{ false };
         float m_moveSoundHandle{ -1.0f };
         bool m_wasMovingLastFrame{ false };
