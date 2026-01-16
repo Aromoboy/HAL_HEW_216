@@ -91,11 +91,11 @@ namespace
         switch (type)
         {
         case SweetsType::Strawberry:
-            return "Assets/Texture/strawberry.png";
+            return "Assets/Texture/MercuryNM.jpg";
         case SweetsType::Blueberry:
-            return "Assets/Texture/blueberry.png";
+            return "Assets/Texture/meteor.jpg";
         case SweetsType::Pineapple:
-            return "Assets/Texture/pineapple.png";
+            return "Assets/Texture/Meteorite_Diffuse.png";
         case SweetsType::Banana:
             return "Assets/Texture/banana.png";
         case SweetsType::Cream:
@@ -140,43 +140,17 @@ namespace
             return normalizedModelPath.find(token) != std::string::npos;
         };
 
-        if (contains("strawberry"))
+        if (contains("mercury"))
         {
-            return "Assets/Texture/strawberry.png";
+            return "Assets/Texture/MercuryNM.jpg";
         }
-        if (contains("blueberry"))
+        if (contains("meteorite"))
         {
-            return "Assets/Texture/blueberry.png";
+            return "Assets/Texture/Meteorite_Diffuse.png";
         }
-        if (contains("pineapple"))
+        if (contains("meteor"))
         {
-            return "Assets/Texture/pineapple.png";
-        }
-        if (contains("cream"))
-        {
-            return "Assets/Texture/Cream.png";
-        }
-        if (contains("banana"))
-        {
-            return "Assets/Texture/banana.png";
-        }
-
-        //01/09追加分
-        if (contains("kiwi"))
-        {
-            return "Assets/Texture/kiwi.png";
-        }
-        if (contains("mikan"))
-        {
-            return "Assets/Texture/mikan.png";
-        }
-        if (contains("muscat"))
-        {
-            return "Assets/Texture/muscat.png";
-        }
-        if (contains("melon"))
-        {
-            return "Assets/Texture/melon.png";
+            return "Assets/Texture/meteor.jpg";
         }
         return std::nullopt;
     }
@@ -190,16 +164,14 @@ namespace
             aliases.emplace(NormalizeForKey(alias), target);
         };
 
-        addAlias("パイナップル.png", "pineapple.png");
-        addAlias("バナナ.png", "banana.png");
-        addAlias("ブルーベリー.png", "blueberry.png");
-        addAlias("ストロベリー.png", "strawberry.png");
-        addAlias("いちご.png", "strawberry.png");
-        addAlias("キウイ.png", "kiwi.png");
-        addAlias("みかん.png", "mikan.png");
-        addAlias("マスカット.png", "muscat.png");
-        addAlias("メロン.png", "melon.png");
-        addAlias("クリーム.png", "cream.png");
+        addAlias("mercury.jpg", "MercuryNM.jpg");
+        addAlias("mercury_nm.jpg", "MercuryNM.jpg");
+        addAlias("水星.jpg", "MercuryNM.jpg");
+        addAlias("meteor.jpg", "meteor.jpg");
+        addAlias("メテオ.jpg", "meteor.jpg");
+        addAlias("meteorite.png", "Meteorite_Diffuse.png");
+        addAlias("meteorite_diffuse.png", "Meteorite_Diffuse.png");
+        addAlias("隕石.png", "Meteorite_Diffuse.png");
 
         return aliases;
     }
