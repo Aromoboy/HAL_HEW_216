@@ -1,6 +1,7 @@
 #include "Systems/Physics/ColliderBuilder.h"
 
 #include "ColliderRegistry.h"
+#include "GameplayConfig.h"
 
 #include <algorithm>
 #include <limits>
@@ -140,6 +141,23 @@ namespace
             << " shapeCount=" << shapeCount
             << "\n";
         log(oss.str());
+    }
+
+    std::optional<std::map<std::string, Collision::ColliderDefinition>> LoadPlayerConfigDefinitions(
+        const Physics::ColliderBuilder::LogFn& log,
+        const std::string& logPrefix)
+    {
+        std::map<std::string, Collision::ColliderDefinition> definitions;
+        if (Collision::LoadColliderDefinitions(GameplayConfig::kConfigPath, GameplayConfig::kSectionPlayerColliders, definitions))
+        {
+            return definitions;
+        }
+
+        std::ostringstream oss;
+        oss << logPrefix << "[ColliderBuilder] Failed to load config definitions for section '"
+            << GameplayConfig::kSectionPlayerColliders << "' from '" << GameplayConfig::kConfigPath << "'.\n";
+        EmitLog(log, oss.str());
+        return std::nullopt;
     }
 
     Physics::ColliderBuilder::BuildResult BuildFromRegistryInternal(
@@ -523,13 +541,24 @@ namespace Physics
         const SceneGameConfig::PlayerColliderTuning defaultTuning{};
         const SceneGameConfig::PlayerColliderTuning& tuning = request.tuning ? *request.tuning : defaultTuning;
 
-        const bool hasConfigDefinitions = request.configDefinitions
-            && request.configDefinitions->find(resolvedKey) != request.configDefinitions->end();
+        std::optional<std::map<std::string, Collision::ColliderDefinition>> loadedConfigDefinitions;
+        const std::map<std::string, Collision::ColliderDefinition>* configDefinitions = request.configDefinitions;
+        if (!configDefinitions && request.forceConfig && resolvedKey == "player")
+        {
+            loadedConfigDefinitions = LoadPlayerConfigDefinitions(m_log, logPrefix);
+            if (loadedConfigDefinitions)
+            {
+                configDefinitions = &*loadedConfigDefinitions;
+            }
+        }
+
+        const bool hasConfigDefinitions = configDefinitions
+            && configDefinitions->find(resolvedKey) != configDefinitions->end();
         const bool configAvailable = hasConfigDefinitions;
 
         if (request.forceConfig && configAvailable)
         {
-            build = BuildFromConfigInternal(m_log, logPrefix, request, tuning, *request.configDefinitions, resolvedKey);
+            build = BuildFromConfigInternal(m_log, logPrefix, request, tuning, *configDefinitions, resolvedKey);
         }
         else
         {
@@ -560,7 +589,7 @@ namespace Physics
                     << resolvedKey << "'.\n";
                 EmitLog(m_log, oss.str());
 
-                BuildResult configBuild = BuildFromConfigInternal(m_log, logPrefix, request, tuning, *request.configDefinitions, resolvedKey);
+                BuildResult configBuild = BuildFromConfigInternal(m_log, logPrefix, request, tuning, *configDefinitions, resolvedKey);
                 if (colliderHasShapes(configBuild) && shapeConfigIsValid(configBuild))
                 {
                     build = configBuild;

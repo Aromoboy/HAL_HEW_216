@@ -226,6 +226,11 @@ namespace
                 return std::nullopt;
         }
 
+        bool IsBoxToken(const std::string& raw)
+        {
+                return raw == "box" || raw == "Box";
+        }
+
         void ApplyScalarOption(const std::string& key, const std::string& value, Collision::ColliderDefinition& outDef)
         {
                 if (key == "margin")
@@ -421,12 +426,28 @@ namespace Collision
                 std::string currentName;
                 ColliderDefinition current{};
                 bool hasActive = false;
+                bool boxShape = false;
+                float boxWidth = 0.0f;
+                float boxHeight = 0.0f;
 
                 const auto flush = [&]()
                 {
                         if (currentName.empty())
                         {
                                 return;
+                        }
+                        if (boxShape && current.points.empty() && boxWidth > 0.0f && boxHeight > 0.0f)
+                        {
+                                const float halfWidth = boxWidth * 0.5f;
+                                const float halfHeight = boxHeight * 0.5f;
+                                current.type = ColliderKind::Hull;
+                                current.points =
+                                {
+                                        float2{ -halfWidth, -halfHeight },
+                                        float2{ halfWidth, -halfHeight },
+                                        float2{ halfWidth, halfHeight },
+                                        float2{ -halfWidth, halfHeight },
+                                };
                         }
                         outDefinitions[currentName] = current;
                         hasActive = false;
@@ -446,11 +467,20 @@ namespace Collision
                                 current = ColliderDefinition{};
                                 currentName = value;
                                 hasActive = true;
+                                boxShape = false;
+                                boxWidth = 0.0f;
+                                boxHeight = 0.0f;
                         }
                         else if (key == "shape" || key == "type")
                         {
-                                if (auto kind = ParseKind(value))
+                                if (IsBoxToken(value))
                                 {
+                                        boxShape = true;
+                                        current.type = ColliderKind::Hull;
+                                }
+                                else if (auto kind = ParseKind(value))
+                                {
+                                        boxShape = false;
                                         current.type = *kind;
                                 }
                                 else
@@ -501,6 +531,36 @@ namespace Collision
                                         oss << kLogPrefix << "Collider '"
                                                 << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
                                                 << "' contained no valid points in '" << value << "'\n";
+                                        Logging::LogWarning(oss.str());
+                                }
+                        }
+                        else if (key == "width")
+                        {
+                                try
+                                {
+                                        boxWidth = std::max(0.0f, std::stof(value));
+                                }
+                                catch (...)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Failed to parse width for collider '"
+                                                << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                                << "' from '" << value << "'\n";
+                                        Logging::LogWarning(oss.str());
+                                }
+                        }
+                        else if (key == "height")
+                        {
+                                try
+                                {
+                                        boxHeight = std::max(0.0f, std::stof(value));
+                                }
+                                catch (...)
+                                {
+                                        std::ostringstream oss;
+                                        oss << kLogPrefix << "Failed to parse height for collider '"
+                                                << (currentName.empty() ? std::string{"<unnamed>"} : currentName)
+                                                << "' from '" << value << "'\n";
                                         Logging::LogWarning(oss.str());
                                 }
                         }
