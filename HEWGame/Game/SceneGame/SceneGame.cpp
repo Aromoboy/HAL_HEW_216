@@ -613,10 +613,10 @@ void SceneGame::OnEnter()
     oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 
-    // BGMを再生（ループあり、音量40%）
+    // BGMを再生（ループあり、音量1%）
     if (m_pManager)
     {
-        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // ループ有効
+        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.01f);  // ループ有効
     }
 }
 

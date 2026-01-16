@@ -1,4 +1,4 @@
-#ifndef ___SOUND_MANAGER_EX___
+ï»¿#ifndef ___SOUND_MANAGER_EX___
 #define ___SOUND_MANAGER_EX___
 
 #include <map>
@@ -13,9 +13,9 @@ public:
     ~SoundManagerEX();
 
     void UpdateSound();
-    int PlaySoundEX(std::string a_szSoundKey, bool a_isLoop, float volume = 1.0f);  // int‚É•ÏX
-    void StopSound(int handle);  // ‰¹‚ğ~‚ß‚é
-    void StopAllSounds();  // ‘S‚Ä‚Ì‰¹‚ğ~‚ß‚é
+    int PlaySoundEX(std::string a_szSoundKey, bool a_isLoop, float volume = 0.1f);  // intã«å¤‰æ›´
+    void StopSound(int handle);  // éŸ³ã‚’æ­¢ã‚ã‚‹
+    void StopAllSounds();  // å…¨ã¦ã®éŸ³ã‚’æ­¢ã‚ã‚‹
     void SetVolume(int handle, float volume);
 
     static SoundManagerEX* GetInstance() { return s_instance; }
