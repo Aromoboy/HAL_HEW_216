@@ -17,7 +17,7 @@ namespace Entities
     public:
         void Update(Player& player, const Core::UpdateContext& ctx, Core::Input& input);
 
-        void ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing, float maxSpeed);
+        void ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing);
         void SetMoveSpeed(float speed);
         void SetMoveSpeeds(float horizontal, float vertical);
         void SetBaseMoveSpeed(float horizontal, float vertical);
@@ -34,7 +34,7 @@ namespace Entities
         float m_speedMultiplier{ 1.0f };
         float m_accel{ 24.0f };
         float m_brake{ 12.0f };
-        float m_maxSpeed{ 0.0f };
+        float m_maxSpeed{ 25.0f };
         float m_facingSign{ 1.0f };
         float3 m_baseRotation{ 0.0f, 0.0f, 0.0f };
         bool m_hasBaseRotation{ false };

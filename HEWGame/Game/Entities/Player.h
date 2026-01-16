@@ -48,7 +48,7 @@ namespace Entities
         void SetBaseMoveSpeed(float horizontal, float vertical);
         void SetSpeedMultiplier(float multiplier);
         void SetYawOffsetRadians(float yawOffsetRadians);
-        void ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing, float maxSpeed);
+        void ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing);
         float GetMoveSpeed() const;
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;

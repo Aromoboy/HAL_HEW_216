@@ -2414,21 +2414,6 @@ namespace SceneGameConfig
                     DebugTrace(oss.str());
                 }
             }
-            else if (key == GameplayConfig::kPlayerMovementKeyMaxSpeed)
-            {
-                if (auto parsed = TryParseFloatToken(value))
-                {
-                    settings.maxSpeed = std::max(0.0f, *parsed);
-                    ++parsedFields;
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[PlayerMovement] Failed to parse max speed line=" << lineNumber
-                        << " value='" << value << "'\n";
-                    DebugTrace(oss.str());
-                }
-            }
             else if (key == GameplayConfig::kPlayerMovementKeyWrapMargin)
             {
                 if (auto parsed = TryParseFloatToken(value))
@@ -2493,7 +2478,6 @@ namespace SceneGameConfig
             << " brake=" << settings.brake
             << " turnRate=" << settings.turnRate
             << " rollResponse=" << settings.rollResponse
-            << " maxSpeed=" << settings.maxSpeed
             << " wrapMargin=" << settings.wrapMargin
             << " wrapX=" << std::boolalpha << settings.wrapX
             << " wrapY=" << std::boolalpha << settings.wrapY << "\n";
