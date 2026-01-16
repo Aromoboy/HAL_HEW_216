@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Vector.h"
+
 namespace Core
 {
     struct UpdateContext;
@@ -29,6 +31,8 @@ namespace Entities
         float m_baseVerticalMoveSpeed{ 0.0f };
         float m_speedMultiplier{ 1.0f };
         float m_facingSign{ 1.0f };
+        float3 m_baseRotation{ 0.0f, 0.0f, 0.0f };
+        bool m_hasBaseRotation{ false };
         bool m_missingBodyLogged{ false };
         float m_moveSoundHandle{ -1.0f };
         bool m_wasMovingLastFrame{ false };

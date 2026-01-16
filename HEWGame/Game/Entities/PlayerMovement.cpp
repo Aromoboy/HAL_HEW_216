@@ -45,6 +45,12 @@ namespace Entities
             m_missingBodyLogged = true;
         }
 
+        if (!m_hasBaseRotation)
+        {
+            m_baseRotation = player.GetTransform().rotation;
+            m_hasBaseRotation = true;
+        }
+
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
         const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
 
@@ -67,6 +73,24 @@ namespace Entities
                     vertical * effectiveVerticalSpeed,
                     0.0f
                 };
+
+                const float movementSq = desired.x * desired.x + desired.y * desired.y;
+                if (movementSq > std::numeric_limits<float>::epsilon())
+                {
+                    const float movementAngle = std::atan2(desired.y, desired.x);
+                    float3 targetRotation = m_baseRotation;
+                    targetRotation.z += movementAngle;
+
+                    if (hasBody)
+                    {
+                        const float3 currentPosition = player.GetTransform().position;
+                        player.SetTransformViaPhysics(currentPosition, targetRotation);
+                    }
+                    else
+                    {
+                        player.SetRotation(targetRotation);
+                    }
+                }
 
                 if (hasBody)
                     player.SetLinearVelocity(desired);
