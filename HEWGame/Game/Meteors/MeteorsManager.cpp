@@ -335,6 +335,7 @@ namespace MeteorsSpace
     {
         m_cachedPlayerPosition = position;
         m_hasCachedPlayerPosition = true;
+        m_spawner.SetPlayerWorldPosition(position);
     }
 
     std::optional<MeteorsType> MeteorsManager::RegisterProjectileHit(const std::shared_ptr<ActiveMeteors>& meteors)
