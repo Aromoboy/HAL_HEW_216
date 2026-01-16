@@ -13,6 +13,7 @@
 #include "Core/UpdateScheduler.h"
 #include "GameplayConfig.h"
 #include "ModelCache.h"
+#include "Engine/Render/ModelDX.h"
 #include "SceneGameConfigLoader.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"

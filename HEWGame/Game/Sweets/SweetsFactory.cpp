@@ -34,6 +34,7 @@
 #include "MeshBuffer.h"
 #include "ModelCache.h"
 #include "ModelPivot.h"
+#include "Engine/Render/ModelDX.h"
 #include "Systems/Physics/ColliderBuilder.h"
 #include "Render/ModelBounds.h"
 #include "Systems/Physics/ShapeConstants.h"
