@@ -1144,10 +1144,31 @@ void SceneGame::UpdateMissiles(float deltaSeconds)
         deltaSeconds = 0.0f;
     }
 
+    float screenMinX = 0.0f;
+    float screenMaxX = 0.0f;
+    float screenMinY = 0.0f;
+    float screenMaxY = 0.0f;
+    const bool hasScreenBounds = m_playerController.TryGetCachedPlayerBounds(
+        screenMinX,
+        screenMaxX,
+        screenMinY,
+        screenMaxY);
+
     auto shouldRemove = [&](MissileInstance& instance)
     {
         instance.remainingSeconds -= deltaSeconds;
-        if (instance.remainingSeconds > 0.0f && instance.entity)
+        bool outOfBounds = false;
+        if (hasScreenBounds && instance.entity)
+        {
+            const AABB bounds = instance.entity->GetAABB();
+            outOfBounds =
+                bounds.max.x < screenMinX ||
+                bounds.min.x > screenMaxX ||
+                bounds.max.y < screenMinY ||
+                bounds.min.y > screenMaxY;
+        }
+
+        if (instance.remainingSeconds > 0.0f && instance.entity && !outOfBounds)
         {
             return false;
         }

@@ -63,6 +63,7 @@ public:
     bool HandleManualRetryInput(Core::Input& input, float elapsedSeconds, float peakHeight) const;
     PostGameAction HandlePostGameInput(Core::Input& input, float peakHeight, int score) const;
     void UpdatePlayerBounds(const BoundsInput& input);
+    bool TryGetCachedPlayerBounds(float& minX, float& maxX, float& minY, float& maxY) const;
 
 private:
     LogFn m_log;

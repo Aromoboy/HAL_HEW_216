@@ -242,3 +242,17 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
     m_cachedPlayerMaxY = maxY;
     m_cachedPlayerBoundsValid = true;
 }
+
+bool PlayerController::TryGetCachedPlayerBounds(float& minX, float& maxX, float& minY, float& maxY) const
+{
+    if (!m_cachedPlayerBoundsValid)
+    {
+        return false;
+    }
+
+    minX = m_cachedPlayerMinX;
+    maxX = m_cachedPlayerMaxX;
+    minY = m_cachedPlayerMinY;
+    maxY = m_cachedPlayerMaxY;
+    return true;
+}
