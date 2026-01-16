@@ -1510,7 +1510,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                             renderTransform.rotation.z += obj.currentRotation;
                     }
 
-                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
+                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get());
                 }
                 else
                 {
