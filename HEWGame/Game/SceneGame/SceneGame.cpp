@@ -54,6 +54,7 @@
 #include "Physical.h"
 #include "ColliderRegistry.h"
 #include "TitleScene.h"
+#include "SoundManagerEX.h"
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -726,9 +727,9 @@ void SceneGame::OnEnter()
     InitializeEffectSystem();
 
     // BGMを再生（ループあり、音量1%）
-    if (m_pManager)
+    if (auto* sound = SoundManagerEX::GetInstance())
     {
-        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.01f);  // ループ有効
+        sound->PlaySoundEX("Assets/Audio/BGM_GameScene.ogg", true, 0.01f);  // ループ有効
     }
 }
 
@@ -749,6 +750,11 @@ void SceneGame::OnExit()
         m_effectRegistered = false;
     }
 
+    if (auto* sound = SoundManagerEX::GetInstance())
+    {
+        sound->StopAllSounds();
+    }
+
     ShutdownEffectSystem();
 }
 
@@ -758,7 +764,6 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     , m_playerController(DebugTrace, kLogPrefix)
     , m_manager(&a_manager)
 {
-    m_pManager = std::make_unique<SoundManagerEX>();
 }
 
 SceneGame::~SceneGame()
@@ -856,10 +861,6 @@ SceneGame::~SceneGame()
     {
         m_drawSystem->ClearRenderables();
     }
-        if (m_pManager)
-        {
-            m_pManager->StopAllSounds();
-        }
 }
 
 void SceneGame::ConfigureUpdates()
@@ -1101,6 +1102,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             else if (missile)
             {
                 spawnExplosion(missile->GetTransform().position);
+            }
+
+            if (m_pManager)
+            {
+                m_pManager->PlaySoundEX("Assets/Audio/SE_Hit.mp3", false, 0.3f);
             }
         }
 
@@ -1534,6 +1540,11 @@ void SceneGame::FireMissile()
     m_activeMissiles.push_back(std::move(instance));
     m_fireMissileHintEnabled = true;
     m_missileFireCooldownSeconds = kMissileFireCooldownSeconds;
+
+    if (m_pManager)
+    {
+        m_pManager->PlaySoundEX("Assets/Audio/SE_Shoot.mp3", false, 0.3f);
+    }
 }
 
 void SceneGame::UpdateMissiles(float deltaSeconds)

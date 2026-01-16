@@ -7,7 +7,6 @@
 #include "Scene.h"
 #include "SceneManager.h"
 #include "Render/Legacy/Model.h"
-#include "SoundManagerEX.h"
 #include "CameraRig.h"
 #include "Entities/PhysicalEntity.h"
 #include "Entities/Player.h"
@@ -139,7 +138,6 @@ protected:
     std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
-    std::unique_ptr<SoundManagerEX> m_pManager;
     Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
     int m_playerHp = 10;

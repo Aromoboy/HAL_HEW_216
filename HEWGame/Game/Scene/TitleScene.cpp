@@ -12,6 +12,7 @@
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
 #include "Diagnostics/Logger.h"
+#include "SoundManagerEX.h"
  
 #include <cstdint>
 #include <filesystem>
@@ -90,11 +91,21 @@ void TitleScene::OnEnter()
         DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
     );
     Sprite::SetProjection(proj);
-   
+
+    // BGMを再生（ループあり、音量1%）
+    if (auto* sound = SoundManagerEX::GetInstance())
+    {
+        sound->PlaySoundEX("Assets/Audio/BGM_MainGame.ogg", true, 0.01f);
+    }
 }
 
 void TitleScene::OnExit()
 {
+    if (auto* sound = SoundManagerEX::GetInstance())
+    {
+        sound->StopAllSounds();
+    }
+
     if (m_background)
     {
         m_background->Shutdown();
