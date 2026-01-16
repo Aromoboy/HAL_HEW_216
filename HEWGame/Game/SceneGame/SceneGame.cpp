@@ -1575,7 +1575,11 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetComfortZoneY(comfortZoneTopY, comfortZoneBottomY);
         m_cameraRig->SetWrapY(canWrapY ? minScrollY : std::nullopt, canWrapY ? maxScrollY : std::nullopt);
-        m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt, shouldClampY ? maxScrollY : std::nullopt);
+        if (!wrapY)
+        {
+            m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
+                                   shouldClampY ? maxScrollY : std::nullopt);
+        }
 
         const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
             && m_cameraRig->IsFollowingPositionY()
@@ -1738,8 +1742,16 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
 
     m_cameraRig->SetWrapY(canWrapY ? minScrollY : std::nullopt,
                           canWrapY ? maxScrollY : std::nullopt);
-    m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
-                           shouldClampY ? maxScrollY : std::nullopt);
+    if (!wrapY)
+    {
+        m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
+                               shouldClampY ? maxScrollY : std::nullopt);
+    }
+
+    if (wrapY && m_gameCamera)
+    {
+        UpdateBackgroundScrollOriginForWrap(m_gameCamera->GetPosition().y);
+    }
 }
 
 void SceneGame::UpdateBackgroundScrollOriginForWrap(float cameraY)
