@@ -14,6 +14,7 @@
 #include "Diagnostics/Logger.h"
  
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -24,6 +25,26 @@ namespace
 
     bool TryLoadTexture(Texture& texture, const char* path, const char* label)
     {
+        std::error_code ec;
+        if (!std::filesystem::exists(path, ec))
+        {
+            std::ostringstream missing;
+            missing << kLogPrefix << "Texture file missing for " << label << " ('" << path << "'). Using fallback.\n";
+            Diagnostics::LogInfo(missing.str());
+
+            const std::uint32_t fallbackPixel = 0xFFFFFFFFu;
+            const HRESULT fallbackHr = texture.Create(DXGI_FORMAT_R8G8B8A8_UNORM, 1u, 1u, &fallbackPixel);
+            if (SUCCEEDED(fallbackHr))
+            {
+                return true;
+            }
+
+            std::ostringstream fallbackLog;
+            fallbackLog << kLogPrefix << "Failed to create fallback texture for " << label << ".\n";
+            Diagnostics::LogInfo(fallbackLog.str());
+            return false;
+        }
+
         const HRESULT hr = texture.Create(path);
         if (SUCCEEDED(hr))
         {
