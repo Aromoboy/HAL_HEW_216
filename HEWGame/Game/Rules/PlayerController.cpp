@@ -196,7 +196,9 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
     const bool changed =
         !m_cachedPlayerBoundsValid ||
         HasMeaningfulDifference(m_cachedPlayerMinX, minX) ||
-        HasMeaningfulDifference(m_cachedPlayerMaxX, maxX);
+        HasMeaningfulDifference(m_cachedPlayerMaxX, maxX) ||
+        HasMeaningfulDifference(m_cachedPlayerMinY, minY) ||
+        HasMeaningfulDifference(m_cachedPlayerMaxY, maxY);
 
     if (kEnablePlayerBoundsLogging)
     {
@@ -209,11 +211,15 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
         {
             std::ostringstream oss;
             oss << "[SceneGame] [PlayerBounds] camX=" << camPos.x
+                << " camY=" << camPos.y
                 << " d=" << d
                 << " fovX=" << DirectX::XMConvertToDegrees(fovX)
                 << " halfWidth=" << halfWidth
+                << " halfHeight=" << halfHeight
                 << " => minX=" << minX
-                << " maxX=" << maxX << "\n";
+                << " maxX=" << maxX
+                << " minY=" << minY
+                << " maxY=" << maxY << "\n";
             if (m_log)
             {
                 m_log(oss.str());
@@ -231,5 +237,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     m_cachedPlayerMinX = minX;
     m_cachedPlayerMaxX = maxX;
+    m_cachedPlayerMinY = minY;
+    m_cachedPlayerMaxY = maxY;
     m_cachedPlayerBoundsValid = true;
 }
