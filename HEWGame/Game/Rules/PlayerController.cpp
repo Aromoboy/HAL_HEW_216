@@ -105,14 +105,23 @@ PlayerController::SpeedResult PlayerController::HandleSpeedInput(const SpeedInpu
         }
     };
 
-    if (input.input.IsTrigger(Core::ActionId::SpeedBoost))
+    const bool boostPressed = input.input.IsPress(Core::ActionId::SpeedBoost);
+    const bool boostTriggered = input.input.IsTrigger(Core::ActionId::SpeedBoost);
+    const bool resetTriggered = input.input.IsTrigger(Core::ActionId::SpeedReset);
+
+    if (boostTriggered)
     {
         adjustMoveSpeed(result.speedMultiplier * kPlayerSpeedBoostStep, "Boost key '1'");
     }
 
-    if (input.input.IsTrigger(Core::ActionId::SpeedReset))
+    if (resetTriggered)
     {
         adjustMoveSpeed(1.0f, "Reset key '2'");
+    }
+
+    if (!boostPressed && !resetTriggered && result.speedMultiplier > 1.0f)
+    {
+        adjustMoveSpeed(1.0f, "Boost key released");
     }
 
     return result;
