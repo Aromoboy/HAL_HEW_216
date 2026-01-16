@@ -1199,23 +1199,25 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
             for (const auto& link : glueSnapshot.fruitLinks)
             {
                 float z = stagePlaneZ;
-                if (link.cream)
+                float3 creamPos{ 0.0f, 0.0f, 0.0f };
+                float3 fruitPos{ 0.0f, 0.0f, 0.0f };
+                const bool hasCream = (link.cream != nullptr);
+                const bool hasFruit = (link.fruit != nullptr);
+                if (hasCream)
                 {
-                    const float3 creamPos = link.cream->GetTransform().position;
+                    creamPos = link.cream->GetTransform().position;
                     z = creamPos.z;
                     DebugColliderRenderer::DrawCircle(float2{ creamPos.x, creamPos.y }, 0.35f, creamPos.z, creamColor);
                 }
-                if (link.fruit)
+                if (hasFruit)
                 {
-                    const float3 fruitPos = link.fruit->GetTransform().position;
+                    fruitPos = link.fruit->GetTransform().position;
                     z = fruitPos.z;
                     DebugColliderRenderer::DrawCircle(float2{ fruitPos.x, fruitPos.y }, 0.28f, fruitPos.z,
                         link.fruitFrozen ? fruitColor : MakeColor(1.0f, 0.5f, 0.5f, 0.9f));
                 }
-                if (link.cream && link.fruit)
+                if (hasCream && hasFruit)
                 {
-                    const float3 creamPos = link.cream->GetTransform().position;
-                    const float3 fruitPos = link.fruit->GetTransform().position;
                     Geometory::AddLine(
                         DirectX::XMFLOAT3(creamPos.x, creamPos.y, creamPos.z),
                         DirectX::XMFLOAT3(fruitPos.x, fruitPos.y, fruitPos.z),
