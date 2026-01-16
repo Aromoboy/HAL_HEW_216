@@ -332,11 +332,11 @@ namespace MeteorsSpace
         m_hasCachedPlayerPosition = true;
     }
 
-    void MeteorsManager::RegisterProjectileHit(const std::shared_ptr<ActiveMeteors>& meteors)
+    std::optional<MeteorsType> MeteorsManager::RegisterProjectileHit(const std::shared_ptr<ActiveMeteors>& meteors)
     {
         if (!meteors || meteors->IsPendingDestroy())
         {
-            return;
+            return std::nullopt;
         }
 
         const auto& manifest = MeteorsPrototypeManifest::Instance();
@@ -350,11 +350,12 @@ namespace MeteorsSpace
         const int hitCount = ++m_meteorsHitCounts[meteors.get()];
         if (hitCount < requiredHits)
         {
-            return;
+            return std::nullopt;
         }
 
         m_lifecycle.RemoveMeteorsEntry(meteors, DeleteReason::Hit, "MissileHit", true, nullptr);
         m_meteorsHitCounts.erase(meteors.get());
+        return meteorsType;
     }
 
     void MeteorsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
