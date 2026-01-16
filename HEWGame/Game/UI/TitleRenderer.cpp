@@ -13,7 +13,7 @@
 
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
-	if (!texture)
+	if (!texture || !texture->Get())
 	{
 		return;
 	}
@@ -49,9 +49,46 @@ void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX
 
 }
 
+void TitleRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
+{
+	if (!texture || !texture->GetResource())
+	{
+		return;
+	}
+
+	// 各マトリクスと描画用のパラメーター
+	DirectX::XMFLOAT4X4 wvp[3];
+	DirectX::XMFLOAT4 param[3];
+
+	// 各マトリクスを設定
+	wvp[0] = worldMatrix;
+	wvp[1] = viewMatrix;
+	wvp[2] = projMatrix;
+
+
+	// ステータスを設定
+	param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
+	param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
+	param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
+
+
+	// シェーダーをバインド
+	ShaderList::SetWVP(wvp);
+
+	vs->WriteBuffer(0, wvp);
+	vs->WriteBuffer(1, param);
+	vs->Bind();
+
+	ps->SetTexture(0, texture->GetResource());
+	ps->Bind();
+
+	// 描画
+	MeshDraw();
+}
+
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
-	if (!texture)
+	if (!texture || !texture->Get())
 	{
 		return;
 	}
