@@ -2444,6 +2444,21 @@ namespace SceneGameConfig
                     DebugTrace(oss.str());
                 }
             }
+            else if (key == GameplayConfig::kPlayerMovementKeyWrapMargin)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.wrapMargin = std::max(0.0f, *parsed);
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse wrap margin line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -2460,7 +2475,8 @@ namespace SceneGameConfig
             << " accel=" << settings.accel
             << " brake=" << settings.brake
             << " turnRate=" << settings.turnRate
-            << " rollResponse=" << settings.rollResponse << "\n";
+            << " rollResponse=" << settings.rollResponse
+            << " wrapMargin=" << settings.wrapMargin << "\n";
         DebugTrace(oss.str());
 
         return settings;

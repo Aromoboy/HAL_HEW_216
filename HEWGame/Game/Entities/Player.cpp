@@ -93,6 +93,11 @@ namespace Entities
         m_physicsBinder.SetScreenBounds(minX, maxX, minY, maxY);
     }
 
+    void Player::SetWrapMargin(float margin)
+    {
+        m_physicsBinder.SetWrapMargin(margin);
+    }
+
     void Player::SetRenderAlpha(float alpha)
     {
         m_renderAlpha = alpha;

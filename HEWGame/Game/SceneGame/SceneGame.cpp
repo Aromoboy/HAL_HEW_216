@@ -2560,13 +2560,31 @@ void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
         return;
     }
 
+    float adjustedWrapDeltaY = wrapDeltaY;
+    const float wrapMargin = std::max(0.0f, m_playerMovementSettings.wrapMargin);
+    if (wrapMargin > 0.0f && m_cameraWrapMinY && m_cameraWrapMaxY
+        && IsFiniteFloat(*m_cameraWrapMinY) && IsFiniteFloat(*m_cameraWrapMaxY))
+    {
+        const float minY = std::min(*m_cameraWrapMinY, *m_cameraWrapMaxY);
+        const float maxY = std::max(*m_cameraWrapMinY, *m_cameraWrapMaxY);
+        const float wrapRange = maxY - minY;
+        if (IsFiniteFloat(wrapRange) && wrapRange > 0.0f)
+        {
+            const float tolerance = wrapMargin * 2.0f;
+            if (std::fabs(adjustedWrapDeltaY) > wrapRange + tolerance)
+            {
+                adjustedWrapDeltaY = std::copysign(wrapRange, adjustedWrapDeltaY);
+            }
+        }
+    }
+
     float3 cameraPosition = m_gameCamera->GetPosition();
     if (!IsFiniteFloat(cameraPosition.y))
     {
         return;
     }
 
-    cameraPosition.y += wrapDeltaY;
+    cameraPosition.y += adjustedWrapDeltaY;
     m_gameCamera->SetPosition(cameraPosition);
 
     if (m_cameraRig && player)
@@ -2574,11 +2592,11 @@ void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
         const float targetY = player->GetTransform().position.y;
         if (IsFiniteFloat(targetY))
         {
-            m_cameraRig->ApplyExternalWrapDeltaY(wrapDeltaY, targetY);
+            m_cameraRig->ApplyExternalWrapDeltaY(adjustedWrapDeltaY, targetY);
         }
     }
 
-    m_backgroundScrollOriginY += wrapDeltaY;
+    m_backgroundScrollOriginY += adjustedWrapDeltaY;
     m_backgroundCameraLastY = cameraPosition.y;
 }
 

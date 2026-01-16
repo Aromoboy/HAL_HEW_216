@@ -884,6 +884,10 @@ namespace MeteorsSpace
 
         if (m_spawner)
         {
+            if (previousState == MeteorsState::Stacked)
+            {
+                m_spawner->DecrementStackedCount();
+            }
             const int remainingToStack = std::max(0, m_spawner->GetBatchStackTarget() - m_spawner->GetStackedInBatch());
             const int liveAfterRemoval = m_spawner->CountLiveMeteors();
             m_spawner->OnMeteorsRemoved(remainingToStack, liveAfterRemoval, context);

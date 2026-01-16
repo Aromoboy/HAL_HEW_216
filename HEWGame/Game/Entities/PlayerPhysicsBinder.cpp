@@ -83,6 +83,17 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
+    void PlayerPhysicsBinder::SetWrapMargin(float margin)
+    {
+        if (!std::isfinite(margin))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の wrapMargin を無視しました \n");
+            return;
+        }
+
+        m_wrapMargin = std::max(0.0f, margin);
+    }
+
     void PlayerPhysicsBinder::ClampScreenBounds(Player& player)
     {
         if (!m_hasScreenBounds)
@@ -97,21 +108,20 @@ namespace Entities
             return;
         }
 
-        player.SyncColliderBounds();
-        const AABB bounds = player.GetAABB();
-
         float3 position = player.GetTransform().position;
         bool wrapped = false;
         float wrapDeltaY = 0.0f;
 
         if (spanX > kScreenWrapEpsilon)
         {
-            if (bounds.min.x < m_minScreenX)
+            const float minX = m_minScreenX - m_wrapMargin;
+            const float maxX = m_maxScreenX + m_wrapMargin;
+            if (position.x < minX)
             {
                 position.x += spanX;
                 wrapped = true;
             }
-            else if (bounds.max.x > m_maxScreenX)
+            else if (position.x > maxX)
             {
                 position.x -= spanX;
                 wrapped = true;
@@ -120,13 +130,15 @@ namespace Entities
 
         if (spanY > kScreenWrapEpsilon)
         {
-            if (bounds.min.y < m_minScreenY)
+            const float minY = m_minScreenY - m_wrapMargin;
+            const float maxY = m_maxScreenY + m_wrapMargin;
+            if (position.y < minY)
             {
                 position.y += spanY;
                 wrapped = true;
                 wrapDeltaY += spanY;
             }
-            else if (bounds.max.y > m_maxScreenY)
+            else if (position.y > maxY)
             {
                 position.y -= spanY;
                 wrapped = true;
