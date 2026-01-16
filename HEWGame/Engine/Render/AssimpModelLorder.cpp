@@ -96,21 +96,6 @@ namespace
             return "Assets/Texture/meteor.jpg";
         case SweetsType::Pineapple:
             return "Assets/Texture/Meteorite_Diffuse.png";
-        case SweetsType::Banana:
-            return "Assets/Texture/banana.png";
-        case SweetsType::Cream:
-            return "Assets/Texture/Cream.png";
-
-        case SweetsType::Kiwi :
-            return "Assets/Texture/kiwi.png";
-        case SweetsType::Mikan:
-            return "Assets/Texture/mikan.png";
-        case SweetsType::Muscat:
-            return "Assets/Texture/muscat.png";
-        case SweetsType::Melon:
-            return "Assets/Texture/melon.png";
-        default:
-            return std::nullopt;
         }
     }
 
