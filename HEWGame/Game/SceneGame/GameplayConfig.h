@@ -5,6 +5,8 @@ namespace GameplayConfig
     inline constexpr const char* kConfigPath = "Assets/Config/gameplay.cfg";
     inline constexpr const char* kSectionPhysicsTuning = "physics.tuning";
     inline constexpr const char* kSectionPlayerTransform = "player.transform";
+    inline constexpr const char* kSectionPlayerMovement = "player.movement";
+    inline constexpr const char* kPlayerMovementKeyHeadingOffsetDegrees = "headingOffsetDegrees";
     inline constexpr const char* kSectionCameraRig = "camera.rig";
     inline constexpr const char* kCameraRigKeyMode = "mode";
     inline constexpr const char* kCameraRigKeyMinY = "minY";

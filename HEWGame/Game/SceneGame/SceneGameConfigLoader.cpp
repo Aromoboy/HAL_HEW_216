@@ -2218,6 +2218,82 @@ namespace SceneGameConfig
         return result;
     }
 
+    PlayerMovementSettings LoadPlayerMovementSettings()
+    {
+        PlayerMovementSettings settings{};
+        constexpr float kDegToRad = 3.14159265358979323846f / 180.0f;
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionPlayerMovement, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerMovement] Config section missing; using defaults path='"
+                << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionPlayerMovement << "'.\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        int parsedFields = 0;
+        for (const auto& entry : lines)
+        {
+            const int lineNumber = static_cast<int>(entry.lineNumber);
+            const std::string key = TrimWhitespace(entry.key);
+            const std::string value = TrimWhitespace(entry.value);
+            if (key.empty() || value.empty())
+            {
+                continue;
+            }
+
+            if (key == GameplayConfig::kPlayerMovementKeyHeadingOffsetDegrees || key == "headingOffsetDeg")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.headingOffsetRadians = *parsed * kDegToRad;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse headingOffsetDegrees line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == "headingOffsetRadians")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.headingOffsetRadians = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse headingOffsetRadians line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerMovement] Ignored unknown key '" << key << "' on line " << lineNumber << "\n";
+                DebugTrace(oss.str());
+            }
+        }
+
+        settings.loadedFromFile = true;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerMovement] Applied path='" << kGameplayConfigPath
+            << "' section='" << GameplayConfig::kSectionPlayerMovement
+            << "' loaded=" << std::boolalpha << settings.loadedFromFile
+            << " parsedFields=" << parsedFields
+            << " headingOffsetRad=" << settings.headingOffsetRadians << "\n";
+        DebugTrace(oss.str());
+
+        return settings;
+    }
+
     MissileSettings LoadMissileSettings()
     {
         MissileSettings settings{};

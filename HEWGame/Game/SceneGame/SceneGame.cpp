@@ -99,19 +99,17 @@ namespace
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
         }
 
-        float ResolvePlayerYaw(const Transform& transform)
+        constexpr float kTwoPi = 6.283185307179586f;
+
+        float ResolvePlayerYaw(const Transform& transform, float headingOffsetRadians)
         {
-            constexpr float kYawAxisEpsilon = 1.0e-4f;
-
-            const float absYawZ = std::fabs(transform.rotation.z);
-            const float absYawY = std::fabs(transform.rotation.y);
-
-            if (absYawY > absYawZ + kYawAxisEpsilon)
+            const float yaw = transform.rotation.y + headingOffsetRadians;
+            if (!std::isfinite(yaw))
             {
-                return transform.rotation.y;
+                return 0.0f;
             }
 
-            return transform.rotation.z;
+            return std::remainder(yaw, kTwoPi);
         }
 
         float3 ForwardFromYaw(float yaw)
@@ -386,6 +384,7 @@ bool SceneGame::Load(Core::Input& input)
     m_loadFailed = false;
     composer.Compose(*composition);
     m_playerSpawnTransform = composition->playerSpawnTransform;
+    m_playerMovementSettings = composition->playerMovementSettings;
     m_stageData = std::move(composition->stageData);
     m_stagePlaneZ = std::nullopt;
     const float stagePlaneZ = m_stageData.GetPlaneZ();
@@ -439,6 +438,7 @@ bool SceneGame::Load(Core::Input& input)
     loaderConfig.physicsBinder = m_physicsBinder.get();
     loaderConfig.drawSystem = m_drawSystem.get();
     loaderConfig.playerSpawnTransform = m_playerSpawnTransform;
+    loaderConfig.playerMovementSettings = m_playerMovementSettings;
     loaderConfig.playerBaseHorizontalSpeed = m_playerBaseHorizontalSpeed;
     loaderConfig.playerBaseVerticalSpeed = m_playerBaseVerticalSpeed;
     loaderConfig.playerSpeedMultiplier = m_playerSpeedMultiplier;
@@ -1038,7 +1038,7 @@ void SceneGame::FireMissile()
 
     const Transform playerTransform = player->GetTransform();
     constexpr float kSpawnOffset = 1.5f;
-    const float yaw = ResolvePlayerYaw(playerTransform);
+    const float yaw = ResolvePlayerYaw(playerTransform, m_playerMovementSettings.headingOffsetRadians);
     const float3 forward = ForwardFromYaw(yaw);
     constexpr float kMissileSpeed = 40.0f;
     constexpr float kMissileLifetimeSeconds = 6.0f;

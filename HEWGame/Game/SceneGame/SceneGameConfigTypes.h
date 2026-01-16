@@ -25,6 +25,12 @@ namespace SceneGameConfig
         bool rotationFromDegrees = false;
     };
 
+    struct PlayerMovementSettings
+    {
+        float headingOffsetRadians = 0.0f;
+        bool loadedFromFile = false;
+    };
+
     struct MissileSettings
     {
         float3 scale{ 1.0f, 1.0f, 1.0f };

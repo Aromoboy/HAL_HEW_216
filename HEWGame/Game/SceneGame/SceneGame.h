@@ -158,6 +158,7 @@ protected:
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerSpeedMultiplier = 1.0f;
+    SceneGameConfig::PlayerMovementSettings m_playerMovementSettings{};
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;

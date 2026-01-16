@@ -34,6 +34,7 @@ public:
         Systems::IPhysicsBinder* physicsBinder = nullptr;
         Systems::DrawSystem* drawSystem = nullptr;
         SceneGameConfig::PlayerSpawnTransform playerSpawnTransform{};
+        SceneGameConfig::PlayerMovementSettings playerMovementSettings{};
         float playerBaseHorizontalSpeed = 0.0f;
         float playerBaseVerticalSpeed = 0.0f;
         float playerSpeedMultiplier = 1.0f;

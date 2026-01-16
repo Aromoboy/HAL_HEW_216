@@ -26,6 +26,7 @@ public:
     {
         bool stageConfigLoaded = false;
         SceneGame::PlayerSpawnTransform playerSpawnTransform{};
+        SceneGameConfig::PlayerMovementSettings playerMovementSettings{};
         Stage::StageData stageData{};
         GameFlow::PhaseManager phaseManager{};
         float playerBaseHorizontalSpeed = 0.0f;

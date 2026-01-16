@@ -104,6 +104,7 @@ void SceneComposer::Compose(Composition& result)
 void SceneComposer::ComposeConfig(Composition& result)
 {
     result.playerSpawnTransform = SceneGameConfig::LoadPlayerTransformConfig();
+    result.playerMovementSettings = SceneGameConfig::LoadPlayerMovementSettings();
     result.renderPostProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
     result.lightingSettings = SceneGameConfig::LoadLightingSettings();
     result.blobShadowSettings = SceneGameConfig::LoadBlobShadowSettings();

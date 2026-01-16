@@ -135,6 +135,16 @@ namespace
     {
         return float3{ std::cos(yaw), std::sin(yaw), 0.0f };
     }
+
+    float GetHeadingAxis(const float3& rotation)
+    {
+        return rotation.y;
+    }
+
+    void SetHeadingAxis(float3& rotation, float yaw)
+    {
+        rotation.y = yaw;
+    }
 }
 
 namespace Entities
@@ -168,7 +178,8 @@ namespace Entities
 
         if (!m_hasCurrentHeading)
         {
-            m_currentHeading = player.GetTransform().rotation.z - m_baseRotation.z;
+            m_currentHeading = GetHeadingAxis(player.GetTransform().rotation) - GetHeadingAxis(m_baseRotation);
+            m_currentHeading += m_headingOffsetRadians;
             m_currentHeading = WrapRadians(m_currentHeading);
             m_hasCurrentHeading = true;
         }
@@ -215,7 +226,8 @@ namespace Entities
             if (hasInput)
             {
                 float3 targetRotation = updatedRotation;
-                targetRotation.z = m_baseRotation.z + m_currentHeading;
+                const float headingRotation = GetHeadingAxis(m_baseRotation) + (m_currentHeading - m_headingOffsetRadians);
+                SetHeadingAxis(targetRotation, headingRotation);
 
                 if (hasBody)
                 {
@@ -375,6 +387,17 @@ namespace Entities
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "速度倍率を " << m_speedMultiplier << "x に設定しました \n";
         PlayerDebugTrace(oss.str());
+    }
+
+    void PlayerMovement::SetHeadingOffsetRadians(float offsetRadians)
+    {
+        if (!std::isfinite(offsetRadians))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のheading offset指定を無視しました \n");
+            return;
+        }
+
+        m_headingOffsetRadians = offsetRadians;
     }
 
     float PlayerMovement::GetMoveSpeed() const

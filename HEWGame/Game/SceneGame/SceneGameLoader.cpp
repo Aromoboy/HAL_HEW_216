@@ -206,6 +206,7 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         }
         result.player->SetBaseMoveSpeed(config.playerBaseHorizontalSpeed, config.playerBaseVerticalSpeed);
         result.player->SetSpeedMultiplier(config.playerSpeedMultiplier);
+        result.player->SetHeadingOffsetRadians(config.playerMovementSettings.headingOffsetRadians);
         if (colliderReady)
         {
             if (config.physicsBinder)

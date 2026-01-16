@@ -21,6 +21,7 @@ namespace Entities
         void SetMoveSpeeds(float horizontal, float vertical);
         void SetBaseMoveSpeed(float horizontal, float vertical);
         void SetSpeedMultiplier(float multiplier);
+        void SetHeadingOffsetRadians(float offsetRadians);
         float GetMoveSpeed() const;
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
@@ -39,6 +40,7 @@ namespace Entities
         float m_turnRate{ 4.0f };
         float m_currentHeading{ 0.0f };
         bool m_hasCurrentHeading{ false };
+        float m_headingOffsetRadians{ 0.0f };
         float m_rollMaxRadians{ 0.436332f };
         float m_rollInputRange{ 0.785398f };
         float m_rollResponse{ 6.0f };
