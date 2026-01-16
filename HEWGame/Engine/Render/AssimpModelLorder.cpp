@@ -210,6 +210,8 @@ namespace
         addOverride("assets/model/cake.fbx", "Assets/Texture/cake.png");
         addOverride("osara.fbx", "Assets/Texture/osara.png");
         addOverride("assets/model/osara.fbx", "Assets/Texture/osara.png");
+        addOverride("base.fbx", "Assets/Texture/texture_diffuse.png");
+        addOverride("assets/model/base.fbx", "Assets/Texture/texture_diffuse.png");
 
         return overrides;
     }
@@ -436,9 +438,8 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
 
     // ノード作成
     std::vector<NodeDX> nodes;
-    Animation::AnimationArray animationarray;
 
-    MakeNode(pScene, nodes, animationarray);
+    MakeNode(pScene, nodes);
 
     // メッシュ作成
     AABB localBounds{};
@@ -930,252 +931,9 @@ AssimpModelLorder::MakeMaterial(
     return materials;
 }
 
-std::shared_ptr<Animation> AssimpModelLorder::LoadAnimation(const std::string& path)
-{
-
-    // assimpの設定
-    static Assimp::Importer importer;
-
-    unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals;
-
-    // assimpで読み込み
-    importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
-    const aiScene* pScene = importer.ReadFile(path, flag);
-
-    if (!pScene)
-    {
-
-        return nullptr;
-    }
-
-    // アニメーションチェック
-    if (!pScene->HasAnimations())
-    {
-#if MODEL_FORCE_ERROR
-        ShowErrorMessage(file, false);
-#endif
-        return nullptr;
-    }
-
-    std::vector<NodeDX> node;
-    Animation::AnimationArray animationArray;
-    MakeNode(pScene, node, animationArray);
-
-    // アニメーションデータ確保
-    aiAnimation* assimpAnime = pScene->mAnimations[0];
-
-    Animation::AnimePlayInfo info;
-    std::vector<Animation::AnimeChannel> channels;
-
-
-    // アニメーション設定
-    using XMVectorKey = std::pair<float, DirectX::XMVECTOR>;
-    using XMVectorKeys = std::map<float, DirectX::XMVECTOR>;
-    info.nowTime = 0.0f;
-    float fbxToGameFrame = static_cast<float>(assimpAnime->mTicksPerSecond);
-    info.totalTime = static_cast<float>(assimpAnime->mDuration) / fbxToGameFrame;
-    info.speed = 1.0f;
-
-    for (UINT channelIdx = 0; channelIdx < assimpAnime->mNumChannels; ++channelIdx)
-    {
-        // これから処理するチャンネルの情報を取得
-        aiNodeAnim* assimpChannel = assimpAnime->mChannels[channelIdx];
-
-        // Assimp側の名称からノード名のみ抽出
-        std::string name = assimpChannel->mNodeName.data;
-
-
-        // 対応するチャンネル(ボーン)を既存のノード内から探索
-        NodeIndexDX nodeIdx = FindNode(name.c_str(), node);
-        if (nodeIdx == kNodeNone) { continue; }
-
-        // 読み取り済みのノードか探索
-        std::vector<Animation::AnimeChannel>::iterator channelIt =
-            std::find_if(channels.begin(), channels.end(),
-                [nodeIdx](const Animation::AnimeChannel& val) {
-                    return val.node == nodeIdx;
-                });
-
-        // 始めて読み取るノードであれば新規追加
-        if (channelIt == channels.end())
-        {
-            channels.push_back({});
-            channelIt = channels.end() - 1;
-            channelIt->node = nodeIdx;
-        }
-
-        // 各キーの値を配列にコピー
-        XMVectorKeys keys[3];
-        Animation::AnimeTimeline& timeline = channelIt->timeline;
-        // 位置
-        for (UINT i = 0; i < assimpChannel->mNumPositionKeys; ++i)
-        {
-            aiVectorKey& key = assimpChannel->mPositionKeys[i];
-            keys[0].insert(XMVectorKey(static_cast<float>(key.mTime) / fbxToGameFrame,
-                DirectX::XMVectorSet(key.mValue.x, key.mValue.y, key.mValue.z, 0.0f)
-            ));
-        }
-        // 回転
-        for (UINT i = 0; i < assimpChannel->mNumRotationKeys; ++i)
-        {
-            aiQuatKey& key = assimpChannel->mRotationKeys[i];
-            keys[1].insert(XMVectorKey(static_cast<float>(key.mTime) / fbxToGameFrame,
-                DirectX::XMVectorSet(key.mValue.x, key.mValue.y, key.mValue.z, key.mValue.w)));
-        }
-        // 拡縮
-        for (UINT i = 0; i < assimpChannel->mNumScalingKeys; ++i)
-        {
-            aiVectorKey& key = assimpChannel->mScalingKeys[i];
-            keys[2].insert(XMVectorKey(static_cast<float>(key.mTime) / fbxToGameFrame,
-                DirectX::XMVectorSet(key.mValue.x, key.mValue.y, key.mValue.z, 0.0f)));
-        }
-
-        // 各タイムラインの先頭の参照を設定
-        XMVectorKeys::iterator it[] = { keys[0].begin(), keys[1].begin(), keys[2].begin() };
-        for (int i = 0; i < 3; ++i)
-        {
-            // キーが一つしかない場合は、参照終了
-            if (keys[i].size() == 1)
-                ++it[i];
-        }
-
-#if 1 // 要素ごとにタイムラインを作成
-        do
-        {
-
-
-
-            // 現状の参照位置で一番小さい時間を取得
-            float time = std::numeric_limits<float>::max();
-
-            for (int i = 0; i < 3; ++i)
-            {
-                if (it[i] != keys[i].end())
-                {
-                    time = std::min(it[i]->first, time);
-                }
-            }
-
-            time = std::max(0.0f, time);
-
-            // 時間に基づいて補間値を計算
-            DirectX::XMVECTOR result[3];
-            for (int i = 0; i < 3; ++i)
-            {
-                // 先頭のキーより小さい時間であれば、先頭の値を設定
-                if (time < keys[i].begin()->first)
-                {
-                    result[i] = keys[i].begin()->second;
-                }
-                // 最終キーより大きい時間であれば、最終の値を設定
-                else if (keys[i].rbegin()->first <= time)
-                {
-                    result[i] = keys[i].rbegin()->second;
-                    it[i] = keys[i].end();
-                }
-                // キー同士に挟まれた時間であれば、補間値を計算
-                else
-                {
-                    // 参照している時間と同じであれば、次の参照へキーを進める
-                    if (it[i]->first <= time)
-                    {
-                        ++it[i];
-                    }
-
-                    // 補間値の計算
-                    XMVectorKeys::iterator prev = it[i];
-                    --prev;
-                    float rate = (time - prev->first) / (it[i]->first - prev->first);
-                    result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
-                }
-            }
-
-
-            // キーが追加済みか判定
-            Animation::AnimeTimeline::iterator timelineIt = timeline.find(time);
-            if (timelineIt != timeline.end())
-            {
-                // キーの数に応じて値を更新
-                if (assimpChannel->mNumPositionKeys > 1)
-                    DirectX::XMStoreFloat3(&timelineIt->second.translate, result[0]);
-                if (assimpChannel->mNumRotationKeys > 1)
-                    DirectX::XMStoreFloat4(&timelineIt->second.quaternion, result[1]);
-                if (assimpChannel->mNumScalingKeys > 1)
-                    DirectX::XMStoreFloat3(&timelineIt->second.scale, result[2]);
-            }
-            else
-            {
-                // 新しい値の追加
-                Animation::AnimeTransformDX transform;
-                DirectX::XMStoreFloat3(&transform.translate, result[0]);
-                DirectX::XMStoreFloat4(&transform.quaternion, result[1]);
-                DirectX::XMStoreFloat3(&transform.scale, result[2]);
-                timeline.insert(Animation::AnimeKey(time, transform));
-            }
-        } while (it[0] != keys[0].end() || it[1] != keys[1].end() || it[2] != keys[2].end());
-#else // 一括で作成
-        // 各要素ごとのタイムラインではなく、すべての変換を含めたタイムラインの作成
-        while (it[0] != keys[0].end() && it[1] != keys[1].end() && it[2] != keys[2].end())
-        {
-            // 現状の参照位置で一番小さい時間を取得
-            float time = anime.info.totalTime;
-            for (int i = 0; i < 3; ++i)
-            {
-                if (it[i] != keys[i].end())
-                {
-                    time = std::min(it[i]->first, time);
-                }
-            }
-
-            // 時間に基づいて補間値を計算
-            DirectX::XMVECTOR result[3];
-            for (int i = 0; i < 3; ++i)
-            {
-                // 先頭のキーより小さい時間であれば、先頭の値を設定
-                if (time < keys[i].begin()->first)
-                {
-                    result[i] = keys[i].begin()->second;
-                }
-                // 最終キーより大きい時間であれば、最終の値を設定
-                else if (keys[i].rbegin()->first <= time)
-                {
-                    result[i] = keys[i].rbegin()->second;
-                    it[i] = keys[i].end();
-                }
-                // キー同士に挟まれた時間であれば、補間値を計算
-                else
-                {
-                    // 参照している時間と同じであれば、次の参照へキーを進める
-                    if (it[i]->first <= time)
-                    {
-                        ++it[i];
-                    }
-
-                    // 補間値の計算
-                    XMVectorKeys::iterator prev = it[i];
-                    --prev;
-                    float rate = (time - prev->first) / (it[i]->first - prev->first);
-                    result[i] = DirectX::XMVectorLerp(prev->second, it[i]->second, rate);
-                }
-            }
-
-            // 指定時間に基づいたキーを追加
-            AnimeTransform transform;
-            DirectX::XMStoreFloat3(&transform.translate, result[0]);
-            DirectX::XMStoreFloat4(&transform.quaternion, result[1]);
-            DirectX::XMStoreFloat3(&transform.scale, result[2]);
-            timeline.insert(AnimeKey(time, transform));
-        }
-#endif
-    }
-
-
-    return std::make_shared<Animation>(info, channels, animationArray, node);
-}
-
 // Node周り
 
-void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outNodes, Animation::AnimationArray& a_outAnimeTransform)
+void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outNodes)
 {
 
     // 再帰処理でAssimpのノード情報を読み取り
@@ -1217,33 +975,6 @@ void AssimpModelLorder::MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outN
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     func(pScene->mRootNode, kNodeNone, DirectX::XMMatrixIdentity());
 
-    // アニメーション計算領域に、ノード数分の初期データを作成
-    for (int i = 0; i < Animation::AnimePatternDX::MAX_ANIMEPATTERN; ++i)
-    {
-        a_outAnimeTransform[i].resize(a_outNodes.size());
-    }
-    for (size_t nodeIndex = 0; nodeIndex < a_outNodes.size(); ++nodeIndex)
-    {
-        DirectX::XMVECTOR scale;
-        DirectX::XMVECTOR rotation;
-        DirectX::XMVECTOR translation;
-        if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation, a_outNodes[nodeIndex].mat))
-        {
-            scale = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
-            rotation = DirectX::XMQuaternionIdentity();
-            translation = DirectX::XMVectorZero();
-        }
-
-        Animation::AnimeTransformDX init;
-        DirectX::XMStoreFloat3(&init.translate, translation);
-        DirectX::XMStoreFloat4(&init.quaternion, rotation);
-        DirectX::XMStoreFloat3(&init.scale, scale);
-
-        for (int pattern = 0; pattern < Animation::AnimePatternDX::MAX_ANIMEPATTERN; ++pattern)
-        {
-            a_outAnimeTransform[pattern][nodeIndex] = init;
-        }
-    }
 }
 
 NodeIndexDX AssimpModelLorder::FindNode(const char* name, const std::vector<NodeDX>& nodes)

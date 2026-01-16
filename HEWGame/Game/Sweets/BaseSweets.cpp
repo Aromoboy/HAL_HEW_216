@@ -73,7 +73,7 @@ namespace SweetsSpace
             return;
         }
 
-        renderer.Draw(*m_model, m_renderTransform, &camera, m_animation.get());
+        renderer.Draw(*m_model, m_renderTransform, &camera);
     }
 
     Transform BaseSweets::GetRenderTransform() const

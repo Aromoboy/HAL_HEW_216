@@ -3,7 +3,6 @@
 #include <string>
 
 #include "Render/Model.h"
-#include "Animation.h"
 #include "MaterialTuningSettings.h"
 
 struct ID3D11Device;
@@ -21,5 +20,4 @@ virtual ~IModelLoader() = default;
                 ID3D11Device* device,
                 TextureCache& textureCache,
                 const MaterialTuningSettings& materialTuningSettings) = 0;
-        virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path) = 0;
 };

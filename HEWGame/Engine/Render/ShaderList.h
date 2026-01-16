@@ -73,7 +73,6 @@ public:
 	enum VSKind
 	{
 		VS_WORLD, // WVP 設定
-		VS_ANIME, // WVP/ボーン設定
 		VS_KIND_MAX
 	};
 	enum PSKind
@@ -100,7 +99,6 @@ public:
 
 	// 萔obt@ւ̐ݒ
 	static void SetWVP(DirectX::XMFLOAT4X4* wvp);
-	static void SetBones(DirectX::XMFLOAT4X4* bones200);
 	static void SetMaterial(const Model::Material& material);
 	static void SetMaterial(const MaterialDX& material);
 
@@ -112,7 +110,6 @@ public:
 	
 private:
 	static void MakeWorldVS();
-	static void MakeAnimeVS();
 	static void MakeLambertPS();
 	static void MakeLambertLegacyPS();
 	static void MakeSpecularPS();

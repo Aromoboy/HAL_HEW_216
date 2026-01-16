@@ -274,7 +274,6 @@ void SceneComposer::ComposeConfig(Composition& result)
         DebugTrace(oss.str());
     }
 
-    // AnimationCache は SceneGame で SetLoader 済みのため、ここでは触らない
 }
 
 void SceneComposer::ComposeRules(Composition& result)

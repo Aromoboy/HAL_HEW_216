@@ -2,9 +2,7 @@
 #include "ModelDX.h"
 
 #include <algorithm>
-#include <array>
 
-#include "Animation.h"
 #include "DrawMatrix.h"
 #include "ShaderList.h"
 #include "Defines.h"
@@ -14,7 +12,7 @@
 ModelRender::ModelRender() = default;
 ModelRender::~ModelRender() = default;
 
-void ModelRender::Draw(Render::Model& a_model, Transform transform, const CameraSpace::ICamera* camera, Animation* animation)
+void ModelRender::Draw(Render::Model& a_model, Transform transform, const CameraSpace::ICamera* camera)
 {
     if (!camera)
     {
@@ -35,7 +33,6 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
 
     ShaderList::SetWVP(wvp);
 
-    // 一旦すべてアニメで描画
     VertexShader* pVTX = ShaderList::GetVS(ShaderList::VS_WORLD);
     PixelShader* pPXS = ShaderList::GetPS(ShaderList::PS_LAMBERT);
 
@@ -55,35 +52,6 @@ void ModelRender::Draw(Render::Model& a_model, Transform transform, const Camera
         std::shared_ptr<MaterialDX> material =
             a_model.GetMaterial(mesh->GetMaterialID()).lock();
 
-
-
-        constexpr size_t kMaxBones = 200;
-        std::array<DirectX::XMFLOAT4X4, kMaxBones> bones{};
-        const unsigned int boneCount = mesh->GetBoneCount();
-        const size_t limitedBoneCount = std::min<size_t>(boneCount, kMaxBones);
-
-        for (size_t i = 0; i < kMaxBones; ++i)
-        {
-            DirectX::XMStoreFloat4x4(&bones[i], DirectX::XMMatrixIdentity());
-        }
-
-        const bool useAnimationShader = (boneCount > 0) && (animation != nullptr);
-
-        DirectX::XMFLOAT4X4 newBones[200];
-        if (useAnimationShader)
-        {
-            pVTX = ShaderList::GetVS(ShaderList::VS_ANIME);
-            pVTX->Bind();
-            for (size_t boneIdx = 0; boneIdx < 47; ++boneIdx)
-            {
-                DirectX::XMStoreFloat4x4(
-                    &newBones[boneIdx],
-                    DirectX::XMMatrixTranspose(mesh->GetBoneMatrix(boneIdx) *
-                        animation->GetNodeMatrix(mesh->GetBoneNodeIndex(boneIdx))));
-            }
-        }
-
-        ShaderList::SetBones(newBones);
 
 
         if (material)

@@ -383,10 +383,6 @@ namespace Entities
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "TryPickupNearest invoked\n");
             TryPickupNearest(player);
-            if (m_lastPickupResult.result == SweetsSpace::PickupResult::Success)
-            {
-                model.PlayStabAnimation(player);
-            }
         }
     }
 

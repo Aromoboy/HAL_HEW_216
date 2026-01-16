@@ -212,9 +212,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Engine\Core\VertexBuffer.cpp" />
     <ClCompile Include="Engine\Core\WindowManager.cpp" />
     <ClCompile Include="Engine\Render\AABB.cpp" />
-    <ClCompile Include="Engine\Render\Animation.cpp" />
-    <ClCompile Include="Engine\Render\AnimationCache.cpp" />
-    <ClCompile Include="Engine\Render\AnimationState.cpp" />
     <ClCompile Include="Engine\Render\AssimpModelLorder.cpp" />
     <ClCompile Include="Engine\Render\DebugColliderRenderer.cpp" />
     <ClCompile Include="Engine\Render\DirectX.cpp" />
@@ -341,9 +338,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Engine\Core\WindowManager.h" />
     <ClInclude Include="Engine\Core\conioex.h" />
     <ClInclude Include="Engine\Render\AABB.h" />
-    <ClInclude Include="Engine\Render\Animation.h" />
-    <ClInclude Include="Engine\Render\AnimationCache.h" />
-    <ClInclude Include="Engine\Render\AnimationState.h" />
     <ClInclude Include="Engine\Render\AssimpModelLorder.h" />
     <ClInclude Include="Engine\Render\DebugColliderRenderer.h" />
     <ClInclude Include="Engine\Render\DirectX.h" />

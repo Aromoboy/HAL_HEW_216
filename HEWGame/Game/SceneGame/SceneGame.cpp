@@ -27,7 +27,6 @@
 #include "PlayerController.h"
 #include "AppGame.h"
 #include "CameraMath.h"
-#include "AnimationCache.h"
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
 #include "ShaderCache.h"
@@ -362,11 +361,6 @@ bool SceneGame::Load(Core::Input& input)
             modelCache.SetLoader(std::make_unique<AssimpModelLorder>(), device, textureCache);
         }
 
-        Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
-        if (!animationCache.IsConfiguredFor(device))
-        {
-            animationCache.SetLoader(std::make_unique<AssimpModelLorder>(), device);
-        }
     }
 
     SceneComposer composer(GetUpdateScheduler());
