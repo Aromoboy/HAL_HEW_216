@@ -89,6 +89,7 @@ namespace MeteorsSpace
 
         MeteorsList& GetByState(MeteorsState state);
         const MeteorsList& GetByState(MeteorsState state) const;
+        std::shared_ptr<ActiveMeteors> FindByEntity(Entities::PhysicalEntity* entity) const;
 
         float GetHighestStackedHeight() const;
 

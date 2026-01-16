@@ -5,40 +5,6 @@
 #include "MeteorsManager.h"
 #include "Systems/Physics/CollisionLayer.h"
 
-namespace
-{
-    std::shared_ptr<MeteorsSpace::ActiveMeteors> FindMeteorsByEntity(
-        MeteorsSpace::MeteorsManager* manager,
-        Entities::PhysicalEntity* entity)
-    {
-        if (!manager || !entity)
-        {
-            return nullptr;
-        }
-
-        const MeteorsSpace::MeteorsState states[] = {
-            MeteorsSpace::MeteorsState::Active,
-            MeteorsSpace::MeteorsState::Stacked,
-            MeteorsSpace::MeteorsState::Ground,
-            MeteorsSpace::MeteorsState::Carried
-        };
-
-        for (MeteorsSpace::MeteorsState state : states)
-        {
-            auto& list = manager->GetByState(state);
-            for (const auto& meteors : list)
-            {
-                if (meteors && meteors.get() == entity)
-                {
-                    return meteors;
-                }
-            }
-        }
-
-        return nullptr;
-    }
-}
-
 void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
     MeteorsSpace::MeteorsManager* meteorsManager,
     Entities::PhysicalEntity* playerEntity,
@@ -60,7 +26,7 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
             if (aIsMissile && b.GetCollisionLayer() == Collision::CollisionLayer::Meteors)
             {
                 auto missile = m_missileResolver ? m_missileResolver(&a) : nullptr;
-                auto meteors = FindMeteorsByEntity(m_meteorsManager, &b);
+                auto meteors = m_meteorsManager ? m_meteorsManager->FindByEntity(&b) : nullptr;
                 if (missile && meteors)
                 {
                     m_missileContact = MissileContactEvent{ missile, meteors };
@@ -69,7 +35,7 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
             else if (bIsMissile && a.GetCollisionLayer() == Collision::CollisionLayer::Meteors)
             {
                 auto missile = m_missileResolver ? m_missileResolver(&b) : nullptr;
-                auto meteors = FindMeteorsByEntity(m_meteorsManager, &a);
+                auto meteors = m_meteorsManager ? m_meteorsManager->FindByEntity(&a) : nullptr;
                 if (missile && meteors)
                 {
                     m_missileContact = MissileContactEvent{ missile, meteors };
@@ -91,7 +57,7 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
             Entities::PhysicalEntity* other = playerIsA ? &b : &a;
             if (other->GetCollisionLayer() == Collision::CollisionLayer::Meteors)
             {
-                auto meteors = FindMeteorsByEntity(m_meteorsManager, other);
+                auto meteors = m_meteorsManager ? m_meteorsManager->FindByEntity(other) : nullptr;
                 m_playerContact = PlayerContactEvent{ meteors, other, PlayerContactType::Begin, PlayerContactSource::Meteor };
             }
             else if (other->GetTag() == "projectile_missile")
@@ -121,7 +87,7 @@ void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder,
             Entities::PhysicalEntity* other = playerIsA ? &b : &a;
             if (other->GetCollisionLayer() == Collision::CollisionLayer::Meteors)
             {
-                auto meteors = FindMeteorsByEntity(m_meteorsManager, other);
+                auto meteors = m_meteorsManager ? m_meteorsManager->FindByEntity(other) : nullptr;
                 m_playerContact = PlayerContactEvent{ meteors, other, PlayerContactType::End, PlayerContactSource::Meteor };
             }
             else if (other->GetTag() == "projectile_missile")
