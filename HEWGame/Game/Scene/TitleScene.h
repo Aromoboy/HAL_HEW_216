@@ -27,7 +27,6 @@ class TitleScene : public SceneSpace::Scene, public SceneSpace::IScene
     enum class TitleMenu
     {
         Start,
-        PowerUp,
         Exit,
         Max
     };
@@ -56,13 +55,10 @@ private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;
     bool m_startButtonEnabled = false;
-    bool m_powerUpButtonEnabled = false;
     bool m_exitButtonEnabled = false;
 
     Texture m_texStartRed;
     Texture m_texStartGreen;
-    Texture m_texPowerUpRed;
-    Texture m_texPowerUpGreen;
     Texture m_texExitRed;
     Texture m_texExitGreen;
 

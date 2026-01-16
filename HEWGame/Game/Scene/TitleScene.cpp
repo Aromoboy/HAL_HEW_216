@@ -5,7 +5,6 @@
 
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
-#include "ScenePowerUp.h"
 #include "SettingScene.h"
 #include "EffectTestScene.h"
 #include "DirectX.h"
@@ -115,14 +114,6 @@ void TitleScene::OnEnter()
         Diagnostics::LogInfo(std::string(kLogPrefix) + "Start button disabled due to missing textures.\n");
     }
 
-    const bool powerUpRedOk = TryLoadTexture(m_texPowerUpRed, "Assets/Texture/タイトル画面UI3.png", "PowerUp (red)");
-    const bool powerUpGreenOk = TryLoadTexture(m_texPowerUpGreen, "Assets/Texture/タイトル画面UI4.png", "PowerUp (green)");
-    m_powerUpButtonEnabled = powerUpRedOk && powerUpGreenOk;
-    if (!m_powerUpButtonEnabled)
-    {
-        Diagnostics::LogInfo(std::string(kLogPrefix) + "PowerUp button disabled due to missing textures.\n");
-    }
-
     const bool exitRedOk = TryLoadTexture(m_texExitRed, "Assets/Texture/タイトル画面UI1.png", "Exit (red)");
     const bool exitGreenOk = TryLoadTexture(m_texExitGreen, "Assets/Texture/タイトル画面UI2.png", "Exit (green)");
     m_exitButtonEnabled = exitRedOk && exitGreenOk;
@@ -203,10 +194,6 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
             if (m_manager && m_startButtonEnabled)
                 m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
             break;
-        case TitleMenu::PowerUp:
-            if (m_manager && m_powerUpButtonEnabled)
-                m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
-            break;
         case TitleMenu::Exit:
             if (m_exitButtonEnabled)
             {
@@ -215,15 +202,6 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
             break;
         }
        
-    }
-
-    if (input->IsTrigger('P'))
-    {
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
-        }
-        return;
     }
 
     if (input->IsTrigger(VK_F1))
@@ -300,7 +278,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
 
     // カーソルで色を切り替えて描画
     drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed, centerX, startY + spacing * 0, buttonWidth, buttonHeight);
-    drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
-    drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 2, buttonWidth, buttonHeight);*/
+    drawUIButton(m_cursor == 1 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);*/
     
 }
