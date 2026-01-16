@@ -85,17 +85,17 @@ namespace
         return fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
-    std::optional<std::string> MapSweetsTypeToTexture(SweetsSpace::SweetsType type)
+    std::optional<std::string> MapMeteorsTypeToTexture(SweetsSpace::SweetsType type)
     {
         using SweetsSpace::SweetsType;
         switch (type)
         {
         case SweetsType::Strawberry:
-            return "Assets/Texture/MercuryNM.jpg";
-        case SweetsType::Blueberry:
             return "Assets/Texture/meteor.jpg";
-        case SweetsType::Pineapple:
+        case SweetsType::Blueberry:
             return "Assets/Texture/Meteorite_Diffuse.png";
+        case SweetsType::Pineapple:
+            return "Assets/Texture/meteor.jpg";
         }
     }
 
@@ -111,7 +111,7 @@ namespace
 
             if (EndsWithPath(normalizedModelPath, candidate))
             {
-                return MapSweetsTypeToTexture(entry.type);
+                return MapMeteorsTypeToTexture(entry.type);
             }
         }
 
@@ -127,7 +127,7 @@ namespace
 
         if (contains("mercury"))
         {
-            return "Assets/Texture/MercuryNM.jpg";
+            return "Assets/Texture/meteor.jpg";
         }
         if (contains("meteorite"))
         {
@@ -149,13 +149,16 @@ namespace
             aliases.emplace(NormalizeForKey(alias), target);
         };
 
-        addAlias("mercury.jpg", "MercuryNM.jpg");
-        addAlias("mercury_nm.jpg", "MercuryNM.jpg");
-        addAlias("水星.jpg", "MercuryNM.jpg");
+        addAlias("mercury.jpg", "meteor.jpg");
+        addAlias("mercury_nm.jpg", "meteor.jpg");
+        addAlias("mercurynm.jpg", "meteor.jpg");
+        addAlias("水星.jpg", "meteor.jpg");
         addAlias("meteor.jpg", "meteor.jpg");
         addAlias("メテオ.jpg", "meteor.jpg");
         addAlias("meteorite.png", "Meteorite_Diffuse.png");
         addAlias("meteorite_diffuse.png", "Meteorite_Diffuse.png");
+        addAlias("meteorite_normal.png", "Meteorite_Diffuse.png");
+        addAlias("meteorite_nm.png", "Meteorite_Diffuse.png");
         addAlias("隕石.png", "Meteorite_Diffuse.png");
 
         return aliases;
