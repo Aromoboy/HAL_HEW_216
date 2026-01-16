@@ -989,10 +989,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
         if (const auto contact = m_contactHandler.ConsumePlayerContact())
         {
-            if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
+            int damage = 0;
+            switch (contact->source)
             {
-                int damage = 0;
-                if (contact->source == SceneGameContactHandler::PlayerContactSource::Meteor)
+            case SceneGameContactHandler::PlayerContactSource::Meteor:
+                if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
                 {
                     const auto meteors = contact->meteor.lock();
                     if (meteors)
@@ -1028,7 +1029,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         m_gameplayRules.AddKillScore(killScore);
                     }
                 }
-                else if (contact->source == SceneGameContactHandler::PlayerContactSource::Missile)
+                break;
+            case SceneGameContactHandler::PlayerContactSource::Missile:
+                if (contact->type == SceneGameContactHandler::PlayerContactType::Begin)
                 {
                     if (contact->other)
                     {
@@ -1039,66 +1042,68 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                     }
                     damage = 4;
                 }
+                break;
+            }
 
-                if (damage > 0 && !m_playerInvulnerable)
-                {
-                    applyDamage(damage);
-                    startInvuln();
-                }
+            if (damage > 0 && !m_playerInvulnerable)
+            {
+                applyDamage(damage);
+                startInvuln();
             }
         }
 
-    if (m_playerInvulnerable)
-    {
-        m_playerInvulnSeconds = std::max(0.0f, m_playerInvulnSeconds - deltaTime);
-        if (m_playerInvulnSeconds <= 0.0f)
+        if (m_playerInvulnerable)
         {
-            m_playerInvulnerable = false;
-            m_playerBlinkTimer = 0.0f;
-            m_playerBlinkAlpha = 1.0f;
+            m_playerInvulnSeconds = std::max(0.0f, m_playerInvulnSeconds - deltaTime);
+            if (m_playerInvulnSeconds <= 0.0f)
+            {
+                m_playerInvulnerable = false;
+                m_playerBlinkTimer = 0.0f;
+                m_playerBlinkAlpha = 1.0f;
+            }
+            else
+            {
+                constexpr float kBlinkSpeed = 10.0f;
+                m_playerBlinkTimer += deltaTime;
+                const float pulse = std::sin(m_playerBlinkTimer * kBlinkSpeed) * 0.5f + 0.5f;
+                m_playerBlinkAlpha = Lerp(0.35f, 1.0f, pulse);
+            }
         }
         else
         {
-            constexpr float kBlinkSpeed = 10.0f;
-            m_playerBlinkTimer += deltaTime;
-            const float pulse = std::sin(m_playerBlinkTimer * kBlinkSpeed) * 0.5f + 0.5f;
-            m_playerBlinkAlpha = Lerp(0.35f, 1.0f, pulse);
+            m_playerBlinkAlpha = 1.0f;
         }
-    }
-    else
-    {
-        m_playerBlinkAlpha = 1.0f;
-    }
 
-    if (player)
-    {
-        player->SetRenderAlpha(m_playerBlinkAlpha);
-    }
-
-    m_playerController.UpdatePlayerBounds({
-        player.get(),
-        m_gameCamera.get(),
-        m_meteorsManager.get(),
-        ctx.dt
-    });
-    if (m_meteorsManager)
-    {
-        float screenMinX = 0.0f;
-        float screenMaxX = 0.0f;
-        float screenMinY = 0.0f;
-        float screenMaxY = 0.0f;
-        if (m_playerController.TryGetCachedPlayerBounds(screenMinX, screenMaxX, screenMinY, screenMaxY))
+        if (player)
         {
-            m_meteorsManager->SetCameraBounds(screenMinX, screenMaxX, screenMinY, screenMaxY);
+            player->SetRenderAlpha(m_playerBlinkAlpha);
         }
-    }
-    if (player)
-    {
-        if (const auto wrapEvent = player->ConsumeWrapEvent())
+
+        m_playerController.UpdatePlayerBounds({
+            player.get(),
+            m_gameCamera.get(),
+            m_meteorsManager.get(),
+            ctx.dt
+        });
+        if (m_meteorsManager)
         {
-            if (wrapEvent->wrappedY)
+            float screenMinX = 0.0f;
+            float screenMaxX = 0.0f;
+            float screenMinY = 0.0f;
+            float screenMaxY = 0.0f;
+            if (m_playerController.TryGetCachedPlayerBounds(screenMinX, screenMaxX, screenMinY, screenMaxY))
             {
-                ApplyPlayerWrapDeltaY(wrapEvent->deltaY);
+                m_meteorsManager->SetCameraBounds(screenMinX, screenMaxX, screenMinY, screenMaxY);
+            }
+        }
+        if (player)
+        {
+            if (const auto wrapEvent = player->ConsumeWrapEvent())
+            {
+                if (wrapEvent->wrappedY)
+                {
+                    ApplyPlayerWrapDeltaY(wrapEvent->deltaY);
+                }
             }
         }
     }
