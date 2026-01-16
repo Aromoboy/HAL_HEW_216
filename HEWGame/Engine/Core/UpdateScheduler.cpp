@@ -277,6 +277,17 @@ namespace Core
                         m_registrationOrder.erase(node);
                         m_nodeIds.erase(node);
 
+                        if (m_isTicking && !m_executionPlan.empty())
+                        {
+                                for (IUpdatable*& plannedNode : m_executionPlan)
+                                {
+                                        if (plannedNode == node)
+                                        {
+                                                plannedNode = nullptr;
+                                        }
+                                }
+                        }
+
                         auto nodeIt = std::remove(m_nodes.begin(), m_nodes.end(), node);
                         if (nodeIt != m_nodes.end())
                         {
@@ -972,6 +983,11 @@ namespace Core
                 for (IUpdatable* node : m_executionPlan)
                 {
                         if (!node)
+                        {
+                                continue;
+                        }
+
+                        if (m_nodeIds.find(node) == m_nodeIds.end())
                         {
                                 continue;
                         }
