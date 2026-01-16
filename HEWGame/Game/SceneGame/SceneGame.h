@@ -206,6 +206,8 @@ protected:
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
     bool m_isComposed = false;
+    float m_resultElapsedSeconds = 0.0f;
+    bool m_resultReturnQueued = false;
 
 
     SceneSpace::SceneManager* m_manager = nullptr;

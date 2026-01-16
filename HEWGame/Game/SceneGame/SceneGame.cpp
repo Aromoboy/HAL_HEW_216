@@ -1285,6 +1285,15 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
     if (m_stageState == StageState::ShowingResult)
     {
+        m_resultElapsedSeconds += ctx.dt;
+        if (m_resultElapsedSeconds >= 5.0f && !m_resultReturnQueued)
+        {
+            if (m_manager)
+            {
+                m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
+                m_resultReturnQueued = true;
+            }
+        }
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
         const auto action = input ? m_playerController.HandlePostGameInput(*input, peakHeight, score)
@@ -1357,9 +1366,10 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
     if (input && input->IsKeyPress(VK_RETURN))
     {
-        if (m_manager)
+        if (m_manager && !m_resultReturnQueued)
         {
             m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
+            m_resultReturnQueued = true;
         }
 
         return;
@@ -2599,6 +2609,10 @@ void SceneGame::SetStageState(StageState newState)
         break;
     case StageState::TimeUp:
         OnStageFail();
+        break;
+    case StageState::ShowingResult:
+        m_resultElapsedSeconds = 0.0f;
+        m_resultReturnQueued = false;
         break;
     default:
         break;
