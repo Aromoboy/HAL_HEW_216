@@ -1897,6 +1897,10 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
             m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
                                    shouldClampY ? maxScrollY : std::nullopt);
         }
+        else
+        {
+            m_cameraRig->SetClampY(std::nullopt, std::nullopt);
+        }
 
         const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
             && m_cameraRig->IsFollowingPositionY()
@@ -2063,6 +2067,10 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
     {
         m_cameraRig->SetClampY(shouldClampY ? minScrollY : std::nullopt,
                                shouldClampY ? maxScrollY : std::nullopt);
+    }
+    else
+    {
+        m_cameraRig->SetClampY(std::nullopt, std::nullopt);
     }
 
     if (wrapY && m_gameCamera)
