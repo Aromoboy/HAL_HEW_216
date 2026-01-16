@@ -40,6 +40,7 @@ namespace GameplayConfig
     inline constexpr const char* kMissileKeyLinearDamping = "linearDamping";
     inline constexpr const char* kMissileKeyAngularDamping = "angularDamping";
     inline constexpr const char* kMissileKeyGravityScale = "gravityScale";
+    inline constexpr const char* kMissileKeySpeed = "missileSpeed";
     inline constexpr const char* kMissileKeyCollisionLayer = "collisionLayer";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";

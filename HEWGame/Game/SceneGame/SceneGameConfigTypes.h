@@ -52,6 +52,7 @@ namespace SceneGameConfig
         float linearDamping = 0.0f;
         float angularDamping = 0.0f;
         float gravityScale = 0.0f;
+        float missileSpeed = 40.0f;
         std::optional<Collision::CollisionLayer> collisionLayer = std::nullopt;
         bool loadedFromFile = false;
     };
