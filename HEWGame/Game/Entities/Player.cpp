@@ -1,5 +1,7 @@
 ﻿#include "Entities/Player.h"
 
+#include <optional>
+
 namespace Entities
 {
     Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Core::Input* input, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
@@ -23,7 +25,6 @@ namespace Entities
             m_movementSystem.Update(*this, ctx, *m_input);
         }
         m_pickupSystem.SetFacingSign(m_movementSystem.GetFacingSign());
-        m_physicsBinder.ClampVerticalPosition(*this);
         m_physicsBinder.ClampScreenBounds(*this);
         m_modelSystem.SyncVisualTransformFromPhysics(*this);
         if (m_input)
@@ -103,25 +104,9 @@ namespace Entities
         return m_movementSystem.GetVerticalMoveSpeed();
     }
 
-    void Player::SetMinimumY(float minY)
+    void Player::SetScreenBounds(float minX, float maxX, float minY, float maxY)
     {
-        m_physicsBinder.SetMinimumY(minY);
-        m_physicsBinder.ClampVerticalPosition(*this);
-    }
-
-    float Player::GetMinimumY() const
-    {
-        return m_physicsBinder.GetMinimumY();
-    }
-
-    bool Player::HasMinimumY() const
-    {
-        return m_physicsBinder.HasMinimumY();
-    }
-
-    void Player::SetScreenBounds(float minX, float maxX, std::optional<float> maxY)
-    {
-        m_physicsBinder.SetScreenBounds(minX, maxX, maxY);
+        m_physicsBinder.SetScreenBounds(minX, maxX, minY, maxY);
     }
 
     void Player::SetPickupBox(float width, float height)

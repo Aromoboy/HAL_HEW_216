@@ -4,7 +4,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,10 +59,7 @@ namespace Entities
         float GetMoveSpeed() const;
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
-        void SetMinimumY(float minY);
-        float GetMinimumY() const;
-        bool HasMinimumY() const;
-        void SetScreenBounds(float minX, float maxX, std::optional<float> maxY);
+        void SetScreenBounds(float minX, float maxX, float minY, float maxY);
         void SetPickupBox(float width, float height);
         void SetPickupArea(float width, float height, const Stage::PickupOffset& offset);
         void SetPickupMaxDistance(float maxDistance);

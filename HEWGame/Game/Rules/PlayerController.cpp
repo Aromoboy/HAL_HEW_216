@@ -16,7 +16,6 @@ namespace
 {
     constexpr float kPlayerSpeedBoostStep = 1.2f;
     constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
-    constexpr float kPlayerMinimumYMargin = 1.0f;
     constexpr float kPlayerBoundsLogIntervalSeconds = 2.0f;
     constexpr float kCameraStateEpsilon = 1e-4f;
     constexpr bool kEnablePlayerBoundsLogging = false;
@@ -191,7 +190,8 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     const float minX = camPos.x - halfWidth;
     const float maxX = camPos.x + halfWidth;
-    const float minY = input.stageFloorY - kPlayerMinimumYMargin;
+    const float minY = camPos.y - halfHeight;
+    const float maxY = camPos.y + halfHeight;
 
     const bool changed =
         !m_cachedPlayerBoundsValid ||
@@ -222,8 +222,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
         }
     }
 
-    input.player->SetScreenBounds(minX, maxX, std::nullopt);
-    input.player->SetMinimumY(minY);
+    input.player->SetScreenBounds(minX, maxX, minY, maxY);
 
     if (input.sweetsManager)
     {
