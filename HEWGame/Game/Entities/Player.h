@@ -4,6 +4,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "Entities/PhysicalEntity.h"
@@ -45,6 +46,7 @@ namespace Entities
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
+        std::optional<float> ConsumeWrapDeltaY();
         Transform GetRenderTransform() const override;
 
     private:
@@ -52,9 +54,12 @@ namespace Entities
         friend class PlayerMovement;
         friend class PlayerPhysicsBinder;
 
+        void RegisterWrapDeltaY(float deltaY);
+
         PlayerModel m_modelSystem;
         PlayerMovement m_movementSystem;
         PlayerPhysicsBinder m_physicsBinder;
         Core::Input* m_input = nullptr;
+        std::optional<float> m_pendingWrapDeltaY = std::nullopt;
     };
 }

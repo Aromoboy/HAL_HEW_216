@@ -102,6 +102,7 @@ namespace Entities
 
         float3 position = player.GetTransform().position;
         bool wrapped = false;
+        float wrapDeltaY = 0.0f;
 
         if (spanX > kScreenWrapEpsilon)
         {
@@ -123,17 +124,23 @@ namespace Entities
             {
                 position.y += spanY;
                 wrapped = true;
+                wrapDeltaY += spanY;
             }
             else if (bounds.max.y > m_maxScreenY)
             {
                 position.y -= spanY;
                 wrapped = true;
+                wrapDeltaY -= spanY;
             }
         }
 
         if (wrapped)
         {
             player.SetPositionViaPhysics(position);
+            if (std::fabs(wrapDeltaY) > kScreenWrapEpsilon)
+            {
+                player.RegisterWrapDeltaY(wrapDeltaY);
+            }
         }
     }
 
