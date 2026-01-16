@@ -53,11 +53,6 @@ namespace Entities
         float m_smoothedInputY{ 0.0f };
         bool m_hasSmoothedInput{ false };
         bool m_missingBodyLogged{ false };
-        float m_moveSoundHandle{ -1.0f };
-        bool m_wasMovingLastFrame{ false };
-        bool m_moveSoundFadingOut{ false };
-        float m_moveSoundFadeTimer{ 0.0f };
-        float m_moveSoundFadeDuration{ 0.4f };
         float3 m_fallbackVelocity{ 0.0f, 0.0f, 0.0f };
     };
 }
