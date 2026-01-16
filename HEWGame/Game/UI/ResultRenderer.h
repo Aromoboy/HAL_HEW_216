@@ -20,7 +20,7 @@ class Texture;
 
 struct ResultDisplayData
 {
-    float remainingSeconds = 0.0f;
+    float elapsedSeconds = 0.0f;
     float currentHeight = 0.0f;
     float peakHeight = 0.0f;
     int score = 0;

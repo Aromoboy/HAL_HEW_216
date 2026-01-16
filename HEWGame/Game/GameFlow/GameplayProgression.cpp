@@ -45,8 +45,6 @@ namespace GameplayProgression
                     continue;
                 }
 
-                result.state.remainingSeconds = std::max(0.0f, result.state.remainingSeconds);
-                result.state.remainingSeconds += bonus.seconds;
                 result.state.totalSeconds += bonus.seconds;
 
                 if (input.log)
@@ -54,8 +52,8 @@ namespace GameplayProgression
                     std::ostringstream oss;
                     oss << input.logPrefix << "[Countdown] bonusApplied +=" << std::fixed << std::setprecision(2)
                         << bonus.seconds << "s height=" << std::fixed << std::setprecision(2)
-                        << bonus.triggerHeight << "m remaining=" << std::fixed << std::setprecision(2)
-                        << result.state.remainingSeconds << "s queue=" << result.state.pendingBonuses.size() << "\n";
+                        << bonus.triggerHeight << "m total=" << std::fixed << std::setprecision(2)
+                        << result.state.totalSeconds << "s queue=" << result.state.pendingBonuses.size() << "\n";
                     input.log(oss.str());
                 }
             }
@@ -67,32 +65,26 @@ namespace GameplayProgression
             return result;
         }
 
-        const float previousRemaining = result.state.remainingSeconds;
-        result.state.remainingSeconds = std::max(0.0f, result.state.remainingSeconds - delta);
+        const float previousElapsed = result.state.elapsedSeconds;
+        result.state.elapsedSeconds = std::max(0.0f, result.state.elapsedSeconds + delta);
 
-        const int previousSeconds = static_cast<int>(std::ceil(previousRemaining));
-        const int currentSeconds = static_cast<int>(std::ceil(result.state.remainingSeconds));
-        if (currentSeconds < previousSeconds)
+        const int previousSeconds = static_cast<int>(std::floor(previousElapsed));
+        const int currentSeconds = static_cast<int>(std::floor(result.state.elapsedSeconds));
+        if (currentSeconds > previousSeconds)
         {
             const int intervalSeconds = std::max(1, static_cast<int>(input.logIntervalSeconds));
             const bool shouldLogInterval = (currentSeconds % intervalSeconds == 0);
-            const bool shouldLogWarning = currentSeconds <= 3;
-            if ((shouldLogInterval || shouldLogWarning) && currentSeconds != result.state.lastAnnouncedSeconds)
+            if (shouldLogInterval && currentSeconds != result.state.lastAnnouncedSeconds)
             {
                 if (input.log)
                 {
                     std::ostringstream oss;
-                    oss << input.logPrefix << "[Countdown] remaining=" << std::fixed << std::setprecision(2)
-                        << result.state.remainingSeconds << "s\n";
+                    oss << input.logPrefix << "[Countdown] elapsed=" << std::fixed << std::setprecision(2)
+                        << result.state.elapsedSeconds << "s\n";
                     input.log(oss.str());
                 }
                 result.state.lastAnnouncedSeconds = currentSeconds;
             }
-        }
-
-        if (result.state.remainingSeconds <= 0.0f)
-        {
-            result.timeUp = true;
         }
 
         return result;
@@ -166,8 +158,8 @@ namespace GameplayProgression
             {
                 std::ostringstream oss;
                 oss << input.logPrefix << "[Tower] newPeakTop=" << std::fixed << std::setprecision(2)
-                    << result.state.peakHeight << "m remaining=" << std::fixed << std::setprecision(2)
-                    << input.remainingCountdownSeconds << "s\n";
+                    << result.state.peakHeight << "m elapsed=" << std::fixed << std::setprecision(2)
+                    << input.elapsedPlaySeconds << "s\n";
                 input.log(oss.str());
             }
         }

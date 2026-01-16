@@ -278,7 +278,7 @@ void HudRenderer::RenderSprite(const HudDisplayData& data)
     Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
 
-    const bool showWarning = data.timeUp || data.remainingSeconds <= m_config.warningThresholdSeconds;
+    const bool showWarning = data.timeUp;
     const DirectX::XMFLOAT4 color = showWarning ? m_config.warningTextColor : m_config.normalTextColor;
     Sprite::SetColor(color);
     Sprite::SetSize(DirectX::XMFLOAT2(widthClip, heightClip));
@@ -292,7 +292,7 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
 {
     std::ostringstream stream;
     stream << std::fixed << std::setprecision(1);
-    stream << "Timer " << std::setw(5) << std::setfill(' ') << data.remainingSeconds << "s";
+    stream << "Timer " << std::setw(5) << std::setfill(' ') << data.elapsedSeconds << "s";
     stream << "  [" << (data.timeUp ? "Result" : "Play") << "]\n";
 
     stream << std::fixed << std::setprecision(2);

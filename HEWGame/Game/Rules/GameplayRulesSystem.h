@@ -38,7 +38,6 @@ public:
 
     struct UpdateResult
     {
-        bool timeUp = false;
         bool phaseAdvanced = false;
         int previousPhase = 0;
         int currentPhase = 0;
@@ -55,8 +54,8 @@ public:
     int ComputeScore(GameFlow::PhaseManager* phaseManager, float peakHeight);
 
     float GetTotalPlaySeconds() const;
-    float GetRemainingCountdownSeconds() const;
-    int GetLastAnnouncedCountdownSeconds() const;
+    float GetElapsedPlaySeconds() const;
+    int GetLastAnnouncedElapsedSeconds() const;
     float GetCurrentTowerHeight() const;
     float GetPeakTowerHeight() const;
     float GetMaxTowerHeight() const;
@@ -72,8 +71,8 @@ private:
 
     Core::StepTimer m_countdownTimer;
     float m_totalPlaySeconds = 0.0f;
-    float m_remainingCountdownSeconds = 0.0f;
-    int m_lastAnnouncedCountdownSeconds = 0;
+    float m_elapsedPlaySeconds = 0.0f;
+    int m_lastAnnouncedElapsedSeconds = 0;
     std::deque<GameplayProgression::PendingTimeBonus> m_pendingTimeBonuses;
 
     float m_currentTowerHeight = 0.0f;
