@@ -44,11 +44,6 @@ struct HudLayoutConfig
     DirectX::XMFLOAT4 warningTextColor{ 1.0f, 0.6f, 0.2f, 1.0f };
 };
 
-struct PowerUpHudData
-{
-
-};
-
 class HudRenderer
 {
 public:
