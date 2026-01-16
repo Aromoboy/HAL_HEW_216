@@ -120,7 +120,17 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     colliderRequest.angularDamping = 5.0f;
     colliderRequest.linearDamping = 0.0f;
     colliderRequest.scaleOffset = true;
+    colliderRequest.tuning = &config.playerColliderTuning;
     colliderRequest.allowFallback = false;
+
+    {
+        const auto& registry = Physics::ColliderRegistry::Instance();
+        const bool registryHit = registry.Find(resolvedColliderKey).has_value();
+        std::ostringstream oss;
+        oss << m_logPrefix << "[PlayerCollider] Registry lookup before build key='" << resolvedColliderKey
+            << "' hit=" << std::boolalpha << registryHit << "\n";
+        LogMessage(m_log, oss.str());
+    }
 
     Physics::ColliderBuilder::BuildResult colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
     const auto colliderHasShapes = [](const Physics::ColliderBuilder::BuildResult& build)
@@ -132,12 +142,21 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         return build.shapeConfig && build.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
     };
 
-    if (!colliderHasShapes(colliderBuild) || !shapeConfigIsValid(colliderBuild))
+    bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
+    if (!colliderReady)
     {
         std::ostringstream oss;
         oss << m_logPrefix << "[PlayerCollider] Collider definition for key='" << resolvedColliderKey
-            << "' is invalid; physics registration will be skipped.\n";
+            << "' invalid; attempting fallback collider.\n";
         LogMessage(m_log, oss.str());
+
+        colliderRequest.allowFallback = true;
+        Physics::ColliderBuilder::BuildResult fallbackBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
+        if (colliderHasShapes(fallbackBuild) && shapeConfigIsValid(fallbackBuild))
+        {
+            colliderBuild = std::move(fallbackBuild);
+            colliderReady = true;
+        }
     }
 
     if (colliderBuild.collider && !colliderBuild.collider->Empty())
@@ -150,7 +169,12 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     }
     playerColliderHalfExtents = colliderBuild.halfExtents;
     playerColliderOffset = colliderBuild.centerOffset;
-    const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
+    if (!colliderReady)
+    {
+        std::ostringstream oss;
+        oss << m_logPrefix << "[PlayerCollider] Fallback collider build failed; physics registration will still be attempted.\n";
+        LogMessage(m_log, oss.str());
+    }
 
     {
         std::ostringstream oss;
@@ -207,53 +231,33 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         result.player->SetBaseMoveSpeed(config.playerBaseHorizontalSpeed, config.playerBaseVerticalSpeed);
         result.player->SetSpeedMultiplier(config.playerSpeedMultiplier);
         result.player->SetYawOffsetRadians(config.playerSpawnTransform.playerYawOffsetRadians);
-        if (colliderReady)
+        if (config.physicsBinder)
         {
-            if (config.physicsBinder)
-            {
-                config.physicsBinder->RegisterPhysicsBody(*result.player);
-            }
-            {
-                std::ostringstream oss;
-                const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
-                const b2BodyType createdBodyType = result.player->GetPhysical().GetBodyType();
-                const auto bodyTypeToString = [](b2BodyType type)
-                {
-                    switch (type)
-                    {
-                    case b2_staticBody: return "static";
-                    case b2_kinematicBody: return "kinematic";
-                    case b2_dynamicBody: return "dynamic";
-                    default: return "unknown";
-                    }
-                };
-
-                const bool typeMatches = configuredBodyType == createdBodyType;
-                oss << m_logPrefix << "Player physics body registered (expected="
-                    << bodyTypeToString(configuredBodyType)
-                    << ", created=" << bodyTypeToString(createdBodyType)
-                    << ", match=" << std::boolalpha << typeMatches << ").\n";
-                LogMessage(m_log, oss.str());
-            }
+            config.physicsBinder->RegisterPhysicsBody(*result.player);
         }
-        else
         {
-            const auto shapeToString = [](Physics::Box2DShapeConfig::Type type)
+            std::ostringstream oss;
+            const auto configuredBodyType = playerShapeConfig ? playerShapeConfig->bodyType : playerBodyType;
+            const b2BodyType createdBodyType = result.player->GetPhysical().GetBodyType();
+            const bool hasBody = result.player->HasBox2DBody();
+            const auto bodyTypeToString = [](b2BodyType type)
             {
                 switch (type)
                 {
-                case Physics::Box2DShapeConfig::Type::Box: return "Box";
-                case Physics::Box2DShapeConfig::Type::Polygon: return "Polygon";
-                case Physics::Box2DShapeConfig::Type::Circle: return "Circle";
-                default: return "None";
+                case b2_staticBody: return "static";
+                case b2_kinematicBody: return "kinematic";
+                case b2_dynamicBody: return "dynamic";
+                default: return "unknown";
                 }
             };
-            std::ostringstream oss;
-            oss << m_logPrefix << "[PlayerCollider] Skipping physics registration; colliderReady="
-                << std::boolalpha << colliderReady
-                << " shapes=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
-                << " shapeType=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
-                << "\n";
+
+            const bool typeMatches = configuredBodyType == createdBodyType;
+            oss << m_logPrefix << "Player physics body registration attempted (expected="
+                << bodyTypeToString(configuredBodyType)
+                << ", created=" << bodyTypeToString(createdBodyType)
+                << ", match=" << std::boolalpha << typeMatches
+                << ", hasBody=" << hasBody
+                << ", colliderReady=" << colliderReady << ").\n";
             LogMessage(m_log, oss.str());
         }
         if (config.drawSystem)

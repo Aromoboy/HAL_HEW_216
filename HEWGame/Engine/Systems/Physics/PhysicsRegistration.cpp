@@ -76,6 +76,7 @@ namespace Systems
         }
 
         const bool isPlayerEntity = (m_playerEntity && m_playerEntity == &entity);
+        const bool isMissileEntity = (entity.GetTag() == "projectile_missile");
         const auto& boxColliderComponent = entity.GetBoxColliderComponent();
         const bool hasBoxColliderComponent = boxColliderComponent && !boxColliderComponent->Empty();
         const auto& shapeConfig = entity.GetBox2DShapeConfig();
@@ -119,6 +120,15 @@ namespace Systems
                 const int rebuiltFixtures = boxColliderComponent ? boxColliderComponent->createdFixtureCount : 0;
                 if (!rebuiltHasBody || rebuiltFixtures <= 0)
                 {
+                    if (isPlayerEntity || isMissileEntity)
+                    {
+                        std::ostringstream diag;
+                        diag << kLogPrefix << "Diagnostic: tag='" << entity.GetTag()
+                            << "' body created without fixtures after rebuild attempt (fixtures="
+                            << rebuiltFixtures << ").\n";
+                        ::DebugTrace(diag.str());
+                    }
+
                     std::ostringstream errorOss;
                     errorOss << kLogPrefix << "Failed to create physics body for tag='" << entity.GetTag()
                         << "' even after rebuild attempt (hasBody=" << std::boolalpha << rebuiltHasBody
@@ -145,6 +155,15 @@ namespace Systems
                 entity.SetGravityScale(0.0f);
                 gravityScale = entity.GetGravityScale();
                 DebugTrace(std::string(kLogPrefix) + "Player gravity disabled to prevent unintended falling.\n");
+            }
+
+            if ((isPlayerEntity || isMissileEntity) && fixtureCount == 0)
+            {
+                std::ostringstream diag;
+                diag << kLogPrefix << "Diagnostic: tag='" << entity.GetTag()
+                    << "' physics body has no fixtures after registration (fixtures="
+                    << fixtureCount << ").\n";
+                ::DebugTrace(diag.str());
             }
 
             std::ostringstream oss;
