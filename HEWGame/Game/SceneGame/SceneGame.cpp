@@ -2022,7 +2022,6 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
-        scrollOffsetUsedForBackground = baseCamera->GetPosition().y;
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
         {
             RenderTarget* defaultRTV = GetDefaultRTV();
@@ -2541,48 +2540,7 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
 
 void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
 {
-    if (!m_gameCamera || !IsFiniteFloat(wrapDeltaY)
-        || std::fabs(wrapDeltaY) <= std::numeric_limits<float>::epsilon())
-    {
-        return;
-    }
-
-    float adjustedWrapDeltaY = wrapDeltaY;
-    const float wrapMargin = std::max(0.0f, m_playerMovementSettings.wrapMargin);
-    if (wrapMargin > 0.0f && m_cameraWrapMinY && m_cameraWrapMaxY
-        && IsFiniteFloat(*m_cameraWrapMinY) && IsFiniteFloat(*m_cameraWrapMaxY))
-    {
-        const float minY = std::min(*m_cameraWrapMinY, *m_cameraWrapMaxY);
-        const float maxY = std::max(*m_cameraWrapMinY, *m_cameraWrapMaxY);
-        const float wrapRange = maxY - minY;
-        if (IsFiniteFloat(wrapRange) && wrapRange > 0.0f)
-        {
-            const float tolerance = wrapMargin * 2.0f;
-            if (std::fabs(adjustedWrapDeltaY) > wrapRange + tolerance)
-            {
-                adjustedWrapDeltaY = std::copysign(wrapRange, adjustedWrapDeltaY);
-            }
-        }
-    }
-
-    float3 cameraPosition = m_gameCamera->GetPosition();
-    if (!IsFiniteFloat(cameraPosition.y))
-    {
-        return;
-    }
-
-    cameraPosition.y += adjustedWrapDeltaY;
-    m_gameCamera->SetPosition(cameraPosition);
-
-    if (m_cameraRig && player)
-    {
-        const float targetY = player->GetTransform().position.y;
-        if (IsFiniteFloat(targetY))
-        {
-            m_cameraRig->ApplyExternalWrapDeltaY(adjustedWrapDeltaY, targetY);
-        }
-    }
-
+    (void)wrapDeltaY;
 }
 
 void SceneGame::SetStageState(StageState newState)
