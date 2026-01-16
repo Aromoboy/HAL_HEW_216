@@ -894,7 +894,6 @@ namespace MeteorsSpace
         m_burstTimer = 0.0f;
         m_activeBurstPlanned = 0;
         m_activeBurstInterval = kDefaultBurstIntervalSeconds;
-        m_stackedInBatch = 0;
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_batchStackTarget = std::max(1, m_batchStackTarget);
@@ -910,6 +909,7 @@ namespace MeteorsSpace
         }
         m_spawnQueue.clear();
         m_currentBurstRemaining = 0;
+        RecountStackedInBatch();
     }
 
     void MeteorsSpawner::SetSpawnOrigins(
@@ -1027,6 +1027,42 @@ namespace MeteorsSpace
     int MeteorsSpawner::GetStackedInBatch() const
     {
         return m_stackedInBatch;
+    }
+
+    void MeteorsSpawner::DecrementStackedCount()
+    {
+        if (m_stackedInBatch > 0)
+        {
+            --m_stackedInBatch;
+        }
+        else
+        {
+            RecountStackedInBatch();
+        }
+    }
+
+    void MeteorsSpawner::RecountStackedInBatch()
+    {
+        if (!m_registry)
+        {
+            m_stackedInBatch = 0;
+            return;
+        }
+
+        int count = 0;
+        const auto it = m_registry->StateMap().find(MeteorsState::Stacked);
+        if (it != m_registry->StateMap().end())
+        {
+            for (const auto& meteors : it->second)
+            {
+                if (meteors && !meteors->IsPendingDestroy())
+                {
+                    ++count;
+                }
+            }
+        }
+
+        m_stackedInBatch = count;
     }
 
     void MeteorsSpawner::OnStateChanged(const std::shared_ptr<ActiveMeteors>& meteors, MeteorsState previousState, MeteorsState newState)
@@ -1246,7 +1282,7 @@ namespace MeteorsSpace
         m_simultaneousLiveTarget = std::max(1, activeConfig.simultaneousLiveTarget);
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
-        m_stackedInBatch = 0;
+        RecountStackedInBatch();
         const int activeLaneCount = (m_spawnOriginsPrimary.empty() ? 0 : 1) + (m_spawnOriginsSecondary.empty() ? 0 : 1);
         const int phaseStartBonusPerLane = std::max(0, activeConfig.phaseStartBonusPerLane);
         const int initialPerLane = std::max(0, activeConfig.initialSpawnPerLane);
