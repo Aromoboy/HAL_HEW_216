@@ -10,9 +10,9 @@ namespace MeteorsSpace
 {
     enum class MeteorsType : std::uint8_t
     {
-        Strawberry,
-        Blueberry,
-        Pineapple,
+        Mercury,
+        Meteor,
+        Meteorite,
     };
 
     struct MeteorsPrototypeDescriptor

@@ -19,7 +19,7 @@ namespace MeteorsSpace
 
     struct WeightedMeteorsType
     {
-        MeteorsType kind{ MeteorsType::Strawberry };
+        MeteorsType kind{ MeteorsType::Mercury };
         float weight = 1.0f;
     };
 
