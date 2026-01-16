@@ -2505,8 +2505,6 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
     {
         m_cameraRig->SetClampY(std::nullopt, std::nullopt);
     }
-
-    }
 }
 
 void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
