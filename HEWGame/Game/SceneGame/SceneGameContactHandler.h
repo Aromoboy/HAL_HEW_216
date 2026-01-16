@@ -26,10 +26,17 @@ public:
         End,
     };
 
+    enum class PlayerContactSource
+    {
+        Meteor,
+        Missile,
+    };
+
     struct PlayerContactEvent
     {
-        Entities::PhysicalEntity* meteor = nullptr;
+        Entities::PhysicalEntity* other = nullptr;
         PlayerContactType type = PlayerContactType::Begin;
+        PlayerContactSource source = PlayerContactSource::Meteor;
     };
 
     struct MissileContactEvent
