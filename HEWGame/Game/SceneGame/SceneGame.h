@@ -27,6 +27,7 @@
 #include "SceneGameConfigTypes.h"
 #include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
+#include "Meteors/MeteorsTypes.h"
 #include <box2d/types.h>
 #include <cstddef>
 #include <memory>
@@ -124,7 +125,10 @@ private:
     int GetMeteorsCount() const;
     void Initialize(const Stage::StageData& stageData);
     void UnregisterMissileInstance(MissileInstance& instance);
-    void RemoveMissileByEntity(Entities::PhysicalEntity* missile);
+    void RemoveMissileByEntity(const std::shared_ptr<Entities::PhysicalEntity>& missile);
+    void ProcessPendingMissileRemovals();
+    void ProcessPendingMeteorRemovals();
+    std::shared_ptr<Entities::PhysicalEntity> FindMissileByEntity(Entities::PhysicalEntity* missile) const;
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -185,6 +189,8 @@ protected:
     SceneGameConfig::MissileSettings m_missileSettings{};
     bool m_fireMissileHintEnabled = false;
     std::vector<MissileInstance> m_activeMissiles;
+    std::vector<std::weak_ptr<Entities::PhysicalEntity>> m_pendingMissileRemovals;
+    std::vector<std::weak_ptr<MeteorsSpace::ActiveMeteors>> m_pendingMeteorRemovals;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
