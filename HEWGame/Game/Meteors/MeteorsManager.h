@@ -130,6 +130,7 @@ namespace MeteorsSpace
         void SetCameraBounds(float minX, float maxX, float minY, float maxY);
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
+        void SetPlayerWorldPosition(const float3& position);
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
         bool HasSupportingContact(const ActiveMeteors& meteors, bool* foundationOnly = nullptr) const;
@@ -154,6 +155,9 @@ namespace MeteorsSpace
         MeteorsContacts m_contacts;
         MeteorsLifecycle m_lifecycle;
         MeteorsRenderer m_renderer;
+        float3 m_cachedPlayerPosition{ 0.0f, 0.0f, 0.0f };
+        bool m_hasCachedPlayerPosition{ false };
+        std::mt19937 m_random;
     };
 
 }

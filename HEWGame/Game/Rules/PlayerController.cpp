@@ -172,6 +172,11 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
         return;
     }
 
+    if (input.meteorsManager)
+    {
+        input.meteorsManager->SetPlayerWorldPosition(input.player->GetTransform().position);
+    }
+
     const float playerZ = input.player->GetTransform().position.z;
     const float3 camPos = input.camera->GetPosition();
 
