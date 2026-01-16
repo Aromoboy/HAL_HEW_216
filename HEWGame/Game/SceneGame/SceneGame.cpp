@@ -547,6 +547,7 @@ bool SceneGame::Load(Core::Input& input)
     }
     m_playerModel = std::move(loaderResult.playerModel);
     player = std::move(loaderResult.player);
+    ApplyPlayerWrapMarginForStageState(m_stageState);
     if (m_physicsBinder)
     {
         m_contactHandler.Bind(*m_physicsBinder, m_meteorsManager.get(), player.get(),
@@ -2564,6 +2565,26 @@ void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
     (void)wrapDeltaY;
 }
 
+float SceneGame::GetWrapMarginForStageState(StageState state) const
+{
+    if (state == StageState::Playing)
+    {
+        return m_playerMovementSettings.wrapMargin;
+    }
+
+    return m_playerMovementSettings.wrapMarginAlt;
+}
+
+void SceneGame::ApplyPlayerWrapMarginForStageState(StageState state)
+{
+    if (!player)
+    {
+        return;
+    }
+
+    player->SetWrapMargin(GetWrapMarginForStageState(state));
+}
+
 void SceneGame::SetStageState(StageState newState)
 {
     if (m_stageState == newState)
@@ -2576,6 +2597,7 @@ void SceneGame::SetStageState(StageState newState)
     }
 
     m_stageState = newState;
+    ApplyPlayerWrapMarginForStageState(newState);
 
     switch (newState)
     {

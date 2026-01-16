@@ -2205,6 +2205,7 @@ namespace SceneGameConfig
         }
 
         int parsedFields = 0;
+        bool parsedWrapMarginAlt = false;
         for (const auto& entry : lines)
         {
             const int lineNumber = static_cast<int>(entry.lineNumber);
@@ -2429,12 +2430,33 @@ namespace SceneGameConfig
                     DebugTrace(oss.str());
                 }
             }
+            else if (key == GameplayConfig::kPlayerMovementKeyWrapMarginAlt)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.wrapMarginAlt = std::max(0.0f, *parsed);
+                    parsedWrapMarginAlt = true;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse wrap margin alt line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
             else
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "[PlayerMovement] Ignored unknown key '" << key << "' on line " << lineNumber << "\n";
                 DebugTrace(oss.str());
             }
+        }
+
+        if (!parsedWrapMarginAlt)
+        {
+            settings.wrapMarginAlt = settings.wrapMargin;
         }
 
         std::ostringstream oss;
@@ -2446,7 +2468,8 @@ namespace SceneGameConfig
             << " brake=" << settings.brake
             << " turnRate=" << settings.turnRate
             << " rollResponse=" << settings.rollResponse
-            << " wrapMargin=" << settings.wrapMargin << "\n";
+            << " wrapMargin=" << settings.wrapMargin
+            << " wrapMarginAlt=" << settings.wrapMarginAlt << "\n";
         DebugTrace(oss.str());
 
         return settings;

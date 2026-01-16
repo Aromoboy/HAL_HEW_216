@@ -118,6 +118,8 @@ private:
     void UpdateMissiles(float deltaSeconds);
     void ClearMissiles();
     void SetStageState(StageState newState);
+    float GetWrapMarginForStageState(StageState state) const;
+    void ApplyPlayerWrapMarginForStageState(StageState state);
     void OnStageStart();
     void OnStageClear();
     void OnStageFail();
