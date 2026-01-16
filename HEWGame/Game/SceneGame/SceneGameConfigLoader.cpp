@@ -2280,6 +2280,14 @@ namespace SceneGameConfig
                     ++parsedFields;
                 }
             }
+            else if (key == "missileSpawnOffset")
+            {
+                if (parseFloat3(value, parsed, key, lineNumber))
+                {
+                    result.missileSpawnOffset = parsed;
+                    ++parsedFields;
+                }
+            }
             else if (key == GameplayConfig::kPlayerTransformKeyYawOffsetDegrees)
             {
                 if (auto parsedFloat = TryParseFloatToken(value))
