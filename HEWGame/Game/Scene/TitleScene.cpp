@@ -78,6 +78,12 @@ void TitleScene::OnEnter()
     layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
     layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     cfg.layers.push_back(layer);
+    m_background = std::make_unique<BackgroundRenderer>();
+    if (!m_background->Initialize(cfg))
+    {
+        Diagnostics::LogInfo("[TitleScene] Background renderer failed to initialize.");
+        m_background.reset();
+    }
 
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
