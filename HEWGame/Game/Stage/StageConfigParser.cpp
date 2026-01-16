@@ -148,39 +148,6 @@ namespace
 
 namespace Stage
 {
-    bool TryParsePickupOffsetMode(const std::string& rawValue, Stage::PickupOffsetMode& outMode)
-    {
-        const std::string lowered = ToLowerCopy(rawValue);
-        if (lowered == "none")
-        {
-            outMode = Stage::PickupOffsetMode::None;
-            return true;
-        }
-        if (lowered == "facing" || lowered == "facingdirection" || lowered == "facing-direction")
-        {
-            outMode = Stage::PickupOffsetMode::FacingDirection;
-            return true;
-        }
-        if (lowered == "worldx" || lowered == "world-x" || lowered == "world_x")
-        {
-            outMode = Stage::PickupOffsetMode::WorldX;
-            return true;
-        }
-
-        return false;
-    }
-
-    const char* PickupOffsetModeToString(Stage::PickupOffsetMode mode)
-    {
-        switch (mode)
-        {
-        case Stage::PickupOffsetMode::None: return "none";
-        case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
-        case Stage::PickupOffsetMode::WorldX: return "world-x";
-        default: return "unknown";
-        }
-    }
-
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines)
     {
         StageConfigParseResult result{};
@@ -193,14 +160,6 @@ namespace Stage
         result.cellSizeWorld = StageConfigDefaults::kDefaultCellSizeWorld;
         result.horizontalSpeedCellsPerSec = StageConfigDefaults::kDefaultHorizontalSpeedCellsPerSec;
         result.verticalSpeedCellsPerSec = StageConfigDefaults::kDefaultVerticalSpeedCellsPerSec;
-        result.pickupBoxWidthCells = StageConfigDefaults::kDefaultPickupBoxWidthCells;
-        result.pickupBoxHeightCells = StageConfigDefaults::kDefaultPickupBoxHeightCells;
-        result.pickupMaxDistance = StageConfigDefaults::kDefaultPickupMaxDistance;
-        result.pickupDepthThreshold = StageConfigDefaults::kDefaultPickupDepthThreshold;
-        result.pickupOffsetMode = StageConfigDefaults::kDefaultPickupOffsetMode;
-        result.pickupOffsetLocalCells = StageConfigDefaults::DefaultPickupOffsetLocalCells();
-        result.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
-        result.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
 
         for (const auto& entry : lines)
@@ -596,124 +555,6 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse verticalSpeedCellsPerSec on line " << lineNumber
-                        << ": " << ex.what() << "\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "pickupBoxWidthCells")
-            {
-                try
-                {
-                    result.pickupBoxWidthCells = std::stof(rawValue);
-                    result.pickupBoxWidthSet = true;
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse pickupBoxWidthCells on line " << lineNumber
-                        << ": " << ex.what() << "\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "pickupBoxHeightCells")
-            {
-                try
-                {
-                    result.pickupBoxHeightCells = std::stof(rawValue);
-                    result.pickupBoxHeightSet = true;
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse pickupBoxHeightCells on line " << lineNumber
-                        << ": " << ex.what() << "\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "pickupMaxDistance")
-            {
-                try
-                {
-                    result.pickupMaxDistance = std::stof(rawValue);
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse pickupMaxDistance on line " << lineNumber
-                        << ": " << ex.what() << "\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "pickupDepthThreshold")
-            {
-                try
-                {
-                    result.pickupDepthThreshold = std::stof(rawValue);
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse pickupDepthThreshold on line " << lineNumber
-                        << ": " << ex.what() << "\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "pickupOffsetMode")
-            {
-                Stage::PickupOffsetMode parsedMode{};
-                if (TryParsePickupOffsetMode(rawValue, parsedMode))
-                {
-                    result.pickupOffsetMode = parsedMode;
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "pickupOffsetMode on line " << lineNumber
-                        << " is invalid ('" << rawValue << "'); expected none/facing-direction/world-x.\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "pickupOffsetLocalCells")
-            {
-                auto parsed = ParseFloatList(rawValue, nullptr);
-                if (parsed.size() == 3)
-                {
-                    result.pickupOffsetLocalCells = float3{ parsed[0], parsed[1], parsed[2] };
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "pickupOffsetLocalCells on line " << lineNumber
-                        << " must contain three floats. Raw='" << rawValue << "'\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "heightBonusThreshold")
-            {
-                try
-                {
-                    result.heightBonusThreshold = std::stof(rawValue);
-                    result.heightBonusThresholdSet = true;
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse heightBonusThreshold on line " << lineNumber
-                        << ": " << ex.what() << "\n";
-                    result.parseError = true;
-                }
-            }
-            else if (key == "heightBonusSeconds")
-            {
-                try
-                {
-                    result.heightBonusSeconds = std::stof(rawValue);
-                    result.heightBonusSecondsSet = true;
-                }
-                catch (const std::exception& ex)
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse heightBonusSeconds on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }

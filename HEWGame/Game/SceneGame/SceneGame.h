@@ -140,8 +140,6 @@ protected:
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
-    float m_heightBonusThresholdMeters = 0.0f;
-    float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
@@ -150,12 +148,6 @@ protected:
     std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
-    float m_playerPickupBoxWidth = 0.0f;
-    float m_playerPickupBoxHeight = 0.0f;
-    Stage::PickupOffset m_playerPickupOffset{};
-    float m_playerPickupMaxDistance = 0.0f;
-    float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
-    float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;

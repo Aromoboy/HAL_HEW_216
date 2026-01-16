@@ -250,7 +250,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Entities\PlayerModel.cpp" />
     <ClCompile Include="Game\Entities\PlayerMovement.cpp" />
     <ClCompile Include="Game\Entities\PlayerPhysicsBinder.cpp" />
-    <ClCompile Include="Game\Entities\PlayerPickupSystem.cpp" />
     <ClCompile Include="Game\GameFlow\GameplayProgression.cpp" />
     <ClCompile Include="Game\GameFlow\PhaseManager.cpp" />
     <ClCompile Include="Game\Rules\GameplayRules.cpp" />
@@ -374,7 +373,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Entities\PlayerModel.h" />
     <ClInclude Include="Game\Entities\PlayerMovement.h" />
     <ClInclude Include="Game\Entities\PlayerPhysicsBinder.h" />
-    <ClInclude Include="Game\Entities\PlayerPickupSystem.h" />
     <ClInclude Include="Game\GameFlow\GameplayProgression.h" />
     <ClInclude Include="Game\GameFlow\PhaseManager.h" />
     <ClInclude Include="Game\Rules\GameplayRules.h" />
@@ -396,7 +394,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\SceneGame\SceneGameConfigTypes.h" />
     <ClInclude Include="Game\SceneGame\SceneGameContactHandler.h" />
     <ClInclude Include="Game\SceneGame\SceneGameLoader.h" />
-    <ClInclude Include="Game\Stage\PickupConfig.h" />
     <ClInclude Include="Game\Stage\StageConfigNormalize.h" />
     <ClInclude Include="Game\Stage\StageConfigParser.h" />
     <ClInclude Include="Game\Stage\StageData.h" />

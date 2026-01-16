@@ -374,14 +374,7 @@ bool SceneGame::Load(Core::Input& input)
     m_phaseManager = std::move(composition->phaseManager);
     m_playerBaseHorizontalSpeed = composition->playerBaseHorizontalSpeed;
     m_playerBaseVerticalSpeed = composition->playerBaseVerticalSpeed;
-    m_playerPickupBoxWidth = composition->playerPickupBoxWidth;
-    m_playerPickupBoxHeight = composition->playerPickupBoxHeight;
-    m_playerPickupOffset = composition->playerPickupOffset;
-    m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
-    m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
-    m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
-    m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
@@ -423,15 +416,9 @@ bool SceneGame::Load(Core::Input& input)
     loaderConfig.services = this;
     loaderConfig.physicsBinder = m_physicsBinder.get();
     loaderConfig.drawSystem = m_drawSystem.get();
-    loaderConfig.sweetsManager = m_sweetsManager.get();
     loaderConfig.playerSpawnTransform = m_playerSpawnTransform;
     loaderConfig.playerBaseHorizontalSpeed = m_playerBaseHorizontalSpeed;
     loaderConfig.playerBaseVerticalSpeed = m_playerBaseVerticalSpeed;
-    loaderConfig.playerPickupBoxWidth = m_playerPickupBoxWidth;
-    loaderConfig.playerPickupBoxHeight = m_playerPickupBoxHeight;
-    loaderConfig.playerPickupOffset = m_playerPickupOffset;
-    loaderConfig.playerPickupMaxDistance = m_playerPickupMaxDistance;
-    loaderConfig.playerPickupDepthThreshold = m_playerPickupDepthThreshold;
     loaderConfig.playerSpeedMultiplier = m_playerSpeedMultiplier;
 
     SceneGameLoader::Result loaderResult = loader.Load(loaderConfig);
@@ -447,9 +434,6 @@ bool SceneGame::Load(Core::Input& input)
     }
     m_playerModel = std::move(loaderResult.playerModel);
     player = std::move(loaderResult.player);
-    m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
-    m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
-    m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
 
@@ -827,7 +811,7 @@ void SceneGame::ConfigureUpdates()
                             : 0;
                         if (!player->HasBox2DBody() || repairedFixtures <= 0)
                         {
-                                DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable; pickup input may fail.\n");
+                                DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable.\n");
                         }
                 }
         }
@@ -1832,18 +1816,12 @@ void SceneGame::ResetPlaySession()
 
     if (player)
     {
-        player->ClearCarriedSweets();
         if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
         {
             m_playerSpeedMultiplier = 1.0f;
             player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
             player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
-
-        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
-        player->SetPickupMaxDistance(m_playerPickupMaxDistance);
-        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
-        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
     }
 
     if (player && m_cameraRig)
@@ -1902,14 +1880,5 @@ int SceneGame::GetSweetsCount() const
 
 void SceneGame::Initialize(const Stage::StageData& stageData)
 {
-    
-    //高さボーナス設定
-    m_heightBonusThresholdMeters = stageData.GetHeightBonusThreshold();
-    m_heightBonusSeconds = stageData.GetHeightBonusSeconds();
-
-    //デバッグ確認用
-    std::ostringstream oss;
-    oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
-        << " second=" << m_heightBonusSeconds << "\n";
-    ::DebugTrace(oss.str());
+    (void)stageData;
 }

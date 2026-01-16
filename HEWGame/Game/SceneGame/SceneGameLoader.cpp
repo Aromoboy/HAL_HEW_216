@@ -6,7 +6,6 @@
 #include "ColliderRegistry.h"
 #include "Systems/Physics/ColliderBuilder.h"
 #include "SceneGameConfigLoader.h"
-#include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/Draw/DrawSystem.h"
 #include "Systems/Physics/IPhysicsBinder.h"
@@ -17,7 +16,6 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -152,17 +150,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     }
     playerColliderHalfExtents = colliderBuild.halfExtents;
     playerColliderOffset = colliderBuild.centerOffset;
-    if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f)
-    {
-        result.playerPickupBoxWidth = playerColliderHalfExtents.x * 2.0f;
-        result.playerPickupBoxHeight = playerColliderHalfExtents.y * 2.0f;
-    }
-    else
-    {
-        result.playerPickupBoxWidth = config.playerPickupBoxWidth;
-        result.playerPickupBoxHeight = config.playerPickupBoxHeight;
-    }
-
     const bool colliderReady = colliderHasShapes(colliderBuild) && shapeConfigIsValid(colliderBuild);
 
     {
@@ -186,17 +173,8 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
             << " shapeCount=" << (boxColliderComponent ? boxColliderComponent->shapes.size() : 0u)
             << " shape=" << (playerShapeConfig ? shapeToString(playerShapeConfig->type) : "None")
             << " offset=(" << playerColliderOffset.x << ',' << playerColliderOffset.y << ',' << playerColliderOffset.z << ')'
-            << " halfExtents=(" << playerColliderHalfExtents.x << ',' << playerColliderHalfExtents.y << ',' << playerColliderHalfExtents.z << ')'
-            << " pickupBox=(" << result.playerPickupBoxWidth << ',' << result.playerPickupBoxHeight << ")\n";
+            << " halfExtents=(" << playerColliderHalfExtents.x << ',' << playerColliderHalfExtents.y << ',' << playerColliderHalfExtents.z << ")\n";
         LogMessage(m_log, oss.str());
-    }
-
-    result.playerPickupOriginOffset = playerColliderOffset;
-    if (!std::isfinite(result.playerPickupOriginOffset.x)
-        || !std::isfinite(result.playerPickupOriginOffset.y)
-        || !std::isfinite(result.playerPickupOriginOffset.z))
-    {
-        result.playerPickupOriginOffset = float3{ 0.0f, 0.0f, 0.0f };
     }
 
     Systems::PhysicsMachine* physicsMachine = config.physicsBinder ? config.physicsBinder->GetPhysicsMachine() : nullptr;
@@ -205,7 +183,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         trans,
         result.playerModel,
         physicsMachine,
-        config.sweetsManager,
         input,
         Collision::CollisionLayer::Player,
         kPlayerIsKinematic,
@@ -227,16 +204,8 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         {
             result.player->SetBox2DShapeConfig(playerShapeConfig);
         }
-        if (playerColliderHalfExtents.x > 0.0f && playerColliderHalfExtents.y > 0.0f && playerColliderHalfExtents.z > 0.0f)
-        {
-            result.player->SetColliderFootprint(playerColliderHalfExtents, playerColliderOffset);
-        }
         result.player->SetBaseMoveSpeed(config.playerBaseHorizontalSpeed, config.playerBaseVerticalSpeed);
         result.player->SetSpeedMultiplier(config.playerSpeedMultiplier);
-        result.player->SetPickupArea(result.playerPickupBoxWidth, result.playerPickupBoxHeight, config.playerPickupOffset);
-        result.player->SetPickupMaxDistance(config.playerPickupMaxDistance);
-        result.player->SetPickupDepthThreshold(config.playerPickupDepthThreshold);
-        result.player->SetPickupOriginOffset(result.playerPickupOriginOffset);
         if (colliderReady)
         {
             if (config.physicsBinder)

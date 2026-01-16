@@ -1,13 +1,11 @@
 #pragma once
 
-#include "PickupConfig.h"
 #include "Render/Model.h"
 #include "SceneGameConfigTypes.h"
 #include "Vector.h"
 #include "ISceneServices.h"
 
 #include <functional>
-#include <limits>
 #include <memory>
 #include <string>
 
@@ -24,11 +22,6 @@ namespace Systems
     class IPhysicsBinder;
 }
 
-namespace SweetsSpace
-{
-    class SweetsManager;
-}
-
 class SceneGameLoader
 {
 public:
@@ -40,15 +33,9 @@ public:
         SceneSpace::ISceneServices* services = nullptr;
         Systems::IPhysicsBinder* physicsBinder = nullptr;
         Systems::DrawSystem* drawSystem = nullptr;
-        SweetsSpace::SweetsManager* sweetsManager = nullptr;
         SceneGameConfig::PlayerSpawnTransform playerSpawnTransform{};
         float playerBaseHorizontalSpeed = 0.0f;
         float playerBaseVerticalSpeed = 0.0f;
-        float playerPickupBoxWidth = 0.0f;
-        float playerPickupBoxHeight = 0.0f;
-        Stage::PickupOffset playerPickupOffset{};
-        float playerPickupMaxDistance = 0.0f;
-        float playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
         float playerSpeedMultiplier = 1.0f;
     };
 
@@ -56,9 +43,6 @@ public:
     {
         std::shared_ptr<Render::Model> playerModel;
         std::unique_ptr<Entities::Player> player;
-        float playerPickupBoxWidth = 0.0f;
-        float playerPickupBoxHeight = 0.0f;
-        float3 playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     };
 
     SceneGameLoader(LogFn log, const char* logPrefix);

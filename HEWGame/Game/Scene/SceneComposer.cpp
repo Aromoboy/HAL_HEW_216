@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
-#include <limits>
 #include <optional>
 #include <sstream>
 
@@ -47,8 +46,6 @@ namespace
 
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
     constexpr float kFallbackPlayerMoveSpeed = 10.0f;
-    constexpr float kDefaultPickupMaxDistance = 0.5f;
-    constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
     const HudLayoutConfig kHudLayoutConfig
     {
         512u,
@@ -138,11 +135,6 @@ void SceneComposer::ComposeConfig(Composition& result)
         result.stageData.GetPhaseRewardMiniMultipliers());
     result.playerBaseHorizontalSpeed = result.stageData.GetPlayerHorizontalSpeedWorld();
     result.playerBaseVerticalSpeed = result.stageData.GetPlayerVerticalSpeedWorld();
-    result.playerPickupBoxWidth = result.stageData.GetPickupBoxWidthWorld();
-    result.playerPickupBoxHeight = result.stageData.GetPickupBoxHeightWorld();
-    result.playerPickupOffset = result.stageData.GetPickupOffset();
-    result.playerPickupMaxDistance = result.stageData.GetPickupMaxDistance();
-    result.playerPickupDepthThreshold = result.stageData.GetPickupDepthThreshold();
 
     const auto sanitizePositive = [](float value, float fallback, const char* label)
     {
@@ -158,47 +150,11 @@ void SceneComposer::ComposeConfig(Composition& result)
         return fallback;
     };
 
-    const auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
-    {
-        if (std::isfinite(value))
-        {
-            if (value >= 0.0f)
-            {
-                return value;
-            }
-        }
-        else if (std::isinf(value))
-        {
-            return value;
-        }
-
-        std::ostringstream oss;
-        oss << kLogPrefix << label << " " << value
-            << " invalid; using fallback " << fallback << "\n";
-        DebugTrace(oss.str());
-        return fallback;
-    };
-
     result.playerBaseHorizontalSpeed = sanitizePositive(result.playerBaseHorizontalSpeed, kFallbackPlayerMoveSpeed, "Player horizontal speed");
     result.playerBaseVerticalSpeed = sanitizePositive(result.playerBaseVerticalSpeed, result.playerBaseHorizontalSpeed, "Player vertical speed");
-    const float pickupFallback = std::max(result.stageData.GetCellSizeWorld(), 1.0f);
-    result.playerPickupBoxWidth = sanitizePositive(result.playerPickupBoxWidth, pickupFallback, "Player pickup width");
-    result.playerPickupBoxHeight = sanitizePositive(result.playerPickupBoxHeight, pickupFallback, "Player pickup height");
-    result.playerPickupMaxDistance = sanitizePositive(result.playerPickupMaxDistance, kDefaultPickupMaxDistance, "Player pickup max distance");
-    result.playerPickupDepthThreshold = sanitizeDepthThreshold(result.playerPickupDepthThreshold, kDefaultPickupDepthThreshold, "Player pickup depth threshold");
     result.playerSpeedMultiplier = 1.0f;
 
     {
-        const auto pickupOffsetModeName = [](Stage::PickupOffsetMode mode)
-        {
-            switch (mode)
-            {
-            case Stage::PickupOffsetMode::None: return "none";
-            case Stage::PickupOffsetMode::FacingDirection: return "facing-direction";
-            case Stage::PickupOffsetMode::WorldX: return "world-x";
-            default: return "unknown";
-            }
-        };
         std::ostringstream oss;
         oss << kLogPrefix << "Stage data " << (stageLoaded ? "loaded" : "defaulted")
             << " from '" << kGameplayConfigPath << "' section='" << stageConfigSectionUsed << "'"
@@ -209,14 +165,6 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " spawnPointsSecondary=" << result.stageData.GetSpawnPointsSecondary().size()
             << " platforms=" << result.stageData.GetPlatformCount()
             << " playerSpeedXY=(" << result.playerBaseHorizontalSpeed << ',' << result.playerBaseVerticalSpeed << ')'
-            << " pickupBox=(" << result.playerPickupBoxWidth << ',' << result.playerPickupBoxHeight << ')'
-            << " pickupMaxDistance=" << result.playerPickupMaxDistance
-            << " pickupDepthThreshold=" << result.playerPickupDepthThreshold
-            << " pickupOffsetMode=" << pickupOffsetModeName(result.playerPickupOffset.mode)
-            << " pickupOffsetLocalWorld=(" << result.playerPickupOffset.localOffset.x << ','
-            << result.playerPickupOffset.localOffset.y << ',' << result.playerPickupOffset.localOffset.z << ')'
-            << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
-            << " heightBonusSeconds=" << result.stageData.GetHeightBonusSeconds()
             << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
         for (std::size_t i = 0; i < result.stageData.GetPlatformCount(); ++i)
         {
@@ -265,32 +213,7 @@ void SceneComposer::ComposeConfig(Composition& result)
 
 void SceneComposer::ComposeRules(Composition& result)
 {
-    result.heightBonusThresholdMeters = result.stageData.GetHeightBonusThreshold();
-    if (!std::isfinite(result.heightBonusThresholdMeters) || result.heightBonusThresholdMeters <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus threshold " << result.heightBonusThresholdMeters
-            << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusThresholdMeters = 0.0f;
-    }
-
-    result.heightBonusSeconds = result.stageData.GetHeightBonusSeconds();
-    if (!std::isfinite(result.heightBonusSeconds))
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds " << result.heightBonusSeconds
-            << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusSeconds = 0.0f;
-    }
-    else if (result.heightBonusSeconds <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds <= 0; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusSeconds = 0.0f;
-    }
+    (void)result;
 }
 
 void SceneComposer::ComposePhysics(Composition& result)

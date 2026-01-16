@@ -153,44 +153,9 @@ namespace Stage
         return m_cellSizeWorld;
     }
 
-    float StageData::GetPickupBoxWidthWorld() const noexcept
-    {
-        return m_pickupBoxWidthWorld;
-    }
-
-    float StageData::GetPickupBoxHeightWorld() const noexcept
-    {
-        return m_pickupBoxHeightWorld;
-    }
-
-    float StageData::GetPickupMaxDistance() const noexcept
-    {
-        return m_pickupMaxDistance;
-    }
-
-    float StageData::GetPickupDepthThreshold() const noexcept
-    {
-        return m_pickupDepthThreshold;
-    }
-
-    const PickupOffset& StageData::GetPickupOffset() const noexcept
-    {
-        return m_pickupOffset;
-    }
-
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
-    }
-
-    float StageData::GetHeightBonusThreshold() const noexcept
-    {
-        return m_heightBonusThreshold;
-    }
-
-    float StageData::GetHeightBonusSeconds() const noexcept
-    {
-        return m_heightBonusSeconds;
     }
 
     void StageData::ApplyDefaults()
@@ -215,15 +180,6 @@ namespace Stage
         m_playerVerticalSpeedCellsPerSec = normalized.playerVerticalSpeedCellsPerSec;
         m_playerHorizontalSpeedWorld = normalized.playerHorizontalSpeedWorld;
         m_playerVerticalSpeedWorld = normalized.playerVerticalSpeedWorld;
-        m_pickupBoxWidthCells = normalized.pickupBoxWidthCells;
-        m_pickupBoxHeightCells = normalized.pickupBoxHeightCells;
-        m_pickupBoxWidthWorld = normalized.pickupBoxWidthWorld;
-        m_pickupBoxHeightWorld = normalized.pickupBoxHeightWorld;
-        m_pickupMaxDistance = normalized.pickupMaxDistance;
-        m_pickupDepthThreshold = normalized.pickupDepthThreshold;
-        m_pickupOffset = normalized.pickupOffset;
-        m_heightBonusThreshold = normalized.heightBonusThreshold;
-        m_heightBonusSeconds = normalized.heightBonusSeconds;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
@@ -243,15 +199,6 @@ namespace Stage
             << " cellSizeWorld=" << m_cellSizeWorld
             << " playerHorizontalSpeedWorld=" << m_playerHorizontalSpeedWorld
             << " playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
-            << " pickupBoxWidthWorld=" << m_pickupBoxWidthWorld
-            << " pickupBoxHeightWorld=" << m_pickupBoxHeightWorld
-            << " pickupMaxDistance=" << m_pickupMaxDistance
-            << " pickupDepthThreshold=" << m_pickupDepthThreshold
-            << " pickupOffsetMode=" << PickupOffsetModeToString(m_pickupOffset.mode)
-            << " pickupOffsetLocalWorld=(" << m_pickupOffset.localOffset.x
-            << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
-            << " heightBonusThreshold=" << m_heightBonusThreshold
-            << " heightBonusSeconds=" << m_heightBonusSeconds
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
 
