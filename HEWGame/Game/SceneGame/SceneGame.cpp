@@ -14,6 +14,7 @@
 #include "BaseCamera.h"
 #include "PerspectiveCamera.h"
 #include "SweetsManager.h"
+#include "Sweets/BaseSweets.h"
 #include "Render/Model.h"
 #include "Render/ModelBounds.h"
 #include "Entities/Player.h"
