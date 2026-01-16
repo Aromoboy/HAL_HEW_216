@@ -93,7 +93,6 @@ public:
     Core::UpdateScheduler& GetScheduler() override;
     Core::Input* GetInput() override;
     Core::StepTimer* GetTimer() override;
-    bool IsOsara(const StageObject& obj);
 
 private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
