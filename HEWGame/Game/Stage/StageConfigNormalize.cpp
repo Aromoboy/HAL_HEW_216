@@ -213,6 +213,8 @@ namespace Stage
         float verticalSpeedCellsPerSec = parsed.verticalSpeedCellsPerSec;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
         std::optional<float> backgroundSafeScrollY;
+        std::optional<float> backgroundSafeWindowY;
+        std::optional<float> backgroundSoftnessY;
 
         if (!planeZSet)
         {
@@ -253,6 +255,30 @@ namespace Stage
             {
                 std::ostringstream oss;
                 oss << kLogPrefix << "background.safeScrollY invalid; ignoring.\n";
+            }
+        }
+        if (parsed.backgroundSafeWindowYSet)
+        {
+            if (std::isfinite(parsed.backgroundSafeWindowY) && parsed.backgroundSafeWindowY > 0.0f)
+            {
+                backgroundSafeWindowY = parsed.backgroundSafeWindowY;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "background.safeWindow invalid; ignoring.\n";
+            }
+        }
+        if (parsed.backgroundSoftnessYSet)
+        {
+            if (std::isfinite(parsed.backgroundSoftnessY) && parsed.backgroundSoftnessY > 0.0f)
+            {
+                backgroundSoftnessY = parsed.backgroundSoftnessY;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "background.softness invalid; ignoring.\n";
             }
         }
 
@@ -664,6 +690,8 @@ namespace Stage
         normalized.playerVerticalSpeedWorld = verticalSpeedCellsPerSec * cellSizeWorld;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
         normalized.backgroundSafeScrollY = backgroundSafeScrollY;
+        normalized.backgroundSafeWindowY = backgroundSafeWindowY;
+        normalized.backgroundSoftnessY = backgroundSoftnessY;
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
         return normalized;
@@ -693,6 +721,8 @@ namespace Stage
         normalized.playerVerticalSpeedWorld = StageConfigDefaults::kDefaultVerticalSpeedCellsPerSec * StageConfigDefaults::kDefaultCellSizeWorld;
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
         normalized.backgroundSafeScrollY = std::nullopt;
+        normalized.backgroundSafeWindowY = std::nullopt;
+        normalized.backgroundSoftnessY = std::nullopt;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
         normalized.secondaryUsedDefaults = false;

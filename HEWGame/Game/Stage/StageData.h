@@ -50,6 +50,8 @@ namespace Stage
         float GetCellSizeWorld() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
         std::optional<float> GetBackgroundSafeScrollY() const noexcept;
+        std::optional<float> GetBackgroundSafeWindowY() const noexcept;
+        std::optional<float> GetBackgroundSoftnessY() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -75,5 +77,7 @@ namespace Stage
         float m_playerVerticalSpeedWorld;
         std::string m_backgroundTexturePath;
         std::optional<float> m_backgroundSafeScrollY;
+        std::optional<float> m_backgroundSafeWindowY;
+        std::optional<float> m_backgroundSoftnessY;
     };
 }

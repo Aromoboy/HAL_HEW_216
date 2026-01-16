@@ -57,6 +57,10 @@ namespace Stage
         bool backgroundTextureSet = false;
         float backgroundSafeScrollY = 0.0f;
         bool backgroundSafeScrollYSet = false;
+        float backgroundSafeWindowY = 0.0f;
+        bool backgroundSafeWindowYSet = false;
+        float backgroundSoftnessY = 0.0f;
+        bool backgroundSoftnessYSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);

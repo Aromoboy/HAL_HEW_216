@@ -27,6 +27,8 @@ namespace Stage
         float playerVerticalSpeedWorld = 0.0f;
         std::string backgroundTexturePath;
         std::optional<float> backgroundSafeScrollY;
+        std::optional<float> backgroundSafeWindowY;
+        std::optional<float> backgroundSoftnessY;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;

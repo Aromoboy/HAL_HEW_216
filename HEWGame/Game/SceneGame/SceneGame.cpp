@@ -94,6 +94,22 @@ namespace
             return std::isfinite(value) != 0;
         }
 
+        float Lerp(float from, float to, float t)
+        {
+            return from + (to - from) * t;
+        }
+
+        float SmoothStep(float edge0, float edge1, float x)
+        {
+            if (!IsFiniteFloat(edge0) || !IsFiniteFloat(edge1) || !IsFiniteFloat(x) || edge0 == edge1)
+            {
+                return (x < edge0) ? 0.0f : 1.0f;
+            }
+
+            const float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+            return t * t * (3.0f - 2.0f * t);
+        }
+
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
@@ -1501,10 +1517,47 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 
             if (maxParallaxOffset)
             {
-                scrollOffsetUsedForBackground = std::clamp(
-                    scrollOffsetUsedForBackground,
-                    -*maxParallaxOffset,
-                    *maxParallaxOffset);
+                const float clampedMaxOffset = std::max(0.0f, *maxParallaxOffset);
+                const std::optional<float> safeWindow = m_stageData.GetBackgroundSafeWindowY();
+                const std::optional<float> softness = m_stageData.GetBackgroundSoftnessY();
+                const float absOffset = std::fabs(scrollOffsetUsedForBackground);
+                const float sign = scrollOffsetUsedForBackground < 0.0f ? -1.0f : 1.0f;
+                float softenedOffset = scrollOffsetUsedForBackground;
+
+                if (clampedMaxOffset > 0.0f && absOffset > 0.0f)
+                {
+                    if (softness && IsFiniteFloat(*softness) && *softness > 0.0f)
+                    {
+                        const float clampedSoftness = std::clamp(*softness, 0.0f, clampedMaxOffset);
+                        const float softStart = std::max(0.0f, clampedMaxOffset - clampedSoftness);
+                        if (absOffset > softStart)
+                        {
+                            const float t = SmoothStep(softStart, clampedMaxOffset, absOffset);
+                            const float eased = Lerp(softStart, clampedMaxOffset, t);
+                            softenedOffset = sign * eased;
+                        }
+                    }
+
+                    softenedOffset = std::clamp(softenedOffset, -clampedMaxOffset, clampedMaxOffset);
+
+                    if (safeWindow && IsFiniteFloat(*safeWindow) && *safeWindow > 0.0f)
+                    {
+                        const float clampedWindow = std::clamp(*safeWindow, 0.0f, clampedMaxOffset);
+                        if (clampedWindow > 0.0f)
+                        {
+                            const float windowStart = std::max(0.0f, clampedMaxOffset - clampedWindow);
+                            const float easedAbs = std::fabs(softenedOffset);
+                            if (easedAbs > windowStart)
+                            {
+                                const float t = SmoothStep(windowStart, clampedMaxOffset, easedAbs);
+                                const float pulled = Lerp(easedAbs, 0.0f, t);
+                                softenedOffset = (softenedOffset < 0.0f ? -1.0f : 1.0f) * pulled;
+                            }
+                        }
+                    }
+                }
+
+                scrollOffsetUsedForBackground = softenedOffset;
             }
 
             m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, pixelsPerUnit);
