@@ -343,7 +343,7 @@ void SceneComposer::ComposeUI(Composition& result)
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;
         layer.scrollOffsetInPixels = false;
-        layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
+        layer.samplingMode = BackgroundRendererConfig::SamplingMode::Wrap;
         layer.baseOffset01 = 4.00f;
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         backgroundConfig.layers.push_back(layer);
