@@ -55,7 +55,17 @@ namespace
         const float screenAspect = screenWidth / screenHeight;
         const float textureAspect = textureWidth / textureHeight;
         const float scrollWorld = scrollOffset * parallaxFactor;
-        const float scrollPx = scrollWorld * pixelsPerUnit;
+        const float tileHeightWorld = (pixelsPerUnit > 0.0f) ? (textureHeight / pixelsPerUnit) : 0.0f;
+        float normalizedScrollWorld = scrollWorld;
+        if (tileHeightWorld > 0.0f)
+        {
+            normalizedScrollWorld = std::fmod(scrollWorld, tileHeightWorld);
+            if (normalizedScrollWorld < 0.0f)
+            {
+                normalizedScrollWorld += tileHeightWorld;
+            }
+        }
+        const float scrollPx = normalizedScrollWorld * pixelsPerUnit;
         const float clampedBaseOffset01 = std::clamp(baseOffset01, 0.0f, 1.0f);
 
         if (textureAspect > screenAspect)
