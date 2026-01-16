@@ -274,6 +274,12 @@ namespace MeteorsSpace
         m_lifecycle.SetHorizontalBounds(minX, maxX, margin);
     }
 
+    void MeteorsManager::SetCameraBounds(float minX, float maxX, float minY, float maxY)
+    {
+        m_lifecycle.SetCameraBounds(minX, maxX, minY, maxY);
+        m_spawner.SetCameraBounds(minX, maxX, minY, maxY);
+    }
+
     void MeteorsManager::SetGeneratedColliderThicknessPadding(float factor)
     {
         m_factory.SetGeneratedColliderThicknessPadding(factor);

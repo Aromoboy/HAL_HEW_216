@@ -127,6 +127,7 @@ namespace MeteorsSpace
         bool ReleaseCarriedMeteors(const std::shared_ptr<ActiveMeteors>& meteors);
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
+        void SetCameraBounds(float minX, float maxX, float minY, float maxY);
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
