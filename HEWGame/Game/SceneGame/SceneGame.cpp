@@ -1174,6 +1174,7 @@ void SceneGame::FireMissile()
         "projectile_missile",
         false);
     missile->SetBoxColliderComponent(collider);
+    missile->SetBox2DShapeConfig(shapeConfig);
 
     m_physicsBinder->RegisterPhysicsBody(*missile);
     const auto& missileCollider = missile->GetBoxColliderComponent();
@@ -1187,7 +1188,6 @@ void SceneGame::FireMissile()
         m_physicsBinder->UnregisterPhysicsBody(missile.get());
         return;
     }
-    missile->SetBox2DShapeConfig(shapeConfig);
     missile->SetGravityScale(m_missileSettings.gravityScale);
     missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
 
