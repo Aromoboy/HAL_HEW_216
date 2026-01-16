@@ -52,6 +52,8 @@ namespace Entities
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
+        void SetRenderAlpha(float alpha);
+        float GetRenderAlpha() const;
         std::optional<WrapEvent> ConsumeWrapEvent();
         Transform GetRenderTransform() const override;
 
@@ -67,5 +69,6 @@ namespace Entities
         PlayerPhysicsBinder m_physicsBinder;
         Core::Input* m_input = nullptr;
         std::optional<WrapEvent> m_pendingWrapEvent = std::nullopt;
+        float m_renderAlpha = 1.0f;
     };
 }

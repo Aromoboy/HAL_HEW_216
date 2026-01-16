@@ -122,6 +122,11 @@ protected:
     std::unique_ptr<SoundManagerEX> m_pManager;
     Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
+    int m_playerHp = 10;
+    float m_playerInvulnSeconds = 0.0f;
+    float m_playerBlinkTimer = 0.0f;
+    float m_playerBlinkAlpha = 1.0f;
+    bool m_playerInvulnerable = false;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<MeteorsSpace::MeteorsManager> m_meteorsManager;
