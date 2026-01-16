@@ -133,9 +133,9 @@ void UIManager::Draw()
 
     if (m_timerReady)
     {
-        const float remainingSeconds = data.showResult
-            ? data.result.remainingSeconds
-            : data.hud.remainingSeconds;
-        m_timerDisplay.Draw(remainingSeconds);
+        const float elapsedSeconds = data.showResult
+            ? data.result.elapsedSeconds
+            : data.hud.elapsedSeconds;
+        m_timerDisplay.Draw(elapsedSeconds);
     }
 }

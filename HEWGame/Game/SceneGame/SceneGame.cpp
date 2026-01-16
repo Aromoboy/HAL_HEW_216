@@ -470,11 +470,6 @@ bool SceneGame::Load(Core::Input& input)
     gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
     m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);
 
-    if (m_physicsBinder)
-    {
-        m_contactHandler.Bind(*m_physicsBinder, m_meteorsManager.get());
-    }
-
     if (m_meteorsManager)
     {
         m_meteorsManager->SetPhaseChangeCallback([this](int newPhase)
@@ -519,6 +514,10 @@ bool SceneGame::Load(Core::Input& input)
     }
     m_playerModel = std::move(loaderResult.playerModel);
     player = std::move(loaderResult.player);
+    if (m_physicsBinder)
+    {
+        m_contactHandler.Bind(*m_physicsBinder, m_meteorsManager.get(), player.get());
+    }
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
 
@@ -924,7 +923,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_clearPhaseCount
     };
     const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
-    if (rulesResult.timeUp && m_stageState == StageState::Playing)
+    if (m_stageState == StageState::Playing && m_contactHandler.ConsumePlayerHit())
     {
         SetStageState(StageState::TimeUp);
     }
@@ -1000,8 +999,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             }
         }
 
-        const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
-            - m_gameplayRules.GetRemainingCountdownSeconds();
+        const float elapsedSeconds = m_gameplayRules.GetElapsedPlaySeconds();
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
@@ -1038,11 +1036,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             || (m_stageState == StageState::ShowingResult);
 
         UIManager::HUDUpdateData uiData{};
-        const float remainingSeconds = std::max(0.0f, m_gameplayRules.GetRemainingCountdownSeconds());
+        const float elapsedSeconds = m_gameplayRules.GetElapsedPlaySeconds();
         const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
-        uiData.hud.remainingSeconds = remainingSeconds;
+        uiData.hud.elapsedSeconds = elapsedSeconds;
         uiData.hud.currentHeight = currentHeight;
         uiData.hud.peakHeight = peakHeight;
         uiData.hud.score = score;
@@ -1068,7 +1066,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             }
         }
 
-        uiData.result.remainingSeconds = remainingSeconds;
+        uiData.result.elapsedSeconds = elapsedSeconds;
         uiData.result.currentHeight = currentHeight;
         uiData.result.peakHeight = peakHeight;
         uiData.result.score = score;
@@ -2287,7 +2285,7 @@ void SceneGame::OnStageFail()
     std::ostringstream oss;
     const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
     const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
-    oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
+    oss << kLogPrefix << "[Stage] failed peakTop=" << std::fixed << std::setprecision(2)
         << peakHeight << "m score=" << score << "\n";
     ::DebugTrace(oss.str());
 }
@@ -2357,6 +2355,7 @@ void SceneGame::ResetPlaySession()
     }
 
     m_gameplayRules.ResetSession();
+    m_contactHandler.Reset();
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 

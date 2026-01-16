@@ -919,17 +919,17 @@ namespace MeteorsSpace
 
         switch (type)
         {
-        case MeteorsType::Strawberry:
+        case MeteorsType::Mercury:
             preset.spawnWeight = 1.0f;
             preset.scale = float3{ 0.3f, 0.3f, 0.3f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.012f, 0.012f, 0.012f } };
             return preset;
-        case MeteorsType::Blueberry:
+        case MeteorsType::Meteor:
             preset.spawnWeight = 1.0f;
             preset.scale = float3{ 0.32f, 0.32f, 0.32f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.014f, 0.014f, 0.014f } };
             return preset;
-        case MeteorsType::Pineapple:
+        case MeteorsType::Meteorite:
             preset.spawnWeight = 0.8f;
             preset.scale = float3{ 0.36f, 0.36f, 0.36f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.016f, 0.016f, 0.016f } };

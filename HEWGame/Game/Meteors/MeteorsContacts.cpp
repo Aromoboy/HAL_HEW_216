@@ -43,7 +43,7 @@ namespace
 
     bool IsCreamTag(const std::string& tag)
     {
-        static const std::string kCreamKey = NormalizeTag(::MeteorsSpace::ToString(::MeteorsSpace::MeteorsType::Strawberry));
+        static const std::string kCreamKey = NormalizeTag(::MeteorsSpace::ToString(::MeteorsSpace::MeteorsType::Mercury));
         return NormalizeTag(tag) == kCreamKey;
     }
 
