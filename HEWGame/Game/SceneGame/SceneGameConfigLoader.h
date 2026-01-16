@@ -38,6 +38,7 @@ namespace SceneGameConfig
 
     PlayerColliderTuning LoadPlayerColliderTuning(const std::string& path);
     PlayerSpawnTransform LoadPlayerTransformConfig();
+    MissileSettings LoadMissileSettings();
     PhysicsTuningSettings LoadPhysicsTuningSettings();
     bool LoadModelTextureLoadingSetting();
     ModelImportSettings LoadModelImportSettings();

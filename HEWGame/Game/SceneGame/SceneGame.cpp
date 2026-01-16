@@ -447,6 +447,8 @@ bool SceneGame::Load(Core::Input& input)
     SceneGameConfig::CameraRigSettings cameraSettings = SceneGameConfig::LoadCameraRigSettings();
     m_gameCameraConfig = SceneGameConfig::LoadGameCameraConfig(); // Source of truth: gameplay.cfg [camera.rig].
     m_cameraRigSettings = cameraSettings;
+    const SceneGameConfig::MissileSettings missileSettings = SceneGameConfig::LoadMissileSettings();
+    m_missileScale = missileSettings.scale;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -1022,6 +1024,7 @@ void SceneGame::FireMissile()
     constexpr float kMissileLifetimeSeconds = 6.0f;
 
     Transform missileTransform = playerTransform;
+    missileTransform.scale = m_missileScale;
     missileTransform.position.x += forward.x * kSpawnOffset;
     missileTransform.position.y += forward.y * kSpawnOffset;
 
