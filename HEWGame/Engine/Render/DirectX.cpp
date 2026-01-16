@@ -1,4 +1,4 @@
-#include "DirectX.h"
+﻿#include "DirectX.h"
 #include "Texture.h"
 #include "AppGame.h"
 
@@ -252,7 +252,7 @@ void BindPostProcessParams(float gamma, float saturation, float contrast, const 
 	if (!g_pPostProcessParamBuffer)
 	{
 		D3D11_BUFFER_DESC desc = {};
-		desc.ByteWidth = sizeof(PostProcessParams);
+		desc.ByteWidth = (sizeof(PostProcessParams) + 15) & ~15;
 		desc.Usage = D3D11_USAGE_DEFAULT;
 		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		HRESULT hr = device->CreateBuffer(&desc, nullptr, &g_pPostProcessParamBuffer);
