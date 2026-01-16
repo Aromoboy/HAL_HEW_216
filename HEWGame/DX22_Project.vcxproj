@@ -253,8 +253,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Entities\PlayerPickupSystem.cpp" />
     <ClCompile Include="Game\GameFlow\GameplayProgression.cpp" />
     <ClCompile Include="Game\GameFlow\PhaseManager.cpp" />
-    <ClCompile Include="Game\Guide\GuidelineActor.cpp" />
-    <ClCompile Include="Game\Guide\GuidelineSystem.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpCursor.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpManager.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpNode.cpp" />
@@ -385,8 +383,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Entities\PlayerPickupSystem.h" />
     <ClInclude Include="Game\GameFlow\GameplayProgression.h" />
     <ClInclude Include="Game\GameFlow\PhaseManager.h" />
-    <ClInclude Include="Game\Guide\GuidelineActor.h" />
-    <ClInclude Include="Game\Guide\GuidelineSystem.h" />
     <ClInclude Include="Game\PowerUp\PowerUpCursor.h" />
     <ClInclude Include="Game\PowerUp\PowerUpManager.h" />
     <ClInclude Include="Game\PowerUp\PowerUpNode.h" />

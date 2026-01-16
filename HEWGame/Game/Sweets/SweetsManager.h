@@ -134,7 +134,6 @@ namespace SweetsSpace
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
         int GetSweetsCount() const;
-        void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
         bool GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const;
     private:
         Systems::DrawSystem* m_drawSystem;

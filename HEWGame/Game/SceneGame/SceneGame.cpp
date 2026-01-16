@@ -14,7 +14,6 @@
 #include "BaseCamera.h"
 #include "PerspectiveCamera.h"
 #include "SweetsManager.h"
-#include "Sweets/BaseSweets.h"
 #include "Render/Model.h"
 #include "Render/ModelBounds.h"
 #include "Entities/Player.h"
@@ -77,8 +76,6 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr float kGuidelineTimeBonusSeconds = 5.0f;
-        constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
@@ -394,20 +391,6 @@ bool SceneGame::Load(Core::Input& input)
     {
         m_blobShadowRenderer->SetSettings(m_blobShadowSettings);
     }
-    GuidelineSystem::Config guidelineConfig{};
-    guidelineConfig.heightMeters = composition->guidelineHeightMeters;
-    guidelineConfig.stepMeters = composition->guidelineStepMeters;
-    guidelineConfig.thicknessPixels = composition->guidelineThicknessPixels;
-    guidelineConfig.widthPaddingWorld = composition->guidelineWidthPaddingWorld;
-    guidelineConfig.zOffset = composition->guidelineZOffset;
-    guidelineConfig.spinAxis = composition->guidelineSpinAxis;
-    guidelineConfig.spinSpeedDegPerSec = composition->guidelineSpinSpeedDegPerSec;
-    guidelineConfig.cooldownDurationSeconds = composition->guidelineCooldownDurationSeconds;
-    guidelineConfig.cooldownRemainingSeconds = composition->guidelineCooldownRemainingSeconds;
-    guidelineConfig.centerX = composition->guidelineCenterX;
-    guidelineConfig.widthWorld = composition->guidelineWidthWorld;
-    guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
-    m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
 
     GameplayRulesSystem::Config gameplayRulesConfig{};
     gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
@@ -912,7 +895,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
     }
-    m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
     if (m_sweetsManager)
@@ -972,21 +954,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             SetStageState(StageState::Playing);
         }
         fRads.z += 0.001f;
-
-        const GuidelineSystem::UpdateInput guidelineInput{
-            m_sweetsManager.get(),
-            kGuidelineTimeBonusSeconds,
-            kGuidelineGlobalCooldownSeconds,
-            DebugTrace,
-            kLogPrefix
-        };
-        GuidelineSystem::UpdateResult guidelineResult =
-            m_guidelineSystem.Update(guidelineInput, {});
-        m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
-        if (guidelineResult.guidelineAdvanced)
-        {
-            UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
-        }
         break;
     }
     case StageState::TimeUp:
@@ -1081,13 +1048,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         return;
     }
 
-}
-
-
-void SceneGame::ResetGuidelineHeight()
-{
-    m_guidelineSystem.ResetHeight(m_stageData.GetGuidelineHeight(),
-                                  m_stageData.GetGuidelineStep());
 }
 
 
@@ -1843,7 +1803,6 @@ void SceneGame::SetStageState(StageState newState)
     }
 
     m_stageState = newState;
-    ResetGuidelineHeight();
 
     switch (newState)
     {
@@ -1959,8 +1918,6 @@ void SceneGame::ResetPlaySession()
     }
 
     m_gameplayRules.ResetSession();
-    m_guidelineSystem.ResetSession();
-    ResetGuidelineHeight();
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 

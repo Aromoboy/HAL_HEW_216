@@ -2,20 +2,13 @@
 
 #include "Core/StepTimer.h"
 #include "GameFlow/PhaseManager.h"
-#include "GuidelineActor.h"
 #include "SweetsManager.h"
-#include "Sweets/BaseSweets.h"
 
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <limits>
 #include <sstream>
-
-namespace
-{
-    constexpr float kGuidelineHeightIncrementMeters = 1.75f;
-}
 
 namespace GameplayProgression
 {

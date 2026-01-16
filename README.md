@@ -531,7 +531,6 @@ class Cfg_SceneGameConfig["SceneGameConfig (free functions)"] {
 class Stage_StageData["Stage::StageData"] {
   +LoadFromFile(path)
   +LoadFromFile(path, section)
-  +GetGuidelineHeight() float
   +GetBackgroundTexturePath() string
 }
 
@@ -596,24 +595,8 @@ class Rules_GameplayRulesSystem["GameplayRulesSystem"] {
   +ComputeScore(phaseManager)
 }
 
-class Guide_GuidelineSystem["GuidelineSystem"] {
-  +Configure(config, actor)
-  +ResetHeight(height, step)
-  +ResetSession()
-  +TickCooldowns(deltaSeconds)
-  +Update(input, pendingBonuses) UpdateResult
-  +GetHeightMeters() float
-}
-
-class Guide_GuidelineActor["GuidelineActor"] {
-  +UpdateGuideline(centerX, height, planeZ, width, thickness)
-}
-
-Guide_GuidelineActor --|> Ent_Entity
 Rules_GameplayRulesSystem ..> GF_PhaseManager
 Rules_GameplayRulesSystem ..> Sweets_Manager
-Guide_GuidelineSystem *-- Guide_GuidelineActor
-Guide_GuidelineSystem ..> Sweets_Manager
 
 %% =========================
 %% PowerUp scene
@@ -661,7 +644,6 @@ Scene_SceneGame *-- Ent_Player
 Scene_SceneGame *-- Stage_StageData
 Scene_SceneGame *-- GF_PhaseManager
 Scene_SceneGame *-- Rules_GameplayRulesSystem
-Scene_SceneGame *-- Guide_GuidelineSystem
 Scene_SceneGame *-- Render_BackgroundRenderer
 
 Scene_SceneGame ..> Core_UpdateScheduler : registers nodes
