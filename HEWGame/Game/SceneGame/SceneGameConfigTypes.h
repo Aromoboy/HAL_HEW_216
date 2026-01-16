@@ -23,6 +23,7 @@ namespace SceneGameConfig
         Transform transform{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } };
         bool loadedFromFile = false;
         bool rotationFromDegrees = false;
+        float missileYawOffsetRadians = 0.0f;
     };
 
     struct MissileSettings
