@@ -338,22 +338,14 @@ void SceneComposer::ComposeUI(Composition& result)
     if (!backgroundTexture.empty())
     {
         // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
-        const float parallaxFactor = result.renderPostProcessSettings.backgroundParallaxFactor;
         BackgroundRendererConfig backgroundConfig{};
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
-        layer.parallaxFactor = parallaxFactor;
         layer.scrollOffsetInPixels = false;
         layer.samplingMode = BackgroundRendererConfig::SamplingMode::Wrap;
         layer.baseOffset01 = 4.00f;
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         backgroundConfig.layers.push_back(layer);
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "Background parallaxFactor=" << parallaxFactor
-                << " texture='" << backgroundTexture << "'\n";
-            DebugTrace(oss.str());
-        }
         result.backgroundRenderer = std::make_unique<BackgroundRenderer>();
         if (!result.backgroundRenderer->Initialize(backgroundConfig))
         {

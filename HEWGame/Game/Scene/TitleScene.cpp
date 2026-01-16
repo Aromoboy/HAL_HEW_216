@@ -74,7 +74,6 @@ void TitleScene::OnEnter()
     BackgroundRendererConfig cfg{};
     BackgroundRendererConfig::BackgroundLayer layer;
     layer.texturePath = "Assets/Texture/StartScreen.png";
-    layer.parallaxFactor = 0.0f;
     layer.samplingMode = BackgroundRendererConfig::SamplingMode::Wrap;
     layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     cfg.layers.push_back(layer);

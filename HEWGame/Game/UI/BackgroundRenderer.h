@@ -20,7 +20,6 @@ struct BackgroundRendererConfig
     struct BackgroundLayer
     {
         std::string texturePath;
-        float parallaxFactor = 0.0f;
         bool invertScroll = true;
         SamplingMode samplingMode = SamplingMode::Wrap;
         float baseOffset01 = 0.0f;
