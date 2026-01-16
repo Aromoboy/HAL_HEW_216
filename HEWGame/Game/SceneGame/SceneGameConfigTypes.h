@@ -37,6 +37,8 @@ namespace SceneGameConfig
         float turnRate = 2.5f;
         float rollResponse = 4.0f;
         float wrapMargin = 0.0f;
+        bool wrapX = true;
+        bool wrapY = true;
     };
 
     struct MissileSettings

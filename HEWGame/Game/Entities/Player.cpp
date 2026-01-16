@@ -98,6 +98,11 @@ namespace Entities
         m_physicsBinder.SetWrapMargin(margin);
     }
 
+    void Player::SetWrapEnabled(bool wrapX, bool wrapY)
+    {
+        m_physicsBinder.SetWrapEnabled(wrapX, wrapY);
+    }
+
     void Player::SetRenderAlpha(float alpha)
     {
         m_renderAlpha = alpha;

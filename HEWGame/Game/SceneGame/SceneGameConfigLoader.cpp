@@ -2429,6 +2429,38 @@ namespace SceneGameConfig
                     DebugTrace(oss.str());
                 }
             }
+            else if (key == GameplayConfig::kPlayerMovementKeyWrapX)
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.wrapX = parsedValue;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse wrapX line=" << lineNumber
+                        << " value='" << value << "'; keeping default=" << std::boolalpha << settings.wrapX << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kPlayerMovementKeyWrapY)
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.wrapY = parsedValue;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse wrapY line=" << lineNumber
+                        << " value='" << value << "'; keeping default=" << std::boolalpha << settings.wrapY << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -2446,7 +2478,9 @@ namespace SceneGameConfig
             << " brake=" << settings.brake
             << " turnRate=" << settings.turnRate
             << " rollResponse=" << settings.rollResponse
-            << " wrapMargin=" << settings.wrapMargin << "\n";
+            << " wrapMargin=" << settings.wrapMargin
+            << " wrapX=" << std::boolalpha << settings.wrapX
+            << " wrapY=" << std::boolalpha << settings.wrapY << "\n";
         DebugTrace(oss.str());
 
         return settings;
