@@ -95,6 +95,15 @@ public:
     Core::StepTimer* GetTimer() override;
 
 private:
+    struct MissileInstance
+    {
+        std::shared_ptr<Entities::PhysicalEntity> entity;
+        float remainingSeconds = 0.0f;
+        float ignorePlayerSeconds = 3.0f;
+        std::vector<b2Filter> originalFilters;
+        bool playerFilterIgnored = false;
+    };
+
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
     void UpdateCameraBoundsForPhase(float heightMeters);
     void UpdateBackgroundScrollOriginForWrap(float cameraY);
@@ -114,6 +123,8 @@ private:
     void ToggleGameplaySystems(bool enabled);
     int GetMeteorsCount() const;
     void Initialize(const Stage::StageData& stageData);
+    void UnregisterMissileInstance(MissileInstance& instance);
+    void RemoveMissileByEntity(Entities::PhysicalEntity* missile);
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -173,14 +184,6 @@ protected:
     std::shared_ptr<Render::Model> m_missileModel;
     SceneGameConfig::MissileSettings m_missileSettings{};
     bool m_fireMissileHintEnabled = false;
-    struct MissileInstance
-    {
-        std::shared_ptr<Entities::PhysicalEntity> entity;
-        float remainingSeconds = 0.0f;
-        float ignorePlayerSeconds = 3.0f;
-        std::vector<b2Filter> originalFilters;
-        bool playerFilterIgnored = false;
-    };
     std::vector<MissileInstance> m_activeMissiles;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;

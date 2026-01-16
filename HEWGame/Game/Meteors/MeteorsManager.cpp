@@ -151,11 +151,16 @@ namespace MeteorsSpace
 
     void MeteorsManager::Erase(const std::shared_ptr<ActiveMeteors>& meteors)
     {
+        if (meteors)
+        {
+            m_meteorsHitCounts.erase(meteors.get());
+        }
         m_lifecycle.Erase(meteors);
     }
 
     void MeteorsManager::ClearAllMeteors()
     {
+        m_meteorsHitCounts.clear();
         m_lifecycle.ClearAllMeteors();
     }
 
@@ -325,6 +330,31 @@ namespace MeteorsSpace
     {
         m_cachedPlayerPosition = position;
         m_hasCachedPlayerPosition = true;
+    }
+
+    void MeteorsManager::RegisterProjectileHit(const std::shared_ptr<ActiveMeteors>& meteors)
+    {
+        if (!meteors || meteors->IsPendingDestroy())
+        {
+            return;
+        }
+
+        const auto& manifest = MeteorsPrototypeManifest::Instance();
+        const std::optional<MeteorsType> meteorsType = manifest.Resolve(meteors->GetTag());
+        int requiredHits = 1;
+        if (meteorsType && *meteorsType == MeteorsType::Mercury)
+        {
+            requiredHits = 2;
+        }
+
+        const int hitCount = ++m_meteorsHitCounts[meteors.get()];
+        if (hitCount < requiredHits)
+        {
+            return;
+        }
+
+        m_lifecycle.RemoveMeteorsEntry(meteors, DeleteReason::Hit, "MissileHit", true, nullptr);
+        m_meteorsHitCounts.erase(meteors.get());
     }
 
     void MeteorsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
