@@ -2310,6 +2310,8 @@ namespace SceneGameConfig
     MissileSettings LoadMissileSettings()
     {
         MissileSettings settings{};
+        const float defaultHalfWidth = settings.halfWidth;
+        const float defaultHalfHeight = settings.halfHeight;
         std::vector<Config::SectionLine> lines;
         if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionMissileSettings, lines))
         {
@@ -2519,6 +2521,24 @@ namespace SceneGameConfig
                     << "' on line " << lineNumber << "\n";
                 DebugTrace(oss.str());
             }
+        }
+
+        if (settings.halfWidth <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[MissileSettings] Invalid halfWidth=" << settings.halfWidth
+                << "; using default " << defaultHalfWidth << ".\n";
+            DebugTrace(oss.str());
+            settings.halfWidth = defaultHalfWidth;
+        }
+
+        if (settings.halfHeight <= 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[MissileSettings] Invalid halfHeight=" << settings.halfHeight
+                << "; using default " << defaultHalfHeight << ".\n";
+            DebugTrace(oss.str());
+            settings.halfHeight = defaultHalfHeight;
         }
 
         settings.loadedFromFile = true;

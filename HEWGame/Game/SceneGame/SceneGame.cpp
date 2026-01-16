@@ -1134,6 +1134,23 @@ void SceneGame::FireMissile()
 
     Physics::BoxColliderComponent collider{};
     collider.AddBox(m_missileSettings.halfWidth, m_missileSettings.halfHeight);
+    if (collider.shapes.empty())
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Missile collider AddBox produced no shapes (halfWidth="
+            << m_missileSettings.halfWidth << ", halfHeight=" << m_missileSettings.halfHeight
+            << "); firing skipped.\n";
+        DebugTrace(oss.str());
+        return;
+    }
+
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Missile collider diagnostics: shapes=" << collider.shapes.size()
+            << " halfWidth=" << m_missileSettings.halfWidth
+            << " halfHeight=" << m_missileSettings.halfHeight << "\n";
+        DebugTrace(oss.str());
+    }
 
     Physics::Box2DShapeConfig shapeConfig{};
     shapeConfig.type = Physics::Box2DShapeConfig::Type::Box;
@@ -1159,6 +1176,17 @@ void SceneGame::FireMissile()
     missile->SetBoxColliderComponent(collider);
 
     m_physicsBinder->RegisterPhysicsBody(*missile);
+    const auto& missileCollider = missile->GetBoxColliderComponent();
+    const int createdFixtures = missileCollider ? missileCollider->createdFixtureCount : 0;
+    if (createdFixtures <= 0)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << "Missile physics registration produced no fixtures (fixtures="
+            << createdFixtures << "); destroying missile.\n";
+        DebugTrace(oss.str());
+        m_physicsBinder->UnregisterPhysicsBody(missile.get());
+        return;
+    }
     missile->SetBox2DShapeConfig(shapeConfig);
     missile->SetGravityScale(m_missileSettings.gravityScale);
     missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
