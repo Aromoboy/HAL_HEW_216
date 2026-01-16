@@ -450,6 +450,7 @@ bool SceneGame::Load(Core::Input& input)
     m_playerBaseHorizontalSpeed = composition->playerBaseHorizontalSpeed;
     m_playerBaseVerticalSpeed = composition->playerBaseVerticalSpeed;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
+    m_playerMovementSettings = SceneGameConfig::LoadPlayerMovementSettings();
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
@@ -488,6 +489,7 @@ bool SceneGame::Load(Core::Input& input)
     loaderConfig.drawSystem = m_drawSystem.get();
     loaderConfig.playerSpawnTransform = m_playerSpawnTransform;
     loaderConfig.playerColliderTuning = SceneGameConfig::LoadPlayerColliderTuning(GameplayConfig::kConfigPath);
+    loaderConfig.playerMovementSettings = m_playerMovementSettings;
     loaderConfig.playerBaseHorizontalSpeed = m_playerBaseHorizontalSpeed;
     loaderConfig.playerBaseVerticalSpeed = m_playerBaseVerticalSpeed;
     loaderConfig.playerSpeedMultiplier = m_playerSpeedMultiplier;

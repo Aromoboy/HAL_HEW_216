@@ -29,6 +29,15 @@ namespace SceneGameConfig
         float missileYawOffsetRadians = 0.0f;
     };
 
+    struct PlayerMovementSettings
+    {
+        float inputSmoothing = 10.0f;
+        float accel = 24.0f;
+        float brake = 12.0f;
+        float turnRate = 2.5f;
+        float rollResponse = 4.0f;
+    };
+
     struct MissileSettings
     {
         float3 scale{ 1.0f, 1.0f, 1.0f };

@@ -69,6 +69,7 @@ public:
 
     using PlayerColliderTuning = SceneGameConfig::PlayerColliderTuning;
     using PlayerSpawnTransform = SceneGameConfig::PlayerSpawnTransform;
+    using PlayerMovementSettings = SceneGameConfig::PlayerMovementSettings;
     using RenderPostProcessSettings = SceneGameConfig::RenderPostProcessSettings;
     using SceneLightingSettings = SceneGameConfig::LightingSettings;
     using BlobShadowSettings = SceneGameConfig::BlobShadowSettings;
@@ -160,6 +161,7 @@ protected:
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
     float m_playerSpeedMultiplier = 1.0f;
+    PlayerMovementSettings m_playerMovementSettings{};
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     std::shared_ptr<Render::Model> m_playerModel;

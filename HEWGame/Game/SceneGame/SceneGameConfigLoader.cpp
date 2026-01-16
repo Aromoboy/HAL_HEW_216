@@ -2307,6 +2307,127 @@ namespace SceneGameConfig
         return result;
     }
 
+    PlayerMovementSettings LoadPlayerMovementSettings()
+    {
+        PlayerMovementSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionPlayerMovement, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[PlayerMovement] Config section missing; using defaults path='"
+                << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionPlayerMovement << "'.\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        int parsedFields = 0;
+        for (const auto& entry : lines)
+        {
+            const int lineNumber = static_cast<int>(entry.lineNumber);
+            const std::string key = TrimWhitespace(entry.key);
+            const std::string value = TrimWhitespace(entry.value);
+            if (key.empty() || value.empty())
+            {
+                continue;
+            }
+
+            if (key == GameplayConfig::kPlayerMovementKeyInputSmoothing)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.inputSmoothing = std::max(0.0f, *parsed);
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse input smoothing line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kPlayerMovementKeyAccel)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.accel = std::max(0.0f, *parsed);
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse accel line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kPlayerMovementKeyBrake)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.brake = std::max(0.0f, *parsed);
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse brake line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kPlayerMovementKeyTurnRate)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.turnRate = std::max(0.0f, *parsed);
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse turn rate line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else if (key == GameplayConfig::kPlayerMovementKeyRollResponse)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.rollResponse = std::max(0.0f, *parsed);
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerMovement] Failed to parse roll response line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "[PlayerMovement] Ignored unknown key '" << key << "' on line " << lineNumber << "\n";
+                DebugTrace(oss.str());
+            }
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[PlayerMovement] Applied path='" << kGameplayConfigPath
+            << "' section='" << GameplayConfig::kSectionPlayerMovement
+            << "' parsedFields=" << parsedFields
+            << " smoothing=" << settings.inputSmoothing
+            << " accel=" << settings.accel
+            << " brake=" << settings.brake
+            << " turnRate=" << settings.turnRate
+            << " rollResponse=" << settings.rollResponse << "\n";
+        DebugTrace(oss.str());
+
+        return settings;
+    }
+
     MissileSettings LoadMissileSettings()
     {
         MissileSettings settings{};
