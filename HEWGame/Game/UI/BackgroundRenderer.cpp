@@ -5,6 +5,7 @@
 #include "Sprite.h"
 #include "Texture.h"
 #include <algorithm>
+#include <cmath>
 #include <sstream>
 #include <vector>
 
@@ -18,6 +19,22 @@ namespace
         float scaleY = 1.0f;
     };
 
+    float WrapOffset(float value, float wrapSize)
+    {
+        if (wrapSize <= 0.0f)
+        {
+            return 0.0f;
+        }
+
+        float wrapped = std::fmod(value, wrapSize);
+        if (wrapped < 0.0f)
+        {
+            wrapped += wrapSize;
+        }
+
+        return wrapped;
+    }
+
     UVWindow ComputeVerticalUVWindow(
         float textureWidth,
         float textureHeight,
@@ -26,7 +43,8 @@ namespace
         float scrollOffset,
         float parallaxFactor,
         float baseOffset01,
-        float pixelsPerUnit)
+        float pixelsPerUnit,
+        bool wrapSampling)
     {
         UVWindow out{};
         if (textureWidth <= 0.0f || textureHeight <= 0.0f || screenWidth <= 0.0f || screenHeight <= 0.0f)
@@ -51,11 +69,22 @@ namespace
             const float visibleWidthPx = textureWidth * scaleX;
             const float offsetRangePx = textureWidth - visibleWidthPx;
             const float maxOffsetPx = std::max(0.0f, offsetRangePx);
-            const float baseOffsetPx = clampedBaseOffset01 * (textureWidth - visibleWidthPx);
-            const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
+            float baseOffsetPx = clampedBaseOffset01 * (textureWidth - visibleWidthPx);
+            float offsetPx = scrollPx + baseOffsetPx;
+            float u0 = 0.0f;
 
-            float u0 = offsetPx / textureWidth;
-            u0 = std::clamp(u0, 0.0f, 1.0f - scaleX);
+            if (wrapSampling)
+            {
+                baseOffsetPx = clampedBaseOffset01 * textureWidth;
+                offsetPx = WrapOffset(scrollPx + baseOffsetPx, textureWidth);
+                u0 = offsetPx / textureWidth;
+            }
+            else
+            {
+                offsetPx = std::clamp(offsetPx, 0.0f, maxOffsetPx);
+                u0 = offsetPx / textureWidth;
+                u0 = std::clamp(u0, 0.0f, 1.0f - scaleX);
+            }
 
             out.u0 = u0;
             out.scaleX = scaleX;
@@ -72,11 +101,22 @@ namespace
             const float visibleHeightPx = textureHeight * scaleY;
             const float offsetRangePx = textureHeight - visibleHeightPx;
             const float maxOffsetPx = std::max(0.0f, offsetRangePx);
-            const float baseOffsetPx = clampedBaseOffset01 * (textureHeight - visibleHeightPx);
-            const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
+            float baseOffsetPx = clampedBaseOffset01 * (textureHeight - visibleHeightPx);
+            float offsetPx = scrollPx + baseOffsetPx;
+            float v0 = 0.0f;
 
-            float v0 = offsetPx / textureHeight;
-            v0 = std::clamp(v0, 0.0f, 1.0f - scaleY);
+            if (wrapSampling)
+            {
+                baseOffsetPx = clampedBaseOffset01 * textureHeight;
+                offsetPx = WrapOffset(scrollPx + baseOffsetPx, textureHeight);
+                v0 = offsetPx / textureHeight;
+            }
+            else
+            {
+                offsetPx = std::clamp(offsetPx, 0.0f, maxOffsetPx);
+                v0 = offsetPx / textureHeight;
+                v0 = std::clamp(v0, 0.0f, 1.0f - scaleY);
+            }
 
             out.v0 = v0;
             out.scaleY = scaleY;
@@ -201,6 +241,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         const float layerPixelsPerUnit = layer.config.scrollOffsetInPixels ? 1.0f : pixelsPerUnit;
         const float textureWidth = static_cast<float>(layer.texture->GetWidth());
         const float textureHeight = static_cast<float>(layer.texture->GetHeight());
+        const bool wrapSampling = layer.config.samplingMode == BackgroundRendererConfig::SamplingMode::Wrap;
         const UVWindow window = ComputeVerticalUVWindow(
             textureWidth,
             textureHeight,
@@ -209,7 +250,8 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             adjustedScrollOffset,
             layer.config.parallaxFactor,
             layer.config.baseOffset01,
-            layerPixelsPerUnit);
+            layerPixelsPerUnit,
+            wrapSampling);
         Sprite::SetUVPos({ window.u0, window.v0 });
         if (!(window.scaleX == 1.0f && window.scaleY == 1.0f))
         {
