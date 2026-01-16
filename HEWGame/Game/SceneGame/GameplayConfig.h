@@ -14,6 +14,7 @@ namespace GameplayConfig
     inline constexpr const char* kPlayerMovementKeyBrake = "brake";
     inline constexpr const char* kPlayerMovementKeyTurnRate = "turnRate";
     inline constexpr const char* kPlayerMovementKeyRollResponse = "rollResponse";
+    inline constexpr const char* kPlayerMovementKeyMaxSpeed = "maxSpeed";
     inline constexpr const char* kPlayerMovementKeyWrapMargin = "wrapMargin";
     inline constexpr const char* kPlayerMovementKeyWrapX = "wrapX";
     inline constexpr const char* kPlayerMovementKeyWrapY = "wrapY";
