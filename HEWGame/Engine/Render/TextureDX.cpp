@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <cstring>
+#include <limits>
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "shlwapi.lib")
 
@@ -54,19 +55,60 @@ namespace
         }
 
         Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
-        decoder->GetFrame(0, &frame);
+        HRESULT hr = decoder->GetFrame(0, &frame);
+        if (FAILED(hr))
+        {
+            return false;
+        }
 
         Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
-        factory->CreateFormatConverter(&converter);
-        converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
+        hr = factory->CreateFormatConverter(&converter);
+        if (FAILED(hr))
+        {
+            return false;
+        }
+
+        hr = converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
             WICBitmapDitherTypeNone, nullptr, 0.0f,
             WICBitmapPaletteTypeCustom);
+        if (FAILED(hr))
+        {
+            return false;
+        }
 
-        UINT width, height;
-        converter->GetSize(&width, &height);
+        UINT width = 0;
+        UINT height = 0;
+        hr = converter->GetSize(&width, &height);
+        if (FAILED(hr))
+        {
+            return false;
+        }
+        if (width == 0 || height == 0 ||
+            width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
+            height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
+        {
+            return false;
+        }
 
-        std::vector<BYTE> pixels(width * height * 4);
-        converter->CopyPixels(nullptr, width * 4, pixels.size(), pixels.data());
+        constexpr size_t kBytesPerPixel = 4;
+        const size_t rowPitch = static_cast<size_t>(width) * kBytesPerPixel;
+        if (height > (std::numeric_limits<size_t>::max() / rowPitch))
+        {
+            return false;
+        }
+        const size_t totalBytes = rowPitch * static_cast<size_t>(height);
+        if (rowPitch > std::numeric_limits<UINT>::max() ||
+            totalBytes > std::numeric_limits<UINT>::max())
+        {
+            return false;
+        }
+
+        std::vector<BYTE> pixels(totalBytes);
+        hr = converter->CopyPixels(nullptr, static_cast<UINT>(rowPitch), static_cast<UINT>(totalBytes), pixels.data());
+        if (FAILED(hr))
+        {
+            return false;
+        }
 
         return CreateTexture(device, width, height, pixels.data(), outTextureView);
     }
