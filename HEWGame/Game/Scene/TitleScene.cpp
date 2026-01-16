@@ -12,8 +12,42 @@
 
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
+#include "Diagnostics/Logger.h"
  
+#include <cstdint>
 #include <memory>
+#include <sstream>
+#include <string>
+
+namespace
+{
+    constexpr const char* kLogPrefix = "[TitleScene] ";
+
+    bool TryLoadTexture(Texture& texture, const char* path, const char* label)
+    {
+        const HRESULT hr = texture.Create(path);
+        if (SUCCEEDED(hr))
+        {
+            return true;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "Failed to load " << label << " texture '" << path << "'. Using fallback.\n";
+        Diagnostics::LogInfo(oss.str());
+
+        const std::uint32_t fallbackPixel = 0xFFFFFFFFu;
+        const HRESULT fallbackHr = texture.Create(DXGI_FORMAT_R8G8B8A8_UNORM, 1u, 1u, &fallbackPixel);
+        if (SUCCEEDED(fallbackHr))
+        {
+            return true;
+        }
+
+        std::ostringstream fallbackLog;
+        fallbackLog << kLogPrefix << "Failed to create fallback texture for " << label << ".\n";
+        Diagnostics::LogInfo(fallbackLog.str());
+        return false;
+    }
+}
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
@@ -73,12 +107,29 @@ void TitleScene::OnEnter()
     }
 
     // UI ボタン用テクスチャ読み込み
-    m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
-    m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
-    m_texPowerUpRed.Create("Assets/Texture/タイトル画面UI3.png");
-    m_texPowerUpGreen.Create("Assets/Texture/タイトル画面UI4.png");
-    m_texExitRed.Create("Assets/Texture/タイトル画面UI1.png");
-    m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
+    const bool startRedOk = TryLoadTexture(m_texStartRed, "Assets/Texture/タイトル画面UI5.png", "Start (red)");
+    const bool startGreenOk = TryLoadTexture(m_texStartGreen, "Assets/Texture/タイトル画面UI6.png", "Start (green)");
+    m_startButtonEnabled = startRedOk && startGreenOk;
+    if (!m_startButtonEnabled)
+    {
+        Diagnostics::LogInfo(std::string(kLogPrefix) + "Start button disabled due to missing textures.\n");
+    }
+
+    const bool powerUpRedOk = TryLoadTexture(m_texPowerUpRed, "Assets/Texture/タイトル画面UI3.png", "PowerUp (red)");
+    const bool powerUpGreenOk = TryLoadTexture(m_texPowerUpGreen, "Assets/Texture/タイトル画面UI4.png", "PowerUp (green)");
+    m_powerUpButtonEnabled = powerUpRedOk && powerUpGreenOk;
+    if (!m_powerUpButtonEnabled)
+    {
+        Diagnostics::LogInfo(std::string(kLogPrefix) + "PowerUp button disabled due to missing textures.\n");
+    }
+
+    const bool exitRedOk = TryLoadTexture(m_texExitRed, "Assets/Texture/タイトル画面UI1.png", "Exit (red)");
+    const bool exitGreenOk = TryLoadTexture(m_texExitGreen, "Assets/Texture/タイトル画面UI2.png", "Exit (green)");
+    m_exitButtonEnabled = exitRedOk && exitGreenOk;
+    if (!m_exitButtonEnabled)
+    {
+        Diagnostics::LogInfo(std::string(kLogPrefix) + "Exit button disabled due to missing textures.\n");
+    }
 
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
@@ -149,15 +200,18 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         switch (static_cast<TitleMenu>(m_cursor))
         {
         case TitleMenu::Start:
-            if (m_manager)
+            if (m_manager && m_startButtonEnabled)
                 m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
             break;
         case TitleMenu::PowerUp:
-            if (m_manager)
+            if (m_manager && m_powerUpButtonEnabled)
                 m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
             break;
         case TitleMenu::Exit:
-            PostQuitMessage(0);
+            if (m_exitButtonEnabled)
+            {
+                PostQuitMessage(0);
+            }
             break;
         }
        

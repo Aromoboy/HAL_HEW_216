@@ -55,6 +55,9 @@ private:
 private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;
+    bool m_startButtonEnabled = false;
+    bool m_powerUpButtonEnabled = false;
+    bool m_exitButtonEnabled = false;
 
     Texture m_texStartRed;
     Texture m_texStartGreen;
