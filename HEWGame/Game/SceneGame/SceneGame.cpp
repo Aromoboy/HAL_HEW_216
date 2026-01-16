@@ -1417,6 +1417,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     // scrollOffsetUsedForBackground is in world units (meters). pixelsPerUnit is derived from the active camera.
     float scrollOffsetUsedForBackground = 0.0f;
     float pixelsPerUnit = 1.0f;
+    std::optional<float> visibleHeightWorld;
 
     auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
     assert(baseCamera && "SceneGame background requires a BaseCamera.");
@@ -1449,10 +1450,11 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                     if (IsFiniteFloat(viewZ) && viewZ > 0.0f)
                     {
                         const float fovRadians = DirectX::XMConvertToRadians(perspectiveCamera->GetFieldOfViewDegrees());
-                        const float visibleHeightWorld = 2.0f * std::tan(0.5f * fovRadians) * viewZ;
-                        if (IsFiniteFloat(visibleHeightWorld) && visibleHeightWorld > 0.0f)
+                        const float computedVisibleHeightWorld = 2.0f * std::tan(0.5f * fovRadians) * viewZ;
+                        if (IsFiniteFloat(computedVisibleHeightWorld) && computedVisibleHeightWorld > 0.0f)
                         {
-                            pixelsPerUnit = viewportHeight / visibleHeightWorld;
+                            visibleHeightWorld = computedVisibleHeightWorld;
+                            pixelsPerUnit = viewportHeight / computedVisibleHeightWorld;
                         }
                     }
                 }
@@ -1460,6 +1462,38 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         }
         if (m_backgroundRenderer)
         {
+            std::optional<float> maxParallaxOffset;
+            if (visibleHeightWorld && IsFiniteFloat(pixelsPerUnit) && pixelsPerUnit > 0.0f)
+            {
+                const std::optional<float> textureHeightPixels = m_backgroundRenderer->GetMinLayerTextureHeightPixels();
+                if (textureHeightPixels && IsFiniteFloat(*textureHeightPixels))
+                {
+                    const float tileHeightWorld = *textureHeightPixels / pixelsPerUnit;
+                    const float computedMaxParallaxOffset = 0.5f * (tileHeightWorld - *visibleHeightWorld);
+                    if (IsFiniteFloat(computedMaxParallaxOffset) && computedMaxParallaxOffset > 0.0f)
+                    {
+                        maxParallaxOffset = computedMaxParallaxOffset;
+                    }
+                }
+            }
+
+            if (!maxParallaxOffset)
+            {
+                const std::optional<float> safeScrollY = m_stageData.GetBackgroundSafeScrollY();
+                if (safeScrollY && IsFiniteFloat(*safeScrollY) && *safeScrollY > 0.0f)
+                {
+                    maxParallaxOffset = *safeScrollY;
+                }
+            }
+
+            if (maxParallaxOffset)
+            {
+                scrollOffsetUsedForBackground = std::clamp(
+                    scrollOffsetUsedForBackground,
+                    -*maxParallaxOffset,
+                    *maxParallaxOffset);
+            }
+
             m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, pixelsPerUnit);
         }
     }

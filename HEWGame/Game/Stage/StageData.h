@@ -1,6 +1,7 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -48,6 +49,7 @@ namespace Stage
         float GetPlayerVerticalSpeedWorld() const noexcept;
         float GetCellSizeWorld() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
+        std::optional<float> GetBackgroundSafeScrollY() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -72,5 +74,6 @@ namespace Stage
         float m_playerHorizontalSpeedWorld;
         float m_playerVerticalSpeedWorld;
         std::string m_backgroundTexturePath;
+        std::optional<float> m_backgroundSafeScrollY;
     };
 }
