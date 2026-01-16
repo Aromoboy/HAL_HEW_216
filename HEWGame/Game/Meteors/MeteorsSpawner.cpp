@@ -50,7 +50,7 @@ namespace
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
     constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
-    constexpr float kDefaultSpawnHeightOffset = 8.0f;
+    constexpr float kDefaultSpawnHeightOffset = 0.0f;
     constexpr float kAutoSpawnIntervalFactor = 0.9f;
     constexpr float kAutoBurstIntervalFactor = 0.9f;
     constexpr int kAutoSimultaneousIncrement = 1;
@@ -671,6 +671,18 @@ namespace MeteorsSpace
                 {
                     config.spawnMinSeparation = std::max(0.0f, separation);
                     hasSpawnMinSeparation = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (normalizedKey == "spawn_height_offset" || normalizedKey == "spawnheightoffset")
+            {
+                float offset = 0.0f;
+                if (TryParseFloat(entry.value, &offset))
+                {
+                    config.spawnHeightOffset = offset;
                 }
                 else
                 {
@@ -1325,6 +1337,7 @@ namespace MeteorsSpace
             << " spawnRadius=" << std::fixed << std::setprecision(2) << config.spawnRadius
             << " spawnRadiusJitter=" << std::fixed << std::setprecision(2) << config.spawnRadiusJitter
             << " spawnMinSeparation=" << std::fixed << std::setprecision(2) << config.spawnMinSeparation
+            << " spawnHeightOffset=" << std::fixed << std::setprecision(2) << config.spawnHeightOffset
             << " mercurySpeed=" << std::fixed << std::setprecision(2) << config.mercurySpeed
             << " meteorSpeed=" << std::fixed << std::setprecision(2) << config.meteorSpeed
             << " meteoriteSpeed=" << std::fixed << std::setprecision(2) << config.meteoriteSpeed
@@ -1563,6 +1576,7 @@ namespace MeteorsSpace
         const float spawnRadius = config ? config->spawnRadius : 0.0f;
         const float spawnRadiusJitter = config ? config->spawnRadiusJitter : 0.0f;
         const float spawnMinSeparation = config ? config->spawnMinSeparation : 0.0f;
+        const float spawnHeightOffset = (config ? config->spawnHeightOffset : 0.0f) + m_spawnHeightOffset;
 
         float3 cameraCenter = originSelection.origin;
         float cameraExtent = 0.0f;
@@ -1676,8 +1690,9 @@ namespace MeteorsSpace
         {
             const float radius = std::max(0.0f, ringRadiusBase + jitterDist(m_random));
             const float angle = angleDist(m_random);
-            candidate.x = cameraCenter.x + (std::cos(angle) * radius);
-            candidate.y = cameraCenter.y + (std::sin(angle) * radius) + m_spawnHeightOffset + ySpreadDist(m_random);
+            const float radialOffset = radius + spawnHeightOffset;
+            candidate.x = cameraCenter.x + (std::cos(angle) * radialOffset);
+            candidate.y = cameraCenter.y + (std::sin(angle) * radialOffset) + ySpreadDist(m_random);
             candidate.z = originSelection.origin.z;
 
             if (!isTooCloseToLiveMeteors(candidate) && !isTooCloseToPlayer(candidate))

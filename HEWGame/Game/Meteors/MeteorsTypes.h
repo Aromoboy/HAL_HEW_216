@@ -34,6 +34,7 @@ namespace MeteorsSpace
         float spawnRadius = 0.0f;
         float spawnRadiusJitter = 0.0f;
         float spawnMinSeparation = 0.0f;
+        float spawnHeightOffset = 0.0f;
         float mercurySpeed = 0.0f;
         float meteorSpeed = 0.0f;
         float meteoriteSpeed = 0.0f;
