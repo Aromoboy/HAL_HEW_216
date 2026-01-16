@@ -41,8 +41,6 @@ namespace
 #endif
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
-    constexpr const char* kPlayerMaterialKey = "player";
-    constexpr const char* kFairyMaterialKey = "fairy";
 
     std::optional<AABB> ComputeBounds(const std::vector<MeshDX::Vertex>& vertices)
     {
@@ -178,11 +176,6 @@ namespace
             DirectX::XMFLOAT4(0.2f, 0.35f, 0.55f, 1),
             DirectX::XMFLOAT4(0.1f, 0.1f, 0.2f, 8),
             nullptr);
-        mat->SetMaterialKey(kFairyMaterialKey);
-        ApplyMaterialTuning(
-            *mat,
-            kFairyMaterialKey,
-            Render::ModelCache::Instance().GetMaterialTuningSettings());
 
         const std::optional<AABB> bounds = ComputeBounds(vertices);
 
@@ -259,10 +252,7 @@ namespace Entities
         }
         const bool usesFairyModel = (selectedModel == m_fairyModel);
         player.m_model = std::move(selectedModel);
-        if (player.m_model)
-        {
-            player.m_model->SetMaterialKey(usesFairyModel ? kFairyMaterialKey : kPlayerMaterialKey);
-        }
+        (void)usesFairyModel;
 
         const Render::PivotInfo pivotInfo = Render::ComputePivotInfoOriginBottom(player.m_model, player.m_transform.scale);
         if (pivotInfo.offsetY != 0.0f)

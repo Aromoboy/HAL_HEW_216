@@ -44,7 +44,6 @@ namespace SceneGameConfig
     RenderFadeSettings LoadRenderFadeSettings();
     LightingSettings LoadLightingSettings();
     BlobShadowSettings LoadBlobShadowSettings();
-    MaterialTuningSettings LoadMaterialTuningSettings();
     CameraRigSettings LoadCameraRigSettings();
     GameCameraConfig LoadGameCameraConfig();
 }

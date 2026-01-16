@@ -94,33 +94,6 @@ namespace
         return std::string(kPrototypeRoot) + trimmed;
     }
 
-    std::string DefaultMaterialKeyForType(SweetsSpace::SweetsType type)
-    {
-        switch (type)
-        {
-        case SweetsSpace::SweetsType::Cream:
-            return "cream";
-        case SweetsSpace::SweetsType::Strawberry:
-            return "strawberry";
-        case SweetsSpace::SweetsType::Blueberry:
-            return "blueberry";
-        case SweetsSpace::SweetsType::Pineapple:
-            return "pineapple";
-        case SweetsSpace::SweetsType::Banana:
-            return "banana";
-
-
-        case SweetsSpace::SweetsType::Kiwi:
-            return "Kiwi";
-        case SweetsSpace::SweetsType::Mikan:
-            return "Mikan";
-        case SweetsSpace::SweetsType::Muscat:
-            return "Muscat";
-        case SweetsSpace::SweetsType::Melon:
-            return "Melon";
-        }
-        return std::string{};
-    }
 }
 
 namespace SweetsSpace
@@ -141,41 +114,40 @@ namespace SweetsSpace
     void SweetsPrototypeManifest::ApplyDefaults()
     {
         Register(SweetsType::Cream, "Cream", "Assets/Model/cream.fbx",
-            "Soft-serve inspired cream scoop used for sherbet prototype", "cream");
+            "Soft-serve inspired cream scoop used for sherbet prototype");
         Register(SweetsType::Strawberry, "Strawberry", "Assets/Model/strawberry.fbx",
-            "Textured strawberry fruit with visible seeds", "strawberry");
+            "Textured strawberry fruit with visible seeds");
         Register(SweetsType::Blueberry, "Blueberry", "Assets/Model/blueberry.fbx",
-            "Stylized blueberry fruit with smooth shading", "blueberry");
+            "Stylized blueberry fruit with smooth shading");
         Register(SweetsType::Pineapple, "Pineapple", "Assets/Model/pineapple.fbx",
-            "High-detail pineapple with leafy crown", "pineapple");
+            "High-detail pineapple with leafy crown");
         Register(SweetsType::Banana, "Banana", "Assets/Model/banana.fbx",
-            "Low-poly curved banana fruit", "banana");
+            "Low-poly curved banana fruit");
 
         //01/09
         Register(SweetsType::Kiwi, "Kiwi", "Assets/Model/Kiwi_High.fbx",
-            "Low-poly curved Kiwi fruit", "Kiwi");
+            "Low-poly curved Kiwi fruit");
 
         Register(SweetsType::Mikan, "Mikan", "Assets/Model/Mikan_high.fbx",
-            "Low-poly curved Mikan fruit", "Mikan");
+            "Low-poly curved Mikan fruit");
 
         Register(SweetsType::Muscat, "Muscat", "Assets/Model/Masukatoo_high.fbx",
-            "Low-poly curved Muscat fruit", "Muscat");
+            "Low-poly curved Muscat fruit");
 
         Register(SweetsType::Melon, "Melon", "Assets/Model/meron_high.fbx",
-            "Low-poly curved Melon fruit", "Melon");
+            "Low-poly curved Melon fruit");
 
         RegisterExtra("Fairy", "Assets/Model/base.fbx", "Fighter jet prototype");
         RegisterExtraAlias("Fairy", "Player");
     }
 
     void SweetsPrototypeManifest::Register(SweetsType type, std::string key, std::string relativePath, std::string description,
-        std::string materialKey, bool allowMeshPhysics)
+        bool allowMeshPhysics)
     {
         SweetsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = ResolveModelPath(relativePath);
         descriptor.description = std::move(description);
-        descriptor.materialKey = std::move(materialKey);
         descriptor.allowMeshPhysics = allowMeshPhysics;
 
         const std::string normalized = NormalizeKey(descriptor.key);
@@ -189,13 +161,12 @@ namespace SweetsSpace
     }
 
     void SweetsPrototypeManifest::RegisterExtra(std::string key, std::string relativePath, std::string description,
-        std::string materialKey, bool allowMeshPhysics)
+        bool allowMeshPhysics)
     {
         SweetsPrototypeDescriptor descriptor{};
         descriptor.key = std::move(key);
         descriptor.modelPath = ResolveModelPath(relativePath);
         descriptor.description = std::move(description);
-        descriptor.materialKey = std::move(materialKey);
         descriptor.allowMeshPhysics = allowMeshPhysics;
 
         const std::string normalized = NormalizeKey(descriptor.key);
@@ -290,7 +261,7 @@ namespace SweetsSpace
             {
                 std::ostringstream warn;
                 warn << kLogPrefix << "Line " << entry.lineNumber
-                    << " malformed (needs key,modelPath[,description[,materialKey=...][,allowMeshPhysics]]).\n";
+                    << " malformed (needs key,modelPath[,description[,allowMeshPhysics]]).\n";
                 ManifestDebugTrace(warn.str());
                 continue;
             }
@@ -299,7 +270,6 @@ namespace SweetsSpace
             const std::string& modelPath = tokens[1];
             bool allowMeshPhysics = false;
             std::size_t descriptionEnd = tokens.size();
-            std::optional<std::string> materialKey;
             if (tokens.size() >= 3)
             {
                 const std::string& maybeFlag = tokens.back();
@@ -313,33 +283,6 @@ namespace SweetsSpace
                 {
                     allowMeshPhysics = false;
                     descriptionEnd = tokens.size() - 1;
-                }
-            }
-
-            if (descriptionEnd > 2)
-            {
-                const std::string& maybeMaterialToken = tokens[descriptionEnd - 1];
-                const std::string normalizedToken = NormalizeKey(maybeMaterialToken);
-                const std::string prefix = "materialkey=";
-                const std::string shortPrefix = "material=";
-                std::string value;
-                if (normalizedToken.rfind(prefix, 0) == 0)
-                {
-                    value = maybeMaterialToken.substr(prefix.size());
-                }
-                else if (normalizedToken.rfind(shortPrefix, 0) == 0)
-                {
-                    value = maybeMaterialToken.substr(shortPrefix.size());
-                }
-
-                if (!value.empty())
-                {
-                    std::string trimmedValue = Trim(value);
-                    if (!trimmedValue.empty())
-                    {
-                        materialKey = std::move(trimmedValue);
-                        descriptionEnd -= 1;
-                    }
                 }
             }
 
@@ -414,25 +357,11 @@ namespace SweetsSpace
                     description = existing ? existing->description : std::string{};
                 }
 
-                std::string resolvedMaterialKey = materialKey.value_or(std::string{});
-                if (resolvedMaterialKey.empty())
-                {
-                    const auto* existing = Find(*mappedType);
-                    if (existing && !existing->materialKey.empty())
-                    {
-                        resolvedMaterialKey = existing->materialKey;
-                    }
-                    else
-                    {
-                        resolvedMaterialKey = DefaultMaterialKeyForType(*mappedType);
-                    }
-                }
-
                 const std::string canonicalKey = ToString(*mappedType);
                 const bool isAliasForCream = (*mappedType == SweetsType::Cream) && normalizedKey == "sherbet";
                 const std::string registerKey = isAliasForCream ? canonicalKey : key;
 
-                Register(*mappedType, registerKey, resolvedPath, description, resolvedMaterialKey, allowMeshPhysics);
+                Register(*mappedType, registerKey, resolvedPath, description, allowMeshPhysics);
                 if (isAliasForCream || NormalizeKey(registerKey) != normalizedKey)
                 {
                     RegisterAlias(*mappedType, key);
@@ -456,7 +385,7 @@ namespace SweetsSpace
                 {
                     canonicalExtraKey = descriptorIt->second.key;
                 }
-                RegisterExtra(canonicalExtraKey, resolvedPath, description, materialKey.value_or(std::string{}), allowMeshPhysics);
+                RegisterExtra(canonicalExtraKey, resolvedPath, description, allowMeshPhysics);
                 if (isExtraAlias)
                 {
                     RegisterExtraAlias(canonicalExtraKey, key);

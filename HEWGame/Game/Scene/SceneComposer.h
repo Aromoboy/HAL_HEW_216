@@ -41,7 +41,6 @@ public:
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
         SceneGameConfig::LightingSettings lightingSettings{};
         SceneGameConfig::BlobShadowSettings blobShadowSettings{};
-        SceneGameConfig::MaterialTuningSettings materialTuningSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;

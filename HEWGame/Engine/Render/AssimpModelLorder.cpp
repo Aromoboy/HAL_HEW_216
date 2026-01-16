@@ -330,8 +330,7 @@ namespace
 std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     const std::string& path,
     ID3D11Device* device,
-    TextureCache& textureCache,
-    const MaterialTuningSettings& materialTuningSettings)
+    TextureCache& textureCache)
 {
     unsigned int flag = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_GenUVCoords;
     const std::string normalizedPath = NormalizePath(path);
@@ -434,7 +433,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     auto meshes = MakeMesh(pScene, localBounds, hasBounds, nodes);
 
     // マテリアル作成
-    auto materials = MakeMaterial(pScene, directory, filename, device, textureCache, materialTuningSettings);
+    auto materials = MakeMaterial(pScene, directory, filename, device, textureCache);
     const bool hasTextureOverride = ResolveTextureOverrideForModel(normalizedPath).has_value();
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
@@ -473,14 +472,13 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             baseMaterial->GetAmbient(),
             baseMaterial->GetSpecular(),
             nullptr);
-        ApplyMaterialTuning(*untexturedMaterial, "default", materialTuningSettings);
         materials.push_back(std::move(untexturedMaterial));
         meshPtr->SetMaterialID(static_cast<unsigned int>(materials.size() - 1));
     }
 
     // モデル生成
     std::optional<AABB> bounds = hasBounds ? std::optional<AABB>(localBounds) : std::nullopt;
-    return std::make_shared<ModelDX>(meshes, materials, &materialTuningSettings, bounds);
+    return std::make_shared<ModelDX>(meshes, materials, bounds);
 }
 
 // メッシュ作成
@@ -689,14 +687,12 @@ AssimpModelLorder::MakeMaterial(
     const std::string& directory,
     const std::string& modelFilename,
     ID3D11Device* device,
-    TextureCache& textureCache,
-    const MaterialTuningSettings& materialTuningSettings)
+    TextureCache& textureCache)
 {
     const aiScene* pScene = reinterpret_cast<const aiScene*>(ptr);
     std::vector<std::shared_ptr<MaterialDX>> materials;
     materials.resize(pScene->mNumMaterials);
     const bool textureLoadingEnabled = Render::ModelCache::Instance().IsTextureLoadingEnabled();
-    const std::string defaultMaterialKey = "default";
 
     if (!textureLoadingEnabled)
     {
@@ -911,7 +907,6 @@ AssimpModelLorder::MakeMaterial(
         }
 
         auto material = std::make_shared<MaterialDX>(diffuse, ambient, specular, texture);
-        ApplyMaterialTuning(*material, defaultMaterialKey, materialTuningSettings);
         materials[i] = std::move(material);
     }
 
