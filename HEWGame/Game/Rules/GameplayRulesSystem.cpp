@@ -16,16 +16,16 @@ void GameplayRulesSystem::Configure(const Config& config, GameplayProgression::L
     m_logPrefix = logPrefix;
 
     m_totalPlaySeconds = m_defaultPlaySeconds;
-    m_remainingCountdownSeconds = m_totalPlaySeconds;
-    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
+    m_elapsedPlaySeconds = 0.0f;
+    m_lastAnnouncedElapsedSeconds = 0;
 }
 
 void GameplayRulesSystem::ResetSession()
 {
     m_countdownTimer.Reset();
     m_totalPlaySeconds = m_defaultPlaySeconds;
-    m_remainingCountdownSeconds = m_totalPlaySeconds;
-    m_lastAnnouncedCountdownSeconds = static_cast<int>(std::ceil(m_totalPlaySeconds));
+    m_elapsedPlaySeconds = 0.0f;
+    m_lastAnnouncedElapsedSeconds = 0;
     m_currentTowerHeight = 0.0f;
     m_peakTowerHeight = 0.0f;
     m_maxTowerHeight = 0.0f;
@@ -66,22 +66,22 @@ GameplayRulesSystem::UpdateResult GameplayRulesSystem::Update(const UpdateInput&
     };
     GameplayProgression::CountdownState countdownState{
         m_totalPlaySeconds,
-        m_remainingCountdownSeconds,
-        m_lastAnnouncedCountdownSeconds,
+        m_elapsedPlaySeconds,
+        m_lastAnnouncedElapsedSeconds,
         m_pendingTimeBonuses
     };
     GameplayProgression::CountdownResult countdownResult =
         GameplayProgression::UpdateCountdown(countdownInput, std::move(countdownState));
     m_totalPlaySeconds = countdownResult.state.totalSeconds;
-    m_remainingCountdownSeconds = countdownResult.state.remainingSeconds;
-    m_lastAnnouncedCountdownSeconds = countdownResult.state.lastAnnouncedSeconds;
+    m_elapsedPlaySeconds = countdownResult.state.elapsedSeconds;
+    m_lastAnnouncedElapsedSeconds = countdownResult.state.lastAnnouncedSeconds;
     m_pendingTimeBonuses = std::move(countdownResult.state.pendingBonuses);
 
     const GameplayProgression::TowerTelemetryInput towerTelemetryInput{
         input.meteorsManager,
         input.phaseManager,
         input.clearPhaseCount,
-        m_remainingCountdownSeconds,
+        m_elapsedPlaySeconds,
         m_log,
         m_logPrefix
     };
@@ -101,7 +101,6 @@ GameplayRulesSystem::UpdateResult GameplayRulesSystem::Update(const UpdateInput&
     m_isGameClear = towerTelemetryResult.state.isGameClear;
 
     UpdateResult result{};
-    result.timeUp = countdownResult.timeUp;
     result.phaseAdvanced = towerTelemetryResult.phaseAdvanced;
     result.previousPhase = towerTelemetryResult.previousPhase;
     result.currentPhase = towerTelemetryResult.currentPhase;
@@ -137,14 +136,14 @@ float GameplayRulesSystem::GetTotalPlaySeconds() const
     return m_totalPlaySeconds;
 }
 
-float GameplayRulesSystem::GetRemainingCountdownSeconds() const
+float GameplayRulesSystem::GetElapsedPlaySeconds() const
 {
-    return m_remainingCountdownSeconds;
+    return m_elapsedPlaySeconds;
 }
 
-int GameplayRulesSystem::GetLastAnnouncedCountdownSeconds() const
+int GameplayRulesSystem::GetLastAnnouncedElapsedSeconds() const
 {
-    return m_lastAnnouncedCountdownSeconds;
+    return m_lastAnnouncedElapsedSeconds;
 }
 
 float GameplayRulesSystem::GetCurrentTowerHeight() const

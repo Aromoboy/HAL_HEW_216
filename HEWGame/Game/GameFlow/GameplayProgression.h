@@ -34,7 +34,7 @@ namespace GameplayProgression
     struct CountdownState
     {
         float totalSeconds = 0.0f;
-        float remainingSeconds = 0.0f;
+        float elapsedSeconds = 0.0f;
         int lastAnnouncedSeconds = 0;
         std::deque<PendingTimeBonus> pendingBonuses;
     };
@@ -52,7 +52,6 @@ namespace GameplayProgression
     struct CountdownResult
     {
         CountdownState state;
-        bool timeUp = false;
     };
 
     CountdownResult UpdateCountdown(const CountdownInput& input, CountdownState state);
@@ -71,7 +70,7 @@ namespace GameplayProgression
         MeteorsSpace::MeteorsManager* meteorsManager = nullptr;
         GameFlow::PhaseManager* phaseManager = nullptr;
         int clearPhaseCount = 0;
-        float remainingCountdownSeconds = 0.0f;
+        float elapsedPlaySeconds = 0.0f;
         LogFn log;
         const char* logPrefix = "";
     };
