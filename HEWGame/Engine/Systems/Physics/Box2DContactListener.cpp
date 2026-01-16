@@ -58,8 +58,10 @@ namespace Systems
 
                 constexpr int kMaxLogsPerFrame = 4;
                 constexpr int kMaxDroppedEventLogsPerFrame = 8;
+                constexpr int kInvalidEndEventLogCooldownFrames = 60;
                 int loggedMeshContacts = 0;
                 int loggedDroppedEvents = 0;
+                int invalidEndEventCount = 0;
 
                 struct ShapeValidationResult
                 {
@@ -302,11 +304,7 @@ namespace Systems
                         const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
                         if (!shapeAValidation.valid || !shapeBValidation.valid)
                         {
-                                const std::string reason = shapeAValidation.reason
-                                    ? shapeAValidation.reason
-                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
-                                recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB, reason,
-                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
+                                ++invalidEndEventCount;
                                 continue;
                         }
 
@@ -331,6 +329,25 @@ namespace Systems
                 // 接触ヒットイベントは当面無視。バッファは Box2D が所有する。
                 (void)events.hitEvents;
                 (void)events.hitCount;
+
+                if (invalidEndEventCount > 0)
+                {
+                        m_invalidEndEventSuppressed += invalidEndEventCount;
+                        if (m_invalidEndEventLogCooldown <= 0)
+                        {
+                                std::ostringstream oss;
+                                oss << "[Box2DContactListener] Ignored " << m_invalidEndEventSuppressed
+                                    << " end-contact events with invalid shapes (rate limited).\n";
+                                DebugTrace(oss.str());
+                                m_invalidEndEventSuppressed = 0;
+                                m_invalidEndEventLogCooldown = kInvalidEndEventLogCooldownFrames;
+                        }
+                }
+
+                if (m_invalidEndEventLogCooldown > 0)
+                {
+                        --m_invalidEndEventLogCooldown;
+                }
 
                 flushDroppedEventLogs();
                 m_destroyedBodyIds.clear();

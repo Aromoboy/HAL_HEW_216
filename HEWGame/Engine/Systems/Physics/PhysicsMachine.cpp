@@ -156,6 +156,10 @@ namespace Systems
         , m_loggedMissingSystem(false)
         , m_loggedMissingWorld(false)
         , m_loggedFirstTick(false)
+        , m_canDestroyBodies(false)
+        , m_isStepping(false)
+        , m_pendingUnregistrations()
+        , m_pendingUnregistrationSet()
     {
         m_defaultBodyDef = b2DefaultBodyDef();
         m_defaultBodyDef.linearDamping = std::max(0.0f, tuning.defaultLinearDamping);
@@ -432,25 +436,27 @@ namespace Systems
 
     void PhysicsMachine::UnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData)
     {
-        if (m_bodies.empty()) return;
         auto* bodyPtr = &body;
-        auto it = std::remove(m_bodies.begin(), m_bodies.end(), bodyPtr);
-        if (it == m_bodies.end())
+        const auto mapIt = m_bodyMap.find(bodyPtr);
+        const bool isRegistered = IsRegisteredEntityPointer(bodyPtr);
+        if (!isRegistered && mapIt == m_bodyMap.end())
         {
-#if defined(_DEBUG)
-            if (!body.HasFixtureBuildFailure())
-            {
-                std::ostringstream oss;
-                oss << "[PhysicsMachine] Unregister requested for unknown body body=" << bodyPtr << "\n";
-                DebugTrace(oss.str());
-            }
-#endif
-            DestroyBody(body, preserveColliderData);
             return;
         }
 
-        m_bodies.erase(it, m_bodies.end());
-        DestroyBody(body, preserveColliderData);
+        if (m_pendingUnregistrationSet.find(bodyPtr) != m_pendingUnregistrationSet.end())
+        {
+            return;
+        }
+
+        if (!m_canDestroyBodies || m_isStepping)
+        {
+            m_pendingUnregistrations.push_back(PendingUnregistration{ bodyPtr, preserveColliderData });
+            m_pendingUnregistrationSet.insert(bodyPtr);
+            return;
+        }
+
+        UnregisterBodyImmediate(body, preserveColliderData);
     }
 
     void PhysicsMachine::ClearBodies()
@@ -464,6 +470,8 @@ namespace Systems
         }
         m_bodyMap.clear();
         m_bodies.clear();
+        m_pendingUnregistrations.clear();
+        m_pendingUnregistrationSet.clear();
     }
 
     void PhysicsMachine::SyncBodies(float dt)
@@ -606,7 +614,10 @@ namespace Systems
             m_box2dSystem->PrepareFrame(ctx.timer.FrameIndex());
         }
 
+        m_canDestroyBodies = false;
+        m_isStepping = true;
         m_system->Apply(ctx.dt);
+        m_isStepping = false;
 
         if (m_box2dSystem)
         {
@@ -614,6 +625,8 @@ namespace Systems
         }
 
         SyncBodies(ctx.dt);
+        m_canDestroyBodies = true;
+        FlushPendingUnregistrations();
     }
 
     b2BodyId PhysicsMachine::CreateBody(Entities::PhysicalEntity& body)
@@ -1150,5 +1163,46 @@ namespace Systems
 
         const_cast<Entities::PhysicalEntity&>(body).SetBox2DBodyId(b2_nullBodyId);
         m_bodyMap.erase(it);
+    }
+
+    void PhysicsMachine::UnregisterBodyImmediate(Entities::PhysicalEntity& body, bool preserveColliderData)
+    {
+        auto* bodyPtr = &body;
+        auto it = std::remove(m_bodies.begin(), m_bodies.end(), bodyPtr);
+        if (it != m_bodies.end())
+        {
+            m_bodies.erase(it, m_bodies.end());
+        }
+
+        DestroyBody(body, preserveColliderData);
+    }
+
+    void PhysicsMachine::FlushPendingUnregistrations()
+    {
+        if (!m_canDestroyBodies || m_isStepping || m_pendingUnregistrations.empty())
+        {
+            return;
+        }
+
+        std::vector<PendingUnregistration> pending = std::move(m_pendingUnregistrations);
+        m_pendingUnregistrations.clear();
+        for (const auto& entry : pending)
+        {
+            if (!entry.body)
+            {
+                continue;
+            }
+
+            m_pendingUnregistrationSet.erase(entry.body);
+            auto* bodyPtr = entry.body;
+            const auto mapIt = m_bodyMap.find(bodyPtr);
+            const bool isRegistered = IsRegisteredEntityPointer(bodyPtr);
+            if (!isRegistered && mapIt == m_bodyMap.end())
+            {
+                continue;
+            }
+
+            UnregisterBodyImmediate(*entry.body, entry.preserveColliderData);
+        }
     }
 }

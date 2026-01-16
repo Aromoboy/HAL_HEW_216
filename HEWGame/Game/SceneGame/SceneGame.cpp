@@ -1045,7 +1045,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
 #endif
 
-    float deltaTime = ctx.dt;
+    float deltaTime = ctx.timer.DeltaTime();
+    m_missileFireCooldownSeconds = std::max(0.0f, m_missileFireCooldownSeconds - deltaTime);
 
     if (m_stageState == StageState::Playing)
     {
@@ -1369,7 +1370,14 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
 void SceneGame::FireMissile()
 {
+    constexpr float kMissileFireCooldownSeconds = 0.1f;
+
     if (!player || !m_physicsBinder || !m_drawSystem)
+    {
+        return;
+    }
+
+    if (m_missileFireCooldownSeconds > 0.0f)
     {
         return;
     }
@@ -1515,6 +1523,7 @@ void SceneGame::FireMissile()
     instance.playerFilterIgnored = playerFilterIgnored;
     m_activeMissiles.push_back(std::move(instance));
     m_fireMissileHintEnabled = true;
+    m_missileFireCooldownSeconds = kMissileFireCooldownSeconds;
 }
 
 void SceneGame::UpdateMissiles(float deltaSeconds)

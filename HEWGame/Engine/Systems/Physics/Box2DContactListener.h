@@ -50,5 +50,7 @@ namespace Systems
                 PhysicsMachine* m_physicsMachine = nullptr;
                 std::unordered_set<uint64_t> m_destroyedBodyIds;
                 std::unordered_set<uint64_t> m_destroyedShapeIds;
+                int m_invalidEndEventLogCooldown = 0;
+                int m_invalidEndEventSuppressed = 0;
         };
 }
