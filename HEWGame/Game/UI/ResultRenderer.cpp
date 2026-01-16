@@ -5,9 +5,7 @@
 #include "Texture.h"
 
 #include <algorithm>
-#include <array>
 #include <cstring>
-#include <iomanip>
 #include <sstream>
 
 namespace
@@ -63,12 +61,6 @@ bool ResultRenderer::Initialize(const ResultLayoutConfig& config)
         return false;
     }
 
-    if (!CreateGuidelineTexture())
-    {
-        Shutdown();
-        return false;
-    }
-
     m_ready = true;
     m_textureDirty = true;
     return true;
@@ -78,12 +70,6 @@ void ResultRenderer::Shutdown()
 {
     DestroyTextResources();
     m_texture.reset();
-    
-
-    for (int i = 0; i < MAX_RESULT_SPRITE; i++)
-    {
-        m_resultTexture[i].reset();
-    }
 
     m_rgbaBuffer.clear();
     m_ready = false;
@@ -128,7 +114,7 @@ bool ResultRenderer::CreateTextResources()
     m_prevFont = SelectObject(m_memoryDC, m_font);
 
     SetBkMode(m_memoryDC, TRANSPARENT);
-    SetTextColor(m_memoryDC, RGB(255, 255, 255));
+    SetTextColor(m_memoryDC, RGB(0, 0, 0));
 
     return true;
 #endif
@@ -179,7 +165,7 @@ void ResultRenderer::Draw(const ResultDisplayData& data)
 
     UpdateBitmap(data);
     UploadTexture();
-    RenderFream(data);
+    RenderSprite(data);
 }
 
 void ResultRenderer::UpdateBitmap(const ResultDisplayData& data)
@@ -200,16 +186,7 @@ void ResultRenderer::UpdateBitmap(const ResultDisplayData& data)
     textRect.right = static_cast<LONG>(m_config.textureWidth) - static_cast<LONG>(m_config.innerPaddingPixels);
     textRect.bottom = static_cast<LONG>(m_config.textureHeight) - static_cast<LONG>(m_config.innerPaddingPixels);
 
-    RECT shadowRect = textRect;
-    shadowRect.left += static_cast<LONG>(m_config.shadowOffsetX);
-    shadowRect.top += static_cast<LONG>(m_config.shadowOffsetY);
-    shadowRect.right += static_cast<LONG>(m_config.shadowOffsetX);
-    shadowRect.bottom += static_cast<LONG>(m_config.shadowOffsetY);
-
     SetTextColor(m_memoryDC, RGB(0, 0, 0));
-    DrawTextA(m_memoryDC, hudText.c_str(), -1, &shadowRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
-
-    SetTextColor(m_memoryDC, RGB(255, 255, 255));
     DrawTextA(m_memoryDC, hudText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
 
     GdiFlush();
@@ -260,44 +237,6 @@ bool ResultRenderer::TryGetViewportSize(float& width, float& height) const
     return width > 0.0f && height > 0.0f;
 }
 
-void ResultRenderer::RenderFream(const ResultDisplayData& data)
-{
-
-    for (int i = 0; i < MAX_RESULT_SPRITE; i++)
-    {
-        if (!m_resultTexture[i]) return;
-    }
-
-    float viewportWidth = 0.0f;
-    float viewportHeight = 0.0f;
-    if (!TryGetViewportSize(viewportWidth, viewportHeight))
-    {
-        return;
-    }
-
-
-    for (int i = 0; i < MAX_RESULT_SPRITE; i++)
-    {
-        SetDepthTest(false);
-        SetBlendMode(BLEND_ALPHA);
-
-        Sprite::SetWorld(m_identityMatrix);
-        Sprite::SetView(m_identityMatrix);
-        Sprite::SetProjection(m_identityMatrix);
-        Sprite::SetTexture(m_resultTexture[i].get());
-        Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
-        Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-        Sprite::SetColor(m_config.normalTextColor);
-        Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
-        Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
-        Sprite::Draw();
-
-        SetDepthTest(true);
-    }
-
-
-}
-
 void ResultRenderer::RenderSprite(const ResultDisplayData& data)
 {
     if (!m_texture)
@@ -343,76 +282,7 @@ void ResultRenderer::RenderSprite(const ResultDisplayData& data)
 std::string ResultRenderer::BuildHudString(const ResultDisplayData& data) const
 {
     std::ostringstream stream;
-    stream << std::fixed << std::setprecision(1);
-    stream << "Timer " << std::setw(5) << std::setfill(' ') << data.elapsedSeconds << "s";
-    stream << "  [" << (data.timeUp ? "Result" : "Play") << "]\n";
-
-    stream << std::fixed << std::setprecision(2);
-
-    stream << "Speed x" << data.moveSpeedMultiplier
-        << " (" << data.moveSpeedUnitsPerSecond << " u/s)  [1=Boost 2=Reset]\n";
-
-    stream << std::fixed << std::setprecision(0);
-    stream << "Score " << data.score;
-    stream << "  (Enter=Restart";
-    if (data.showFireMissileHint)
-    {
-        stream << "  E=FireMissile";
-    }
-    stream << "  R=Retry)";
-    stream << "\nMeteors " << data.meteorsCount;
+    stream << "GAME OVER\n";
+    stream << "SCORE: " << data.score;
     return stream.str();
-}
-
-bool ResultRenderer::CreateGuidelineTexture()
-{
-    for (int i = 0; i < MAX_RESULT_SPRITE; i++)
-    {
-        m_resultTexture[i] = std::make_unique<Texture>();
-        if (!m_resultTexture[i])
-        {
-            return false;
-        }
-    }
-
-
-    constexpr size_t kSize = 4;
-    std::array<uint32_t, kSize* kSize> pixels{};
-    for (size_t y = 0; y < kSize; ++y)
-    {
-        for (size_t x = 0; x < kSize; ++x)
-        {
-            const bool opaque = (x % 2) == 0;
-            pixels[y * kSize + x] = opaque ? 0xFFFFFFFFu : 0x00000000u;
-        }
-    }
-
-
-    
-    bool bIsFailed = false;
-
-    for (int i = 0; i < MAX_RESULT_SPRITE; i++)
-    {
-       const HRESULT hr = m_resultTexture[i]->Create("Assets/Texture/background_UI_sample.png", true);
-        if (FAILED(hr))
-        {
-            bIsFailed = true;
-            break;
-        }
-    }
-
-
-    if (bIsFailed)
-    {
-        for (int i = 0; i < MAX_RESULT_SPRITE; i++)
-        {
-            m_resultTexture[i].reset();
-        }
-
-        return false;
-    }
-
-
-
-    return true;
 }
