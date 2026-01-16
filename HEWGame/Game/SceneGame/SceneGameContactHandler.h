@@ -4,6 +4,8 @@
 #include <memory>
 #include <optional>
 
+#include "Meteors/MeteorsTypes.h"
+
 namespace Entities
 {
     class PhysicalEntity;
@@ -16,7 +18,6 @@ namespace Systems
 
 namespace MeteorsSpace
 {
-    class ActiveMeteors;
     class MeteorsManager;
 }
 
