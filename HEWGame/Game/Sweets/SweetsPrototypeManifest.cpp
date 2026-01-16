@@ -1,4 +1,4 @@
-#include "SweetsPrototypeManifest.h"
+﻿#include "SweetsPrototypeManifest.h"
 
 #include <algorithm>
 #include <array>
@@ -164,7 +164,7 @@ namespace SweetsSpace
         Register(SweetsType::Melon, "Melon", "Assets/Model/meron_high.fbx",
             "Low-poly curved Melon fruit", "Melon");
 
-        RegisterExtra("Fairy", "Assets/Model/yousei.fbx", "Cross-plane fairy using embedded material data");
+        RegisterExtra("Fairy", "Assets/Model/base.fbx", "Cross-plane fighter plane");
         RegisterExtraAlias("Fairy", "Player");
     }
 

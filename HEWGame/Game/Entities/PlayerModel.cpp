@@ -1,4 +1,4 @@
-#include "Entities/PlayerModel.h"
+﻿#include "Entities/PlayerModel.h"
 
 #include "AABB.h"
 #include "AnimationCache.h"
@@ -238,11 +238,11 @@ namespace Entities
 
         Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
 
-        const std::string playerIdleAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
-        const std::string playerStabAnimationPath = "Assets/Animation/yousei_StabAnimations.fbx";
+        //const std::string playerIdleAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
+        //const std::string playerStabAnimationPath = "Assets/Animation/yousei_StabAnimations.fbx";
 
-        m_idleAnimation = animationCache.Get(playerIdleAnimationPath);
-        m_stabAnimation = animationCache.Get(playerStabAnimationPath);
+        //m_idleAnimation = animationCache.Get(playerIdleAnimationPath);
+        //m_stabAnimation = animationCache.Get(playerStabAnimationPath);
 
         if (m_idleAnimation)
         {
