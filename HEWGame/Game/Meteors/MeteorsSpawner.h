@@ -38,6 +38,7 @@ namespace MeteorsSpace
         void SetLiveMeteorsCap(int cap);
         void SetCameraBounds(float minX, float maxX, float minY, float maxY);
         void SetPlayerWorldPosition(const float3& position);
+        std::optional<float3> GetCachedPlayerWorldPosition() const;
         void NotifyPhaseChanged(int newPhase);
 
         int CountLiveMeteors() const;

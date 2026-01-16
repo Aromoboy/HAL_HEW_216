@@ -31,6 +31,39 @@ namespace
 #endif
 
     constexpr const char* kLogPrefix = "[MeteorsManager] ";
+
+    const MeteorsSpace::PhaseSpawnConfig* GetActiveSpawnConfig(const MeteorsSpace::MeteorsSpawner& spawner)
+    {
+        const auto& configs = spawner.GetPhaseConfigs();
+        const int activeIndex = spawner.GetActivePhaseConfigIndex();
+        if (activeIndex < 0 || activeIndex >= static_cast<int>(configs.size()))
+        {
+            return nullptr;
+        }
+
+        return &configs[activeIndex];
+    }
+
+    float ResolveSpawnSpeedForKind(const MeteorsSpace::PhaseSpawnConfig& config, const std::string& kind)
+    {
+        const auto resolvedType = MeteorsSpace::MeteorsPrototypeManifest::Instance().Resolve(kind);
+        if (!resolvedType)
+        {
+            return 0.0f;
+        }
+
+        switch (*resolvedType)
+        {
+        case MeteorsSpace::MeteorsType::Mercury:
+            return config.mercurySpeed;
+        case MeteorsSpace::MeteorsType::Meteor:
+            return config.meteorSpeed;
+        case MeteorsSpace::MeteorsType::Meteorite:
+            return config.meteoriteSpeed;
+        }
+
+        return 0.0f;
+    }
 }
 
 namespace MeteorsSpace
@@ -92,6 +125,56 @@ namespace MeteorsSpace
     void MeteorsManager::OnUpdate(const Core::UpdateContext& ctx)
     {
         m_spawner.RunSpawnScheduler(ctx.dt);
+        if (!m_spawnHomingTimers.empty())
+        {
+            const std::optional<float3> playerPosition = m_spawner.GetCachedPlayerWorldPosition();
+            const PhaseSpawnConfig* config = GetActiveSpawnConfig(m_spawner);
+            for (auto it = m_spawnHomingTimers.begin(); it != m_spawnHomingTimers.end();)
+            {
+                ActiveMeteors* meteors = it->first;
+                if (!meteors || meteors->IsPendingDestroy())
+                {
+                    it = m_spawnHomingTimers.erase(it);
+                    continue;
+                }
+
+                float& timer = it->second;
+                timer -= ctx.dt;
+                if (timer > 0.0f && playerPosition && config && m_physicsMachine)
+                {
+                    const b2BodyId bodyId = m_physicsMachine->FindBody(*meteors);
+                    if (b2Body_IsValid(bodyId))
+                    {
+                        const float speed = ResolveSpawnSpeedForKind(*config, meteors->GetTag());
+                        if (speed > 0.0f)
+                        {
+                            const b2Vec2 position = b2Body_GetPosition(bodyId);
+                            b2Vec2 direction{
+                                playerPosition->x - position.x,
+                                playerPosition->y - position.y
+                            };
+                            const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                            if (length > 0.0001f)
+                            {
+                                direction.x /= length;
+                                direction.y /= length;
+                                const b2Vec2 velocity{ direction.x * speed, direction.y * speed };
+                                b2Body_SetLinearVelocity(bodyId, velocity);
+                            }
+                        }
+                    }
+                }
+
+                if (timer <= 0.0f)
+                {
+                    it = m_spawnHomingTimers.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
         m_lifecycle.OnUpdate(ctx);
         m_contacts.TickDebugStats(ctx.dt);
     }
@@ -183,6 +266,7 @@ namespace MeteorsSpace
         if (meteors)
         {
             m_meteorsHitCounts.erase(meteors.get());
+            m_spawnHomingTimers.erase(meteors.get());
         }
         m_lifecycle.Erase(meteors);
     }
@@ -190,6 +274,7 @@ namespace MeteorsSpace
     void MeteorsManager::ClearAllMeteors()
     {
         m_meteorsHitCounts.clear();
+        m_spawnHomingTimers.clear();
         m_lifecycle.ClearAllMeteors();
     }
 
@@ -290,31 +375,42 @@ namespace MeteorsSpace
                 if (activeIndex >= 0 && activeIndex < static_cast<int>(configs.size()))
                 {
                     const PhaseSpawnConfig& config = configs[activeIndex];
-                    const auto resolvedType = MeteorsPrototypeManifest::Instance().Resolve(kind);
-                    float speed = 0.0f;
-                    if (resolvedType)
-                    {
-                        switch (*resolvedType)
-                        {
-                        case MeteorsType::Mercury:
-                            speed = config.mercurySpeed;
-                            break;
-                        case MeteorsType::Meteor:
-                            speed = config.meteorSpeed;
-                            break;
-                        case MeteorsType::Meteorite:
-                            speed = config.meteoriteSpeed;
-                            break;
-                        }
-                    }
-
+                    const float speed = ResolveSpawnSpeedForKind(config, kind);
                     if (speed > 0.0f)
                     {
-                        constexpr float kTwoPi = 6.28318530718f;
-                        std::uniform_real_distribution<float> angleDist(0.0f, kTwoPi);
-                        const float angle = angleDist(m_random);
-                        const b2Vec2 velocity{ std::cos(angle) * speed, std::sin(angle) * speed };
+                        const std::optional<float3> playerPosition = m_spawner.GetCachedPlayerWorldPosition();
+                        b2Vec2 velocity{};
+                        bool hasVelocity = false;
+                        if (playerPosition)
+                        {
+                            b2Vec2 direction{
+                                playerPosition->x - position.x,
+                                playerPosition->y - position.y
+                            };
+                            const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                            if (length > 0.0001f)
+                            {
+                                direction.x /= length;
+                                direction.y /= length;
+                                velocity = b2Vec2{ direction.x * speed, direction.y * speed };
+                                hasVelocity = true;
+                            }
+                        }
+
+                        if (!hasVelocity)
+                        {
+                            constexpr float kTwoPi = 6.28318530718f;
+                            std::uniform_real_distribution<float> angleDist(0.0f, kTwoPi);
+                            const float angle = angleDist(m_random);
+                            velocity = b2Vec2{ std::cos(angle) * speed, std::sin(angle) * speed };
+                        }
+
                         b2Body_SetLinearVelocity(bodyId, velocity);
+                    }
+
+                    if (config.initialHomingSeconds > 0.0f)
+                    {
+                        m_spawnHomingTimers[meteors.get()] = config.initialHomingSeconds;
                     }
                 }
             }
