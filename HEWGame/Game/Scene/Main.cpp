@@ -335,8 +335,7 @@ void Draw()
                         postSettings.enableFxaa ? 1 : 0,
                         postTime,
                         postSettings.grainAmount,
-                        postSettings.grainEnable ? 1 : 0,
-                        postSettings.grainAnimate ? 1 : 0);
+                        postSettings.grainEnable ? 1 : 0);
 
                 context->IASetInputLayout(nullptr);
                 context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);

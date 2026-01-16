@@ -625,8 +625,7 @@ void SceneGame::Draw()
                 postSettings.enableFxaa ? 1 : 0,
                 postTime,
                 postSettings.grainAmount,
-                postSettings.grainEnable ? 1 : 0,
-                postSettings.grainAnimate ? 1 : 0);
+                postSettings.grainEnable ? 1 : 0);
 
             postprocess->Bind(context);
 
@@ -912,13 +911,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     const auto& platform = m_stageData.GetPlatform(0);
     const float stageFloorY = platform.center.y;
     float deltaTime = ctx.timer.DeltaTime();
-    for (auto& obj : m_stageObjects)
-    {
-        if (obj.spinEnabled)
-        {
-            obj.currentRotation += obj.spinSpeed * deltaTime;
-        }
-    }
 
     m_playerController.UpdatePlayerBounds({
         player.get(),
@@ -962,14 +954,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     case StageState::ShowingResult:
         break;
-    }
-
-    for (auto& obj : m_stageObjects)
-    {
-        if (obj.spinEnabled)
-        {
-            obj.currentRotation += obj.spinSpeed * deltaTime;
-        }
     }
 
     if (m_stageState == StageState::ShowingResult)

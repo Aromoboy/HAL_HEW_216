@@ -1,5 +1,5 @@
-# meshPath,posX,posY,posZ,rotX,rotY,rotZ,scaleX,scaleY,scaleZ,spinEnabled,spinAxisX,spinAxisY,spinAxisZ,spinSpeed,materialKey,colliderPresetId
-,,,,,,,,,,,,,,,,
-Assets/Model/cake.fbx,0,1,0,0,0,0,4,1.3,1,FALSE,0,1,0,0,cake,Cake
-Assets/Model/osara.fbx,-10,0.4,0,0,0,0,1,1,1,FALSE,0,1,0,0,osara,osara
-Assets/Model/osara.fbx,10,0.4,0,0,0,0,1,1,1,FALSE,0,1,0,0,osara,osara
+# meshPath,posX,posY,posZ,rotX,rotY,rotZ,scaleX,scaleY,scaleZ,materialKey,colliderPresetId
+,,,,,,,,,,,
+Assets/Model/cake.fbx,0,1,0,0,0,0,4,1.3,1,cake,Cake
+Assets/Model/osara.fbx,-10,0.4,0,0,0,0,1,1,1,osara,osara
+Assets/Model/osara.fbx,10,0.4,0,0,0,0,1,1,1,osara,osara

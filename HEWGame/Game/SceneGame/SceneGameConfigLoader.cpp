@@ -440,7 +440,6 @@ namespace SceneGameConfig
         bool parsedEnableVignette = false;
         bool parsedEnableBloom = false;
         bool parsedGrainEnable = false;
-        bool parsedGrainAnimate = false;
         bool parsedEnableFxaa = false;
 
         for (const auto& entry : lines)
@@ -836,27 +835,6 @@ namespace SceneGameConfig
                 continue;
             }
 
-            if (key == "post.grain.animate")
-            {
-                bool parsedValue = false;
-                if (ParseBool(value, parsedValue))
-                {
-                    settings.grainAnimate = parsedValue;
-                    parsedGrainAnimate = true;
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[RenderSettings] Parsed post.grain.animate=" << std::boolalpha << settings.grainAnimate
-                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
-                    DebugTrace(oss.str());
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << kLogPrefix << "[RenderSettings] Invalid post.grain.animate value='" << value
-                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.grainAnimate << "\n";
-                    DebugTrace(oss.str());
-                }
-                continue;
-            }
         }
 
         if (!parsedGamma)
@@ -977,13 +955,6 @@ namespace SceneGameConfig
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderSettings] post.grain.enable not found; using default=" << std::boolalpha << settings.grainEnable
                 << " (path='" << kTechnicalConfigPath << "')\n";
-            DebugTrace(oss.str());
-        }
-        if (!parsedGrainAnimate)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "[RenderSettings] post.grain.animate not found; using default="
-                << std::boolalpha << settings.grainAnimate << " (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
         if (!parsedEnableFxaa)
