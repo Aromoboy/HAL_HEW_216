@@ -279,9 +279,6 @@
     <ClCompile Include="Game\Entities\PlayerPhysicsBinder.cpp">
       <Filter>Game\Entities</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Entities\PlayerPickupSystem.cpp">
-      <Filter>Game\Entities</Filter>
-    </ClCompile>
     <ClCompile Include="Game\GameFlow\GameplayProgression.cpp">
       <Filter>Game\GameFlow</Filter>
     </ClCompile>
@@ -651,9 +648,6 @@
     <ClInclude Include="Game\Entities\PlayerPhysicsBinder.h">
       <Filter>Game\Entities</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Entities\PlayerPickupSystem.h">
-      <Filter>Game\Entities</Filter>
-    </ClInclude>
     <ClInclude Include="Game\GameFlow\GameplayProgression.h">
       <Filter>Game\GameFlow</Filter>
     </ClInclude>
@@ -716,9 +710,6 @@
     </ClInclude>
     <ClInclude Include="Game\SceneGame\SceneGameLoader.h">
       <Filter>Game\SceneGame</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Stage\PickupConfig.h">
-      <Filter>Game\Stage</Filter>
     </ClInclude>
     <ClInclude Include="Game\Stage\StageConfigNormalize.h">
       <Filter>Game\Stage</Filter>

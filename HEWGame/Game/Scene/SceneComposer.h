@@ -30,14 +30,7 @@ public:
         GameFlow::PhaseManager phaseManager{};
         float playerBaseHorizontalSpeed = 0.0f;
         float playerBaseVerticalSpeed = 0.0f;
-        float playerPickupBoxWidth = 0.0f;
-        float playerPickupBoxHeight = 0.0f;
-        Stage::PickupOffset playerPickupOffset{};
-        float playerPickupMaxDistance = 0.0f;
-        float playerPickupDepthThreshold = 0.0f;
         float playerSpeedMultiplier = 1.0f;
-        float heightBonusThresholdMeters = 0.0f;
-        float heightBonusSeconds = 0.0f;
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
         SceneGameConfig::LightingSettings lightingSettings{};
         SceneGameConfig::BlobShadowSettings blobShadowSettings{};

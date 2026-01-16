@@ -53,23 +53,9 @@ namespace Stage
         bool horizontalSpeedSet = false;
         float verticalSpeedCellsPerSec = 0.0f;
         bool verticalSpeedSet = false;
-        float pickupBoxWidthCells = 0.0f;
-        bool pickupBoxWidthSet = false;
-        float pickupBoxHeightCells = 0.0f;
-        bool pickupBoxHeightSet = false;
-        float pickupMaxDistance = 0.0f;
-        float pickupDepthThreshold = 0.0f;
-        Stage::PickupOffsetMode pickupOffsetMode = Stage::PickupOffsetMode::WorldX;
-        float3 pickupOffsetLocalCells{ 0.0f, 0.0f, 0.0f };
-        float heightBonusThreshold = 0.0f;
-        bool heightBonusThresholdSet = false;
-        float heightBonusSeconds = 0.0f;
-        bool heightBonusSecondsSet = false;
         std::string backgroundTexturePath;
         bool backgroundTextureSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);
-    bool TryParsePickupOffsetMode(const std::string& rawValue, Stage::PickupOffsetMode& outMode);
-    const char* PickupOffsetModeToString(Stage::PickupOffsetMode mode);
 }

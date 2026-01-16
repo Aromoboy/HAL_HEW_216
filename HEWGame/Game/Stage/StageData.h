@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "PickupConfig.h"
 #include "Vector.h"
 
 namespace Stage
@@ -48,14 +47,7 @@ namespace Stage
         float GetPlayerHorizontalSpeedWorld() const noexcept;
         float GetPlayerVerticalSpeedWorld() const noexcept;
         float GetCellSizeWorld() const noexcept;
-        float GetPickupBoxWidthWorld() const noexcept;
-        float GetPickupBoxHeightWorld() const noexcept;
-        float GetPickupMaxDistance() const noexcept;
-        float GetPickupDepthThreshold() const noexcept;
-        const PickupOffset& GetPickupOffset() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
-        float GetHeightBonusThreshold() const noexcept;
-        float GetHeightBonusSeconds() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -79,15 +71,6 @@ namespace Stage
         float m_playerVerticalSpeedCellsPerSec;
         float m_playerHorizontalSpeedWorld;
         float m_playerVerticalSpeedWorld;
-        float m_pickupBoxWidthCells;
-        float m_pickupBoxHeightCells;
-        float m_pickupBoxWidthWorld;
-        float m_pickupBoxHeightWorld;
-        float m_pickupMaxDistance;
-        float m_pickupDepthThreshold;
-        PickupOffset m_pickupOffset;
         std::string m_backgroundTexturePath;
-        float m_heightBonusThreshold;
-        float m_heightBonusSeconds;
     };
 }

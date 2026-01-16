@@ -4,11 +4,10 @@
 
 namespace Entities
 {
-    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Core::Input* input, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
+    Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, Core::Input* input, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
         : PhysicalEntity(transform, std::nullopt, collisionLayer, std::move(model), physicsMachine, phase, priority, std::move(tag))
         , m_modelSystem()
         , m_movementSystem()
-        , m_pickupSystem(sweetsManager)
         , m_physicsBinder(kinematic)
         , m_input(input)
     {
@@ -24,14 +23,8 @@ namespace Entities
         {
             m_movementSystem.Update(*this, ctx, *m_input);
         }
-        m_pickupSystem.SetFacingSign(m_movementSystem.GetFacingSign());
         m_physicsBinder.ClampScreenBounds(*this);
         m_modelSystem.SyncVisualTransformFromPhysics(*this);
-        if (m_input)
-        {
-            m_pickupSystem.HandleCarryInput(*this, m_modelSystem, ctx, *m_input);
-        }
-        m_pickupSystem.UpdateCarriedSweets(*this);
     }
 
     void Player::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
@@ -42,26 +35,6 @@ namespace Entities
     Transform Player::GetRenderTransform() const
     {
         return m_modelSystem.GetRenderTransform();
-    }
-
-    void Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
-    {
-        m_pickupSystem.SetSweetsManager(manager);
-    }
-
-    bool Player::IsCarryingSweets() const
-    {
-        return m_pickupSystem.IsCarryingSweets();
-    }
-
-    const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& Player::GetCarriedSweets() const
-    {
-        return m_pickupSystem.GetCarriedSweets();
-    }
-
-    void Player::ClearCarriedSweets()
-    {
-        m_pickupSystem.ClearCarriedSweets();
     }
 
     bool Player::IsKinematic() const
@@ -109,38 +82,4 @@ namespace Entities
         m_physicsBinder.SetScreenBounds(minX, maxX, minY, maxY);
     }
 
-    void Player::SetPickupBox(float width, float height)
-    {
-        m_pickupSystem.SetPickupBox(width, height);
-    }
-
-    void Player::SetPickupArea(float width, float height, const Stage::PickupOffset& offset)
-    {
-        m_pickupSystem.SetPickupArea(width, height, offset);
-    }
-
-    void Player::SetPickupMaxDistance(float maxDistance)
-    {
-        m_pickupSystem.SetPickupMaxDistance(maxDistance);
-    }
-
-    void Player::SetPickupDepthThreshold(float depthThreshold)
-    {
-        m_pickupSystem.SetPickupDepthThreshold(depthThreshold);
-    }
-
-    void Player::SetPickupOriginOffset(const float3& offset)
-    {
-        m_pickupSystem.SetPickupOriginOffset(offset);
-    }
-
-    void Player::SetColliderFootprint(const float3& halfExtents, const float3& centerOffset)
-    {
-        m_pickupSystem.SetColliderFootprint(halfExtents, centerOffset);
-    }
-
-    const SweetsSpace::PickupQueryResult& Player::GetLastPickupResult() const noexcept
-    {
-        return m_pickupSystem.GetLastPickupResult();
-    }
 }
