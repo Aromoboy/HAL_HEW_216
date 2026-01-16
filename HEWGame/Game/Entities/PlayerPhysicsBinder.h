@@ -10,7 +10,7 @@ namespace Entities
         explicit PlayerPhysicsBinder(bool isKinematic);
 
         bool IsKinematic() const;
-        void SetScreenBounds(float minX, float maxX);
+        void SetScreenBounds(float minX, float maxX, float minY, float maxY);
         void ClampScreenBounds(Player& player);
 
     private:
@@ -18,5 +18,7 @@ namespace Entities
         bool m_hasScreenBounds = false;
         float m_minScreenX = 0.0f;
         float m_maxScreenX = 0.0f;
+        float m_minScreenY = 0.0f;
+        float m_maxScreenY = 0.0f;
     };
 }

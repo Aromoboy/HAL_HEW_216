@@ -59,7 +59,7 @@ namespace Entities
         float GetMoveSpeed() const;
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
-        void SetScreenBounds(float minX, float maxX);
+        void SetScreenBounds(float minX, float maxX, float minY, float maxY);
         void SetPickupBox(float width, float height);
         void SetPickupArea(float width, float height, const Stage::PickupOffset& offset);
         void SetPickupMaxDistance(float maxDistance);
