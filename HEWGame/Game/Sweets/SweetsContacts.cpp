@@ -43,7 +43,7 @@ namespace
 
     bool IsCreamTag(const std::string& tag)
     {
-        static const std::string kCreamKey = NormalizeTag(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Cream));
+        static const std::string kCreamKey = NormalizeTag(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Strawberry));
         return NormalizeTag(tag) == kCreamKey;
     }
 

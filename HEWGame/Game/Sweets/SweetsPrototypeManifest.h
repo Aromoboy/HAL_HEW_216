@@ -10,16 +10,9 @@ namespace SweetsSpace
 {
     enum class SweetsType : std::uint8_t
     {
-        Cream,
         Strawberry,
         Blueberry,
         Pineapple,
-        Banana,
-        Kiwi,
-        Mikan,
-        Muscat,
-        Melon,
-
     };
 
     struct SweetsPrototypeDescriptor
