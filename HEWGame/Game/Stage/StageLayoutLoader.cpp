@@ -170,29 +170,9 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             continue;
         }
 
-        if (values.size() > 10)
-        {
-            obj.materialKey = Trim(values[10]);
-        }
         if (values.size() > 11)
         {
             obj.colliderPresetId = NormalizeKey(values[11]);
-        }
-        if (!obj.materialKey.empty())
-        {
-            const std::string normalizedMaterialKey = NormalizeKey(obj.materialKey);
-            if (IsKnownStageMaterialKey(normalizedMaterialKey, materialTuningSettings))
-            {
-                obj.materialKey = normalizedMaterialKey;
-            }
-            else
-            {
-                obj.materialKey.clear();
-            }
-        }
-        if (obj.materialKey.empty())
-        {
-            obj.materialKey = kFallbackStageMaterialKey;
         }
 
         if (kEnableStageModelVerboseLogging)
