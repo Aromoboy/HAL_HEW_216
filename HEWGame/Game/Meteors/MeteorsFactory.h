@@ -14,9 +14,9 @@
 #include "ColliderRegistry.h"
 #include "Render/Model.h"
 #include "Systems/Physics/ShapeConstants.h"
-#include "Sweets/SweetsKeyUtils.h"
-#include "Sweets/SweetsTypes.h"
-#include "SweetsPrototypeManifest.h"
+#include "Meteors/MeteorsKeyUtils.h"
+#include "Meteors/MeteorsTypes.h"
+#include "MeteorsPrototypeManifest.h"
 #include "Transform.h"
 
 namespace Systems
@@ -24,16 +24,16 @@ namespace Systems
     class PhysicsMachine;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsFactory
+    class MeteorsFactory
     {
     public:
-        using SpawnerMap = std::unordered_map<std::string, std::function<std::shared_ptr<ActiveSweets>(const Transform&)>>;
+        using SpawnerMap = std::unordered_map<std::string, std::function<std::shared_ptr<ActiveMeteors>(const Transform&)>>;
 
-        explicit SweetsFactory(Systems::PhysicsMachine& physicsMachine);
+        explicit MeteorsFactory(Systems::PhysicsMachine& physicsMachine);
 
-        std::shared_ptr<ActiveSweets> Create(const std::string& kind, const Transform& transform);
+        std::shared_ptr<ActiveMeteors> Create(const std::string& kind, const Transform& transform);
         std::vector<std::pair<std::string, FactoryPreset>> EnumerateFactoryPresets() const;
 
         const std::map<std::string, FactoryPreset>& GetFactoryPresets() const;
@@ -56,12 +56,12 @@ namespace SweetsSpace
             float thickness = 1.0f;
         };
 
-        static std::optional<FactoryPreset> BuildDefaultFactoryPreset(SweetsType type);
+        static std::optional<FactoryPreset> BuildDefaultFactoryPreset(MeteorsType type);
         static std::map<std::string, FactoryPreset> LoadFactoryPresets(bool* parseError);
 
         std::map<std::string, Collision::ColliderDefinition>::const_iterator FindColliderDefinition(const std::string& key) const;
-        ColliderBuildResult BuildColliderForSweets(const std::string& kind,
-            SweetsType type,
+        ColliderBuildResult BuildColliderForMeteors(const std::string& kind,
+            MeteorsType type,
             const Transform& transform,
             const std::string& modelPath,
             const std::shared_ptr<Render::Model>& model,
@@ -69,7 +69,7 @@ namespace SweetsSpace
             bool allowMeshPhysics);
 
         template<typename T>
-        std::shared_ptr<ActiveSweets> MakeSweets(
+        std::shared_ptr<ActiveMeteors> MakeMeteors(
             const std::string& tag,
             const std::shared_ptr<Render::Model>& model,
             const Transform& transform,
@@ -82,7 +82,7 @@ namespace SweetsSpace
             if (!model)
                 return nullptr;
 
-            auto sweets = std::make_shared<T>(
+            auto meteors = std::make_shared<T>(
                 tag,
                 transform,
                 model,
@@ -94,10 +94,10 @@ namespace SweetsSpace
                 allowMeshPhysics
             );
 
-            if (!sweets)
+            if (!meteors)
                 return nullptr;
 
-            return sweets;
+            return meteors;
         }
 
         Systems::PhysicsMachine* m_physicsMachine;

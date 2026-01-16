@@ -1,6 +1,6 @@
 #include "GameplayRulesSystem.h"
 
-#include "SweetsManager.h"
+#include "MeteorsManager.h"
 #include "GameFlow/PhaseManager.h"
 
 #include <cmath>
@@ -78,7 +78,7 @@ GameplayRulesSystem::UpdateResult GameplayRulesSystem::Update(const UpdateInput&
     m_pendingTimeBonuses = std::move(countdownResult.state.pendingBonuses);
 
     const GameplayProgression::TowerTelemetryInput towerTelemetryInput{
-        input.sweetsManager,
+        input.meteorsManager,
         input.phaseManager,
         input.clearPhaseCount,
         m_remainingCountdownSeconds,

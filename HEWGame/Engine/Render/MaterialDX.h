@@ -6,11 +6,14 @@
 class MaterialDX
 {
 public:
-	MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> a_tecture);
+	MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> diffuseTexture);
+	MaterialDX(DirectX::XMFLOAT4 diffuse, DirectX::XMFLOAT4 ambient, DirectX::XMFLOAT4 specular, std::shared_ptr<Texture2D> diffuseTexture, std::shared_ptr<Texture2D> normalTexture);
 	~MaterialDX();
 
         ID3D11ShaderResourceView* GetTexture() const;
+        ID3D11ShaderResourceView* GetNormalTexture() const;
         void BindTexture(ID3D11DeviceContext* context, UINT slot = 0) const;
+        void BindNormalTexture(ID3D11DeviceContext* context, UINT slot = 1) const;
 
         DirectX::XMFLOAT4 GetDiffuse() const;
         DirectX::XMFLOAT4 GetAmbient() const;
@@ -20,6 +23,7 @@ public:
         DirectX::XMFLOAT3 GetSssColor() const;
 
         std::shared_ptr<Texture2D> GetTextureResource() const;
+        std::shared_ptr<Texture2D> GetNormalTextureResource() const;
 
         void SetDiffuse(const DirectX::XMFLOAT4& diffuse);
         void SetAmbient(const DirectX::XMFLOAT4& ambient);
@@ -37,5 +41,6 @@ private:
 	float m_sssIntensity = 0.0f;
 	DirectX::XMFLOAT3 m_sssColor{ 1.0f, 1.0f, 1.0f };
 
-	std::shared_ptr<Texture2D> m_texture;
+	std::shared_ptr<Texture2D> m_diffuseTexture;
+	std::shared_ptr<Texture2D> m_normalTexture;
 };

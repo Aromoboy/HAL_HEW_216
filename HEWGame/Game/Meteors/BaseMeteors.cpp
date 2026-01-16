@@ -1,4 +1,4 @@
-#include "Sweets/BaseSweets.h"
+#include "Meteors/BaseMeteors.h"
 
 #include "ModelPivot.h"
 
@@ -27,12 +27,12 @@ namespace
     }
 #endif
 
-    constexpr const char* kLogPrefix = "[BaseSweets] ";
+    constexpr const char* kLogPrefix = "[BaseMeteors] ";
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-        BaseSweets::BaseSweets(const std::string& tag,
+        BaseMeteors::BaseMeteors(const std::string& tag,
         const Transform& transform,
         std::shared_ptr<Render::Model> model,
         std::optional<Physics::Box2DShapeConfig> shapeConfig,
@@ -55,13 +55,13 @@ namespace SweetsSpace
         RefreshRenderTransform();
     }
 
-    void BaseSweets::OnUpdate(const Core::UpdateContext& ctx)
+    void BaseMeteors::OnUpdate(const Core::UpdateContext& ctx)
     {
         SyncFromPhysics();
         Entities::PhysicalEntity::OnUpdate(ctx);
     }
 
-    void BaseSweets::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
+    void BaseMeteors::Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera)
     {
         if (!m_model)
         {
@@ -76,12 +76,12 @@ namespace SweetsSpace
         renderer.Draw(*m_model, m_renderTransform, &camera);
     }
 
-    Transform BaseSweets::GetRenderTransform() const
+    Transform BaseMeteors::GetRenderTransform() const
     {
         return m_renderTransform;
     }
 
-    void BaseSweets::SyncFromPhysics()
+    void BaseMeteors::SyncFromPhysics()
     {
         float3 renderOffset{};
         if (const auto& colliderComponent = GetBoxColliderComponent())
@@ -135,7 +135,7 @@ namespace SweetsSpace
         RefreshRenderTransform();
     }
 
-    void BaseSweets::RefreshRenderTransform()
+    void BaseMeteors::RefreshRenderTransform()
     {
         // 描画のたびに合成しないようキャッシュした変換を頼る
         m_renderTransform = Transform{ m_visual.position, m_visual.rotation, m_visual.scale };

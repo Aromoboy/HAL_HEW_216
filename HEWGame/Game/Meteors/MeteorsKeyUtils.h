@@ -3,7 +3,7 @@
 #include <string>
 #include <cctype>
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
     inline std::string NormalizeKey(const std::string& key)
     {

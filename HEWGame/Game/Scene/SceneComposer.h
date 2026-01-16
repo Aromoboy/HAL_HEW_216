@@ -36,7 +36,7 @@ public:
         SceneGameConfig::BlobShadowSettings blobShadowSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
-        std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;
+        std::unique_ptr<MeteorsSpace::MeteorsManager> meteorsManager;
         std::unique_ptr<UIManager> uiManager;
         std::unique_ptr<BackgroundRenderer> backgroundRenderer;
         std::vector<StageObject> stageObjects;

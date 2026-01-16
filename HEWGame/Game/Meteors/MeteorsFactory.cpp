@@ -1,4 +1,4 @@
-#include "Sweets/SweetsFactory.h"
+#include "Meteors/MeteorsFactory.h"
 
 #include <algorithm>
 #include <cassert>
@@ -38,7 +38,7 @@
 #include "Systems/Physics/ColliderBuilder.h"
 #include "Render/ModelBounds.h"
 #include "Systems/Physics/ShapeConstants.h"
-#include "Sweets/BaseSweets.h"
+#include "Meteors/BaseMeteors.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
 namespace
@@ -55,19 +55,19 @@ namespace
     }
 #endif
 
-    constexpr const char* kLogPrefix = "[SweetsManager] ";
+    constexpr const char* kLogPrefix = "[MeteorsManager] ";
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
     constexpr float kMinimumColliderThickness = std::max(Physics::kMinimumShapeDimensionMeters, 1e-3f);
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
-    const char* ToString(SweetsSpace::ColliderShape shape)
+    const char* ToString(MeteorsSpace::ColliderShape shape)
     {
         switch (shape)
         {
-        case SweetsSpace::ColliderShape::Box:
+        case MeteorsSpace::ColliderShape::Box:
             return "Box";
-        case SweetsSpace::ColliderShape::Capsule:
+        case MeteorsSpace::ColliderShape::Capsule:
             return "Capsule";
-        case SweetsSpace::ColliderShape::Circle:
+        case MeteorsSpace::ColliderShape::Circle:
             return "Circle";
         default:
             return "Unknown";
@@ -76,7 +76,7 @@ namespace
 
     std::string ResolveManifestKeyAlias(const std::string& key)
     {
-        const auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+        const auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
         if (const auto resolvedType = manifest.Resolve(key))
         {
             if (const auto* descriptor = manifest.Find(*resolvedType))
@@ -88,13 +88,13 @@ namespace
         return key;
     }
 
-    void ReportInvalidBox2DConfig(SweetsSpace::SweetsType type, const std::string& reason)
+    void ReportInvalidBox2DConfig(MeteorsSpace::MeteorsType type, const std::string& reason)
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[ConfigError] type='" << ToString(type) << "' " << reason << "\n";
         Diagnostics::LogInfo(oss.str());
 
-        assert(false && "Invalid Box2DShapeConfig for sweets type");
+        assert(false && "Invalid Box2DShapeConfig for meteors type");
     }
 
     Physics::Box2DShapeConfig::Type InferShapeType(const std::vector<Physics::ColliderShapeDescriptor>& shapes)
@@ -117,7 +117,7 @@ namespace
         }
     }
 
-    bool ValidateBaseShapeDefinition(SweetsSpace::SweetsType type)
+    bool ValidateBaseShapeDefinition(MeteorsSpace::MeteorsType type)
     {
         const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(ToString(type));
         if (!registryDefinition)
@@ -357,7 +357,7 @@ namespace
         desc.idxCount = static_cast<UINT>(indices.size());
         desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-        const std::string normalizedKind = SweetsSpace::NormalizeKey(path);
+        const std::string normalizedKind = MeteorsSpace::NormalizeKey(path);
         const auto rawHull = Collision::BuildConvexHullFromMesh(desc, normalizedKind, path);
         const std::vector<float2> originalHull = rawHull.hullPointsCentered;
         constexpr std::size_t kMinHullPoints = 6;
@@ -501,9 +501,9 @@ namespace
     }
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    SweetsFactory::SweetsFactory(Systems::PhysicsMachine& physicsMachine)
+    MeteorsFactory::MeteorsFactory(Systems::PhysicsMachine& physicsMachine)
         : m_physicsMachine(&physicsMachine)
         , m_generatedColliderThicknessPadding(SanitizeThicknessPadding(kDefaultGeneratedThicknessPadding))
         , m_generatedColliderMinThickness(SanitizeMinThickness(Physics::kMinimumShapeDimensionMeters))
@@ -517,7 +517,7 @@ namespace SweetsSpace
         }
 
         Render::ModelCache& cache = Render::ModelCache::Instance();
-        const auto& manifest = SweetsPrototypeManifest::Instance();
+        const auto& manifest = MeteorsPrototypeManifest::Instance();
 
         bool factoryParseError = false;
         const auto factoryOverrides = LoadFactoryPresets(&factoryParseError);
@@ -582,7 +582,7 @@ namespace SweetsSpace
                 << "' をアセット '" << registeredPath << "' と一緒に登録するね\n";
             DebugTrace(oss.str());
 
-            const SweetsType type = prototype.type;
+            const MeteorsType type = prototype.type;
 
             if (!ValidateBaseShapeDefinition(type))
             {
@@ -592,9 +592,9 @@ namespace SweetsSpace
 
             auto factory = [this, &cache, kind, type, preset,
                 resolvedKind, normalizedKind, isAliasedKind, aliasSuffix](const Transform& transform)
-                -> std::shared_ptr<ActiveSweets>
+                -> std::shared_ptr<ActiveMeteors>
             {
-                const auto& manifest = SweetsPrototypeManifest::Instance();
+                const auto& manifest = MeteorsPrototypeManifest::Instance();
                 const auto* descriptor = manifest.Find(type);
                 std::string descriptorKey = descriptor ? descriptor->key : resolvedKind;
                 std::string descriptorPath = descriptor ? descriptor->modelPath : std::string{};
@@ -703,22 +703,22 @@ namespace SweetsSpace
                     }
                 }
 
-                auto sweets = MakeSweets<ActiveSweets>(kind, model, physicsTransform, colliderBuild.shapeConfig,
-                    Collision::CollisionLayer::Sweets,
+                auto meteors = MakeMeteors<ActiveMeteors>(kind, model, physicsTransform, colliderBuild.shapeConfig,
+                    Collision::CollisionLayer::Meteors,
                     Core::UpdatePhase::Physics, 0, allowMeshPhysics);
 
-                if (sweets)
+                if (meteors)
                 {
                     const std::string colliderIdForLog = colliderBuild.collider ? colliderBuild.collider->colliderId : colliderLookupId;
                     if (colliderBuild.collider)
                     {
-                        sweets->SetBoxColliderComponent(std::move(colliderBuild.collider));
+                        meteors->SetBoxColliderComponent(std::move(colliderBuild.collider));
                     }
-                    sweets->SetVisualTransform(visualTransform);
+                    meteors->SetVisualTransform(visualTransform);
 
 #if defined(_DEBUG)
                     std::ostringstream colliderLog;
-                    colliderLog << kLogPrefix << "[SpawnCollider] tag='" << sweets->GetTag()
+                    colliderLog << kLogPrefix << "[SpawnCollider] tag='" << meteors->GetTag()
                         << "' bodyPos=(" << physicsTransform.position.x << ',' << physicsTransform.position.y << ',' << physicsTransform.position.z
                         << ") colliderId='" << colliderIdForLog << "'"
                         << "\n";
@@ -726,16 +726,16 @@ namespace SweetsSpace
 #endif
 
                     std::ostringstream created;
-                    created << kLogPrefix << "[SpawnRender] tag='" << sweets->GetTag()
+                    created << kLogPrefix << "[SpawnRender] tag='" << meteors->GetTag()
                         << "' renderPos=(" << visualTransform.position.x << ',' << visualTransform.position.y << ',' << visualTransform.position.z
                         << ") renderRotDeg=(" << visualTransform.rotation.x << ',' << visualTransform.rotation.y << ',' << visualTransform.rotation.z
                         << ") renderScale=(" << visualTransform.scale.x << ',' << visualTransform.scale.y << ',' << visualTransform.scale.z
                         << " colliderId='" << resolvedKind << "'"
-                        << " policy=PhysicsAligned (OriginBottom disabled for sweets)\n";
+                        << " policy=PhysicsAligned (OriginBottom disabled for meteors)\n";
                     Diagnostics::LogInfo(created.str());
                 }
 
-                return sweets;
+                return meteors;
             };
 
             auto [_, inserted] = m_spawner.emplace(normalizedKind, std::move(factory));
@@ -749,7 +749,7 @@ namespace SweetsSpace
         }
     }
 
-    std::shared_ptr<ActiveSweets> SweetsFactory::Create(const std::string& kind, const Transform& transform)
+    std::shared_ptr<ActiveMeteors> MeteorsFactory::Create(const std::string& kind, const Transform& transform)
     {
         const std::string resolvedKind = ResolveKindKey(kind);
         const std::string normalizedKind = NormalizeKey(kind);
@@ -785,8 +785,8 @@ namespace SweetsSpace
             return nullptr;
         }
 
-        auto sweets = it->second(transform);
-        if (!sweets)
+        auto meteors = it->second(transform);
+        if (!meteors)
         {
             std::ostringstream oss;
             oss << kLogPrefix << "種類 '" << kind << "' のスポナーが null を返しちゃった \n";
@@ -794,10 +794,10 @@ namespace SweetsSpace
             return nullptr;
         }
 
-        return sweets;
+        return meteors;
     }
 
-    std::vector<std::pair<std::string, FactoryPreset>> SweetsFactory::EnumerateFactoryPresets() const
+    std::vector<std::pair<std::string, FactoryPreset>> MeteorsFactory::EnumerateFactoryPresets() const
     {
         std::vector<std::pair<std::string, FactoryPreset>> presets;
         presets.reserve(m_factoryPresets.size());
@@ -808,12 +808,12 @@ namespace SweetsSpace
         return presets;
     }
 
-    const std::map<std::string, FactoryPreset>& SweetsFactory::GetFactoryPresets() const
+    const std::map<std::string, FactoryPreset>& MeteorsFactory::GetFactoryPresets() const
     {
         return m_factoryPresets;
     }
 
-    std::optional<FactoryPreset> SweetsFactory::FindFactoryPreset(const std::string& normalizedKind) const
+    std::optional<FactoryPreset> MeteorsFactory::FindFactoryPreset(const std::string& normalizedKind) const
     {
         auto it = m_factoryPresets.find(normalizedKind);
         if (it == m_factoryPresets.end())
@@ -823,17 +823,17 @@ namespace SweetsSpace
         return it->second;
     }
 
-    const SweetsFactory::SpawnerMap& SweetsFactory::GetSpawners() const
+    const MeteorsFactory::SpawnerMap& MeteorsFactory::GetSpawners() const
     {
         return m_spawner;
     }
 
-    std::string SweetsFactory::ResolveKindKey(const std::string& key) const
+    std::string MeteorsFactory::ResolveKindKey(const std::string& key) const
     {
         return ResolveManifestKeyAlias(key);
     }
 
-    void SweetsFactory::SetGeneratedColliderThicknessPadding(float factor)
+    void MeteorsFactory::SetGeneratedColliderThicknessPadding(float factor)
     {
         const float sanitized = SanitizeThicknessPadding(factor);
         const bool clamped = std::fabs(sanitized - factor) > 1e-4f;
@@ -852,7 +852,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsFactory::SetGeneratedColliderMinThickness(float thickness)
+    void MeteorsFactory::SetGeneratedColliderMinThickness(float thickness)
     {
         const float sanitized = SanitizeMinThickness(thickness);
         const bool clamped = std::fabs(sanitized - thickness) > 1e-4f;
@@ -871,7 +871,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsFactory::SetForceGeneratedColliders(bool force)
+    void MeteorsFactory::SetForceGeneratedColliders(bool force)
     {
         m_forceGeneratedColliders = force;
         std::ostringstream oss;
@@ -879,7 +879,7 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsFactory::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
+    void MeteorsFactory::SetForceConfigColliders(bool force, const std::vector<std::string>& kinds)
     {
         m_forceConfigColliders = force;
         m_forceConfigColliderKinds.clear();
@@ -902,7 +902,7 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsFactory::SetColliderConfigOverridesEnabled(bool enabled)
+    void MeteorsFactory::SetColliderConfigOverridesEnabled(bool enabled)
     {
         m_colliderConfigOverridesEnabled = enabled;
         std::ostringstream oss;
@@ -910,7 +910,7 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    std::optional<FactoryPreset> SweetsFactory::BuildDefaultFactoryPreset(SweetsType type)
+    std::optional<FactoryPreset> MeteorsFactory::BuildDefaultFactoryPreset(MeteorsType type)
     {
         FactoryPreset preset{};
         preset.spawnWeight = 0.0f;
@@ -919,17 +919,17 @@ namespace SweetsSpace
 
         switch (type)
         {
-        case SweetsType::Strawberry:
+        case MeteorsType::Strawberry:
             preset.spawnWeight = 1.0f;
             preset.scale = float3{ 0.3f, 0.3f, 0.3f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.012f, 0.012f, 0.012f } };
             return preset;
-        case SweetsType::Blueberry:
+        case MeteorsType::Blueberry:
             preset.spawnWeight = 1.0f;
             preset.scale = float3{ 0.32f, 0.32f, 0.32f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.014f, 0.014f, 0.014f } };
             return preset;
-        case SweetsType::Pineapple:
+        case MeteorsType::Pineapple:
             preset.spawnWeight = 0.8f;
             preset.scale = float3{ 0.36f, 0.36f, 0.36f };
             preset.colliderPreset = ColliderPreset{ ColliderShape::Circle, float3{ 0.016f, 0.016f, 0.016f } };
@@ -940,15 +940,15 @@ namespace SweetsSpace
         }
     }
 
-    std::map<std::string, FactoryPreset> SweetsFactory::LoadFactoryPresets(bool* parseError)
+    std::map<std::string, FactoryPreset> MeteorsFactory::LoadFactoryPresets(bool* parseError)
     {
         std::map<std::string, FactoryPreset> overrides;
         std::vector<Config::SectionLine> lines;
-        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionSweetsFactory, lines))
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionMeteorsFactory, lines))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "工場プリセットの設定が '" << kGameplayConfigPath
-                << "' の section '" << GameplayConfig::kSectionSweetsFactory
+                << "' の section '" << GameplayConfig::kSectionMeteorsFactory
                 << "' に見当たらないので、昔のデフォルトに戻すね\n";
             DebugTrace(oss.str());
             return overrides;
@@ -1068,7 +1068,7 @@ namespace SweetsSpace
         return overrides;
     }
 
-    std::map<std::string, Collision::ColliderDefinition>::const_iterator SweetsFactory::FindColliderDefinition(const std::string& key) const
+    std::map<std::string, Collision::ColliderDefinition>::const_iterator MeteorsFactory::FindColliderDefinition(const std::string& key) const
     {
         const std::string canonicalKey = ResolveKindKey(key);
         const std::string normalizedKey = NormalizeKey(key);
@@ -1090,8 +1090,8 @@ namespace SweetsSpace
         return m_colliderDefinitions.end();
     }
 
-    ColliderBuildResult SweetsFactory::BuildColliderForSweets(const std::string& kind,
-        SweetsType type,
+    ColliderBuildResult MeteorsFactory::BuildColliderForMeteors(const std::string& kind,
+        MeteorsType type,
         const Transform& transform,
         const std::string& modelPath,
         const std::shared_ptr<Render::Model>& model,

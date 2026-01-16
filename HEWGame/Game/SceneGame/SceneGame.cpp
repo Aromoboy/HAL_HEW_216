@@ -14,9 +14,9 @@
 #include "DirectX.h"
 #include "BaseCamera.h"
 #include "PerspectiveCamera.h"
-#include "SweetsManager.h"
-#include "Sweets/BaseSweets.h"
-#include "Sweets/SweetsPrototypeManifest.h"
+#include "MeteorsManager.h"
+#include "Meteors/BaseMeteors.h"
+#include "Meteors/MeteorsPrototypeManifest.h"
 #include "Render/Model.h"
 #include "Render/ModelBounds.h"
 #include "Entities/Player.h"
@@ -455,7 +455,7 @@ bool SceneGame::Load(Core::Input& input)
     m_blobShadowSettings = composition->blobShadowSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
-    m_sweetsManager = std::move(composition->sweetsManager);
+    m_meteorsManager = std::move(composition->meteorsManager);
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
     m_blobShadowRenderer = std::make_unique<BlobShadowRenderer>();
@@ -472,14 +472,14 @@ bool SceneGame::Load(Core::Input& input)
 
     if (m_physicsBinder)
     {
-        m_contactHandler.Bind(*m_physicsBinder, m_sweetsManager.get());
+        m_contactHandler.Bind(*m_physicsBinder, m_meteorsManager.get());
     }
 
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
+        m_meteorsManager->SetPhaseChangeCallback([this](int newPhase)
         {
-            ForwardSweetsPhaseChange(newPhase);
+            ForwardMeteorsPhaseChange(newPhase);
         });
     }
 
@@ -765,19 +765,19 @@ SceneGame::~SceneGame()
         m_drawRegistered = false;
     }
 
-    if (m_sweetsLateRegistered && m_sweetsManager)
+    if (m_meteorsLateRegistered && m_meteorsManager)
     {
-        if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
+        if (auto* lateNode = m_meteorsManager->GetLateUpdateNode())
         {
             Unregister(*lateNode);
         }
-        m_sweetsLateRegistered = false;
+        m_meteorsLateRegistered = false;
     }
 
-    if (m_sweetsRegistered && m_sweetsManager)
+    if (m_meteorsRegistered && m_meteorsManager)
     {
-        Unregister(*m_sweetsManager);
-        m_sweetsRegistered = false;
+        Unregister(*m_meteorsManager);
+        m_meteorsRegistered = false;
     }
 
     if (player)
@@ -853,16 +853,16 @@ void SceneGame::ConfigureUpdates()
                 m_cameraRigRegistered = Register(*m_cameraRig);
         }
 
-        if (m_sweetsManager && !m_sweetsRegistered)
+        if (m_meteorsManager && !m_meteorsRegistered)
         {
-                m_sweetsRegistered = Register(*m_sweetsManager);
+                m_meteorsRegistered = Register(*m_meteorsManager);
         }
 
-        if (m_sweetsManager && !m_sweetsLateRegistered)
+        if (m_meteorsManager && !m_meteorsLateRegistered)
         {
-                if (auto* lateNode = m_sweetsManager->GetLateUpdateNode())
+                if (auto* lateNode = m_meteorsManager->GetLateUpdateNode())
                 {
-                        m_sweetsLateRegistered = Register(*lateNode);
+                        m_meteorsLateRegistered = Register(*lateNode);
                 }
         }
 
@@ -919,7 +919,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     const GameplayRulesSystem::UpdateInput rulesInput{
         m_stageState == StageState::Playing,
         ctx.dt,
-        m_sweetsManager.get(),
+        m_meteorsManager.get(),
         &m_phaseManager,
         m_clearPhaseCount
     };
@@ -935,14 +935,14 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
 
 #if defined(_DEBUG)
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        const auto& stacked = m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked);
-        for (const auto& sweets : stacked)
+        const auto& stacked = m_meteorsManager->GetByState(MeteorsSpace::MeteorsState::Stacked);
+        for (const auto& meteors : stacked)
         {
-            if (!sweets) continue;
-            const AABB bounds = sweets->GetAABB();
-            ::DebugTrace("[DEBUG] sweetsTop=" + std::to_string(bounds.max.y) + "\n");
+            if (!meteors) continue;
+            const AABB bounds = meteors->GetAABB();
+            ::DebugTrace("[DEBUG] meteorsTop=" + std::to_string(bounds.max.y) + "\n");
         }
     }
 #endif
@@ -952,7 +952,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     m_playerController.UpdatePlayerBounds({
         player.get(),
         m_gameCamera.get(),
-        m_sweetsManager.get(),
+        m_meteorsManager.get(),
         ctx.dt
     });
     if (player)
@@ -1035,7 +1035,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.hud.currentHeight = currentHeight;
         uiData.hud.peakHeight = peakHeight;
         uiData.hud.score = score;
-        uiData.hud.sweetsCount = GetSweetsCount();
+        uiData.hud.meteorsCount = GetMeteorsCount();
         uiData.hud.timeUp = isTimeUp;
         uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
         uiData.hud.showFireMissileHint = m_fireMissileHintEnabled;
@@ -1043,10 +1043,10 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         {
             uiData.hud.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
         }
-        if (g_DebugDrawEnabled && m_sweetsManager)
+        if (g_DebugDrawEnabled && m_meteorsManager)
         {
-            SweetsSpace::SweetsContacts::GlueDebugSnapshot glueSnapshot;
-            if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
+            MeteorsSpace::MeteorsContacts::GlueDebugSnapshot glueSnapshot;
+            if (m_meteorsManager->GetGlueDebugSnapshot(glueSnapshot))
             {
                 uiData.hud.showGlueDebug = true;
                 uiData.hud.glueActiveFruitGlue = glueSnapshot.activeFruitGlue;
@@ -1061,7 +1061,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.result.currentHeight = currentHeight;
         uiData.result.peakHeight = peakHeight;
         uiData.result.score = score;
-        uiData.result.sweetsCount = GetSweetsCount();
+        uiData.result.meteorsCount = GetMeteorsCount();
         uiData.result.timeUp = isTimeUp;
         uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
         uiData.result.showFireMissileHint = m_fireMissileHintEnabled;
@@ -1098,7 +1098,7 @@ void SceneGame::FireMissile()
 
     if (!m_missileModel)
     {
-        const auto* descriptor = SweetsSpace::SweetsPrototypeManifest::Instance().Find("Missile");
+        const auto* descriptor = MeteorsSpace::MeteorsPrototypeManifest::Instance().Find("Missile");
         const std::string modelPath = descriptor ? descriptor->modelPath : std::string("Assets/Model/Missile.fbx");
         m_missileModel = Render::ModelCache::Instance().Get(modelPath);
         if (!m_missileModel)
@@ -1489,20 +1489,20 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
             }
         }
 
-        if (m_sweetsManager)
+        if (m_meteorsManager)
         {
-            const auto drawState = [&](SweetsSpace::SweetsState state)
+            const auto drawState = [&](MeteorsSpace::MeteorsState state)
             {
-                const auto& list = m_sweetsManager->GetByState(state);
-                for (const auto& sweets : list)
+                const auto& list = m_meteorsManager->GetByState(state);
+                for (const auto& meteors : list)
                 {
-                    drawEntity(sweets.get());
+                    drawEntity(meteors.get());
                 }
             };
 
-            drawState(SweetsSpace::SweetsState::Active);
-            drawState(SweetsSpace::SweetsState::Stacked);
-            drawState(SweetsSpace::SweetsState::Carried);
+            drawState(MeteorsSpace::MeteorsState::Active);
+            drawState(MeteorsSpace::MeteorsState::Stacked);
+            drawState(MeteorsSpace::MeteorsState::Carried);
         }
 
         for (const auto& entity : m_stagePhysicsEntities)
@@ -1566,10 +1566,10 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
         }
     }
 
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        SweetsSpace::SweetsContacts::GlueDebugSnapshot glueSnapshot;
-        if (m_sweetsManager->GetGlueDebugSnapshot(glueSnapshot))
+        MeteorsSpace::MeteorsContacts::GlueDebugSnapshot glueSnapshot;
+        if (m_meteorsManager->GetGlueDebugSnapshot(glueSnapshot))
         {
             const float stagePlaneZ = (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ)) ? *m_stagePlaneZ : 0.0f;
             const DirectX::XMFLOAT4 linkColor(0.2f, 1.0f, 0.3f, 0.85f);
@@ -1770,23 +1770,23 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 const auto [receiverY, receiverHeight] = resolveShadowReceiver(*player);
                 m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, receiverZ, receiverHeight);
             }
-            if (m_sweetsManager)
+            if (m_meteorsManager)
             {
-                const auto drawList = [&](const SweetsSpace::SweetsManager::SweetsList& list)
+                const auto drawList = [&](const MeteorsSpace::MeteorsManager::MeteorsList& list)
                 {
-                    for (const auto& sweets : list)
+                    for (const auto& meteors : list)
                     {
-                        if (sweets)
+                        if (meteors)
                         {
-                            const auto [receiverY, receiverHeight] = resolveShadowReceiver(*sweets);
-                            m_blobShadowRenderer->DrawShadow(*sweets, *activeCamera, receiverY, receiverZ, receiverHeight);
+                            const auto [receiverY, receiverHeight] = resolveShadowReceiver(*meteors);
+                            m_blobShadowRenderer->DrawShadow(*meteors, *activeCamera, receiverY, receiverZ, receiverHeight);
                         }
                     }
                 };
 
-                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
-                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked));
-                drawList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Ground));
+                drawList(m_meteorsManager->GetByState(MeteorsSpace::MeteorsState::Active));
+                drawList(m_meteorsManager->GetByState(MeteorsSpace::MeteorsState::Stacked));
+                drawList(m_meteorsManager->GetByState(MeteorsSpace::MeteorsState::Ground));
             }
         }
 
@@ -2289,39 +2289,39 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
         << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
     ::DebugTrace(oss.str());
 
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        m_sweetsManager->NotifyPhaseChanged(newPhase);
+        m_meteorsManager->NotifyPhaseChanged(newPhase);
     }
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
 }
 
-void SceneGame::ForwardSweetsPhaseChange(int newPhase)
+void SceneGame::ForwardMeteorsPhaseChange(int newPhase)
 {
     std::ostringstream oss;
-    oss << kLogPrefix << "[SweetsPhase] Forwarding phase " << newPhase
+    oss << kLogPrefix << "[MeteorsPhase] Forwarding phase " << newPhase
         << " to spawn pacing system.\n";
     ::DebugTrace(oss.str());
 
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        m_sweetsManager->ForceSpawnRefresh();
+        m_meteorsManager->ForceSpawnRefresh();
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "[SweetsPhase] Spawn pacing refresh skipped; manager missing.\n");
+        DebugTrace(std::string(kLogPrefix) + "[MeteorsPhase] Spawn pacing refresh skipped; manager missing.\n");
     }
 }
 void SceneGame::ResetPlaySession()
 {
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        m_sweetsManager->ClearAllSweets();
-        m_sweetsManager->ForceSpawnRefresh();
+        m_meteorsManager->ClearAllMeteors();
+        m_meteorsManager->ForceSpawnRefresh();
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
+        DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear meteors: manager missing.\n");
     }
 
     ClearMissiles();
@@ -2349,13 +2349,13 @@ void SceneGame::ResetPlaySession()
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        m_sweetsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
+        m_meteorsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
     }
     else
     {
-        DebugTrace(std::string(kLogPrefix) + "SweetsManager missing during ResetPlaySession; phase reset not broadcast.\n");
+        DebugTrace(std::string(kLogPrefix) + "MeteorsManager missing during ResetPlaySession; phase reset not broadcast.\n");
     }
 
     std::ostringstream oss;
@@ -2371,9 +2371,9 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
     {
         m_physicsBinder->Enable(enabled);
     }
-    if (m_sweetsManager)
+    if (m_meteorsManager)
     {
-        m_sweetsManager->Enable(enabled);
+        m_meteorsManager->Enable(enabled);
     }
     if (player)
     {
@@ -2381,10 +2381,10 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
     }
 }
 
-int SceneGame::GetSweetsCount() const
+int SceneGame::GetMeteorsCount() const
 {
-    if (m_sweetsManager)
-        return m_sweetsManager->GetSweetsCount();
+    if (m_meteorsManager)
+        return m_meteorsManager->GetMeteorsCount();
     return 0;
 }
 

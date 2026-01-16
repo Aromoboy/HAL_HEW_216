@@ -18,9 +18,9 @@ namespace Entities
     class Player;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsManager;
+    class MeteorsManager;
 }
 
 class PlayerController
@@ -46,7 +46,7 @@ public:
     {
         Entities::Player* player = nullptr;
         CameraSpace::PerspectiveCamera* camera = nullptr;
-        SweetsSpace::SweetsManager* sweetsManager = nullptr;
+        MeteorsSpace::MeteorsManager* meteorsManager = nullptr;
         float deltaSeconds = 0.0f;
     };
 

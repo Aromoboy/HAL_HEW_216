@@ -9,23 +9,23 @@
 #include <unordered_set>
 #include <vector>
 
-#include "Sweets/SweetsKeyUtils.h"
-#include "Sweets/SweetsTypes.h"
-#include "SweetsPrototypeManifest.h"
+#include "Meteors/MeteorsKeyUtils.h"
+#include "Meteors/MeteorsTypes.h"
+#include "MeteorsPrototypeManifest.h"
 #include "Transform.h"
 #include "Vector.h"
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsFactory;
-    class SweetsRegistry;
+    class MeteorsFactory;
+    class MeteorsRegistry;
 
-    class SweetsSpawner
+    class MeteorsSpawner
     {
     public:
-        using SpawnCallback = std::function<std::shared_ptr<ActiveSweets>(const std::string&, const Transform&)>;
+        using SpawnCallback = std::function<std::shared_ptr<ActiveMeteors>(const std::string&, const Transform&)>;
 
-        SweetsSpawner(SweetsFactory& factory, SweetsRegistry& registry, SpawnCallback spawnCallback);
+        MeteorsSpawner(MeteorsFactory& factory, MeteorsRegistry& registry, SpawnCallback spawnCallback);
 
         void RunSpawnScheduler(float deltaSeconds);
         bool LoadPhaseSpawnConfig(const std::string& path);
@@ -35,16 +35,16 @@ namespace SweetsSpace
             const std::vector<float3>& secondary,
             std::optional<float> spawnHeightOffset = std::nullopt);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
-        void SetLiveSweetsCap(int cap);
+        void SetLiveMeteorsCap(int cap);
         void NotifyPhaseChanged(int newPhase);
 
-        int CountLiveSweets() const;
+        int CountLiveMeteors() const;
         int ComputeDesiredLiveTarget(int remainingToStack) const;
         int GetBatchStackTarget() const;
         int GetStackedInBatch() const;
 
-        void OnStateChanged(const std::shared_ptr<ActiveSweets>& sweets, SweetsState previousState, SweetsState newState);
-        void OnSweetsRemoved(int remainingToStack, int liveAfterRemoval, const char* context);
+        void OnStateChanged(const std::shared_ptr<ActiveMeteors>& meteors, MeteorsState previousState, MeteorsState newState);
+        void OnMeteorsRemoved(int remainingToStack, int liveAfterRemoval, const char* context);
 
         const std::vector<PhaseSpawnConfig>& GetPhaseConfigs() const;
         int GetActivePhaseConfigIndex() const;
@@ -63,18 +63,18 @@ namespace SweetsSpace
         void LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const;
         void EnsurePhaseConfigAvailable(int phaseIndex);
         PhaseSpawnConfig GenerateAutoPhaseConfig(const PhaseSpawnConfig& previous, int previousIndex) const;
-        std::vector<WeightedSweetsType> NormalizeWeights(const std::vector<WeightedSweetsType>& weights) const;
+        std::vector<WeightedMeteorsType> NormalizeWeights(const std::vector<WeightedMeteorsType>& weights) const;
         void LogAutoGenerationPolicy(const char* context) const;
         void ApplyDefaultPhaseConfigs();
-        std::vector<WeightedSweetsType> BuildDefaultWeights() const;
+        std::vector<WeightedMeteorsType> BuildDefaultWeights() const;
         SpawnOriginSelection NextSpawnOrigin();
         Transform BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection);
         void EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
             const std::unordered_set<std::string>& registeredKindsNormalized,
-            const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const;
+            const std::unordered_map<MeteorsType, float, MeteorsTypeHash>& defaultWeightLookup) const;
 
-        SweetsFactory* m_factory;
-        SweetsRegistry* m_registry;
+        MeteorsFactory* m_factory;
+        MeteorsRegistry* m_registry;
         SpawnCallback m_spawnCallback;
 
         std::vector<PhaseSpawnConfig> m_phaseConfigs;
@@ -106,10 +106,10 @@ namespace SweetsSpace
 
         float3 m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f };
         float3 m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f };
-        int m_liveSweetsCap{ 0 };
+        int m_liveMeteorsCap{ 0 };
         bool m_warnedMissingSpawnOrigins{ false };
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
-        bool m_spawnPausedDueToLiveSweets{ false };
-        int m_lastLiveSweetsCount{ 0 };
+        bool m_spawnPausedDueToLiveMeteors{ false };
+        int m_lastLiveMeteorsCount{ 0 };
     };
 }

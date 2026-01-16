@@ -108,11 +108,13 @@ void ShaderList::SetMaterial(const Model::Material& material)
 	};
 	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[3].x = material.pTexture ? 1.0f : 0.0f;
+	param[3].y = 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])
 		{
 			m_pPS[i]->SetTexture(0, material.pTexture);
+			m_pPS[i]->SetTexture(1, static_cast<ID3D11ShaderResourceView*>(nullptr));
 			m_pPS[i]->WriteBuffer(0, param);
 		}
 	}
@@ -133,11 +135,13 @@ void ShaderList::SetMaterial(const MaterialDX& material)
 	};
 	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[3].x = material.GetTexture() ? 1.0f : 0.0f;
+	param[3].y = material.GetNormalTexture() ? 1.0f : 0.0f;
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])
 		{
 			m_pPS[i]->SetTexture(0, material.GetTexture());
+			m_pPS[i]->SetTexture(1, material.GetNormalTexture());
 			m_pPS[i]->WriteBuffer(0, param);
 		}
 	}
@@ -277,17 +281,28 @@ cbuffer Camera : register(b2)
 	float4 cameraPos;
 };
 Texture2D tex : register(t0);
+Texture2D normalTex : register(t1);
 SamplerState samp : register(s0);
 float WrapLambert(float3 normalDir, float3 lightDir, float wrap)
 {
 	return saturate((dot(normalDir, lightDir) + wrap) / (1.0f + wrap));
+}
+float3 SampleNormal(PS_IN pin)
+{
+	float3 N = normalize(pin.normal);
+	if (objFlags.y >= 1.0f)
+	{
+		float3 normalSample = normalTex.Sample(samp, pin.uv).xyz * 2.0f - 1.0f;
+		N = normalize(normalSample);
+	}
+	return N;
 }
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
 	float3 albedo = texRgb * objDiffuse.rgb;
 
-	float3 N = normalize(pin.normal);
+	float3 N = SampleNormal(pin);
 	float3 L = normalize(-lightParams[1].xyz);
 	float3 F = normalize(-lightParams[3].xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
@@ -354,12 +369,23 @@ cbuffer Camera : register(b2)
 	float4 cameraPos;
 };
 Texture2D tex : register(t0);
+Texture2D normalTex : register(t1);
 SamplerState samp : register(s0);
+float3 SampleNormal(PS_IN pin)
+{
+	float3 N = normalize(pin.normal);
+	if (objFlags.y >= 1.0f)
+	{
+		float3 normalSample = normalTex.Sample(samp, pin.uv).xyz * 2.0f - 1.0f;
+		N = normalize(normalSample);
+	}
+	return N;
+}
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float3 texRgb = (objFlags.x >= 1.0f) ? tex.Sample(samp, pin.uv).rgb : 1.0.xxx;
 	float3 albedo = texRgb * objDiffuse.rgb * pin.color.rgb;
-	float3 N = normalize(pin.normal);
+	float3 N = SampleNormal(pin);
 	float3 L = normalize(-lightParams[1].xyz);
 	float lambert = saturate(dot(N, L));
 	float3 lighting = objAmbient.rgb + lightParams[0].rgb * lambert;
@@ -398,13 +424,24 @@ cbuffer Camera : register(b2)
 	float4 cameraPos;
 };
 Texture2D tex : register(t0);
+Texture2D normalTex : register(t1);
 SamplerState samp : register(s0);
+float3 SampleNormal(PS_IN pin)
+{
+	float3 N = normalize(pin.normal);
+	if (objFlags.y >= 1.0f)
+	{
+		float3 normalSample = normalTex.Sample(samp, pin.uv).xyz * 2.0f - 1.0f;
+		N = normalize(normalSample);
+	}
+	return N;
+}
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
-	float3 N = normalize(pin.normal);
+	float3 N = SampleNormal(pin);
 	float3 L = normalize(-lightParams[1].xyz);
 	float3 V = normalize(cameraPos.xyz - pin.wPos.xyz);
 	float3 R = reflect(-V, N);
@@ -448,13 +485,24 @@ cbuffer Light : register(b1)
 	// [4]=hemi.sky, [5]=hemi.ground, [6]=rim.color, [7]=rim.params
 };
 Texture2D tex : register(t0);
+Texture2D normalTex : register(t1);
 SamplerState samp : register(s0);
+float3 SampleNormal(PS_IN pin)
+{
+	float3 N = normalize(pin.normal);
+	if (objFlags.y >= 1.0f)
+	{
+		float3 normalSample = normalTex.Sample(samp, pin.uv).xyz * 2.0f - 1.0f;
+		N = normalize(normalSample);
+	}
+	return N;
+}
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
-	float3 N = normalize(pin.normal);
+	float3 N = SampleNormal(pin);
 	float3 L = normalize(-lightParams[1].xyz);
 	float dotNL = dot(N, L); // マイナス込で計算
 	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
@@ -509,13 +557,24 @@ cbuffer Param : register(b3)
 	float2 dummy;
 };
 Texture2D tex : register(t0);
+Texture2D normalTex : register(t1);
 SamplerState samp : register(s0);
+float3 SampleNormal(PS_IN pin)
+{
+	float3 N = normalize(pin.normal);
+	if (objFlags.y >= 1.0f)
+	{
+		float3 normalSample = normalTex.Sample(samp, pin.uv).xyz * 2.0f - 1.0f;
+		N = normalize(normalSample);
+	}
+	return N;
+}
 float4 main(PS_IN pin) : SV_TARGET
 {
 	float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 	if(objFlags.x >= 1.0f)
 		color = tex.Sample(samp, pin.uv);
-	float3 N = normalize(pin.normal);
+	float3 N = SampleNormal(pin);
 	float3 L = normalize(-lightParams[1].xyz);
 	float dotNL = saturate((dot(N, L) + 0.5f) / 1.5f);
 	float3 diffuse = objDiffuse.rgb * lightParams[0].rgb;
