@@ -163,6 +163,7 @@ protected:
     std::shared_ptr<Render::Model> m_playerModel;
     std::shared_ptr<Render::Model> m_missileModel;
     float3 m_missileScale{ 1.0f, 1.0f, 1.0f };
+    float m_missileRotationOffset = 0.0f;
     bool m_fireMissileHintEnabled = false;
     struct MissileInstance
     {

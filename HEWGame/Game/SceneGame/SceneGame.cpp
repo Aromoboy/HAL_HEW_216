@@ -469,6 +469,7 @@ bool SceneGame::Load(Core::Input& input)
     m_cameraRigSettings = cameraSettings;
     const SceneGameConfig::MissileSettings missileSettings = SceneGameConfig::LoadMissileSettings();
     m_missileScale = missileSettings.scale;
+    m_missileRotationOffset = missileSettings.rotationOffset;
     m_gameCamera = std::make_shared<CameraSpace::PerspectiveCamera>(cameraSettings.fovDegrees);
     auto registeredCamera = AddCamera(m_gameCamera);
     if (!registeredCamera)
@@ -1037,12 +1038,16 @@ void SceneGame::FireMissile()
     }
 
     const Transform playerTransform = player->GetTransform();
-    const float yaw = ResolvePlayerYaw(playerTransform);
+    constexpr float kSpawnOffset = 1.5f;
+    const float yaw = ResolvePlayerYaw(playerTransform) + m_playerSpawnTransform.missileYawOffsetRadians;
     const float3 forward = ForwardFromYaw(yaw);
     constexpr float kMissileSpeed = 40.0f;
     constexpr float kMissileLifetimeSeconds = 6.0f;
 
-    Transform missileTransform = playerTransform;
+    const float missileYaw = std::atan2(forward.y, forward.x) + m_missileRotationOffset;
+    Transform missileTransform{};
+    missileTransform.position = playerTransform.position;
+    missileTransform.rotation = float3{ 0.0f, 0.0f, missileYaw };
     missileTransform.scale = m_missileScale;
     const float3 spawnLocalOffset = m_playerSpawnTransform.missileSpawnOffset;
     const float cosYaw = std::cos(yaw);

@@ -6,6 +6,7 @@ namespace GameplayConfig
     inline constexpr const char* kSectionPhysicsTuning = "physics.tuning";
     inline constexpr const char* kSectionPlayerTransform = "player.transform";
     inline constexpr const char* kSectionCameraRig = "camera.rig";
+    inline constexpr const char* kPlayerTransformKeyMissileYawOffsetDegrees = "missileYawOffsetDegrees";
     inline constexpr const char* kCameraRigKeyMode = "mode";
     inline constexpr const char* kCameraRigKeyMinY = "minY";
     inline constexpr const char* kCameraRigKeyMaxY = "maxY";
@@ -21,6 +22,7 @@ namespace GameplayConfig
     inline constexpr const char* kCameraRigKeyPitchDegrees = "pitchDegrees";
     inline constexpr const char* kSectionMissileSettings = "missile.settings";
     inline constexpr const char* kMissileKeyScale = "scale";
+    inline constexpr const char* kMissileKeyRotationOffset = "rotationOffset";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
     inline constexpr const char* kSectionSweetsManifest = "sweets.manifest";
