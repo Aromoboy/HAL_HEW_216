@@ -5,22 +5,11 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "Entities/PhysicalEntity.h"
 #include "Entities/PlayerModel.h"
 #include "Entities/PlayerMovement.h"
 #include "Entities/PlayerPhysicsBinder.h"
-#include "Entities/PlayerPickupSystem.h"
-#include "PickupConfig.h"
-#include "Sweets/SweetsTypes.h"
-
-namespace SweetsSpace
-{
-    class BaseSweets;
-    class SweetsManager;
-    struct PickupQueryResult;
-}
 
 namespace Core
 {
@@ -35,7 +24,6 @@ namespace Entities
         Player(const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
-            SweetsSpace::SweetsManager* sweetsManager = nullptr,
             Core::Input* input = nullptr,
             Collision::CollisionLayer collisionLayer = Collision::CollisionLayer::Player,
             bool kinematic = false,
@@ -47,10 +35,6 @@ namespace Entities
         void OnUpdate(const Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;
 
-        void SetSweetsManager(SweetsSpace::SweetsManager* manager);
-        bool IsCarryingSweets() const;
-        const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& GetCarriedSweets() const;
-        void ClearCarriedSweets();
         bool IsKinematic() const;
         void SetMoveSpeed(float speed);
         void SetMoveSpeeds(float horizontal, float vertical);
@@ -60,26 +44,15 @@ namespace Entities
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
-        void SetPickupBox(float width, float height);
-        void SetPickupArea(float width, float height, const Stage::PickupOffset& offset);
-        void SetPickupMaxDistance(float maxDistance);
-        void SetPickupDepthThreshold(float depthThreshold);
-        void SetPickupOriginOffset(const float3& offset);
-        void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
-
-        const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
-
         Transform GetRenderTransform() const override;
 
     private:
         friend class PlayerModel;
         friend class PlayerMovement;
-        friend class PlayerPickupSystem;
         friend class PlayerPhysicsBinder;
 
         PlayerModel m_modelSystem;
         PlayerMovement m_movementSystem;
-        PlayerPickupSystem m_pickupSystem;
         PlayerPhysicsBinder m_physicsBinder;
         Core::Input* m_input = nullptr;
     };

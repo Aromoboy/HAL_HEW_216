@@ -1,6 +1,5 @@
 #pragma once
 
-#include <limits>
 #include <string>
 #include <vector>
 
@@ -25,16 +24,7 @@ namespace Stage
         float playerVerticalSpeedCellsPerSec = 0.0f;
         float playerHorizontalSpeedWorld = 0.0f;
         float playerVerticalSpeedWorld = 0.0f;
-        float pickupBoxWidthCells = 0.0f;
-        float pickupBoxHeightCells = 0.0f;
-        float pickupBoxWidthWorld = 0.0f;
-        float pickupBoxHeightWorld = 0.0f;
-        float pickupMaxDistance = 0.0f;
-        float pickupDepthThreshold = 0.0f;
-        PickupOffset pickupOffset{};
         std::string backgroundTexturePath;
-        float heightBonusThreshold = 0.0f;
-        float heightBonusSeconds = 0.0f;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;
@@ -58,19 +48,11 @@ namespace Stage
         static constexpr float kDefaultCellSizeWorld = 1.0f;
         static constexpr float kDefaultHorizontalSpeedCellsPerSec = 10.0f;
         static constexpr float kDefaultVerticalSpeedCellsPerSec = 12.0f;
-        static constexpr float kDefaultPickupBoxWidthCells = 5.0f;
-        static constexpr float kDefaultPickupBoxHeightCells = 5.0f;
-        static constexpr float kDefaultPickupMaxDistance = 0.5f;
-        static constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
-        static constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::WorldX;
-        static constexpr float kDefaultHeightBonusThreshold = 2.0f;
-        static constexpr float kDefaultHeightBonusSeconds = 5.0f;
 
         static float DefaultPlayerMoveSpeed();
         static const float3& DefaultPlatformScale();
         static const DirectX::XMFLOAT4& DefaultPlatformPrimaryColor();
         static const DirectX::XMFLOAT4& DefaultPlatformSecondaryColor();
-        static const float3& DefaultPickupOffsetLocalCells();
         static const std::string& DefaultBackgroundTexturePath();
         static const std::vector<float>& DefaultThresholds();
         static const std::vector<float>& DefaultRewardMultipliers();

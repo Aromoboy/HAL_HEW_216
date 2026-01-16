@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <sstream>
 
 #include "Stage/StageConfigParser.h"
@@ -16,7 +15,6 @@ namespace
     const float3 kDefaultPlatformScale{ 12.0f, 2.0f, 4.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformPrimaryColor{ 0.305f, 0.173f, 0.125f, 1.0f };
     const DirectX::XMFLOAT4 kDefaultPlatformSecondaryColor{ 0.180f, 0.258f, 0.329f, 1.0f };
-    const float3 kDefaultPickupOffsetLocalCells{ 0.5f, 0.0f, 0.0f };
     const std::string kDefaultBackgroundTexturePath = "Assets/Texture/background.png";
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
@@ -70,10 +68,6 @@ namespace Stage
         return kDefaultPlatformSecondaryColor;
     }
 
-    const float3& StageConfigDefaults::DefaultPickupOffsetLocalCells()
-    {
-        return kDefaultPickupOffsetLocalCells;
-    }
 
     const std::string& StageConfigDefaults::DefaultBackgroundTexturePath()
     {
@@ -216,14 +210,6 @@ namespace Stage
         float horizontalSpeedCellsPerSec = parsed.horizontalSpeedCellsPerSec;
         bool verticalSpeedSet = parsed.verticalSpeedSet;
         float verticalSpeedCellsPerSec = parsed.verticalSpeedCellsPerSec;
-        float pickupBoxWidthCells = parsed.pickupBoxWidthCells;
-        float pickupBoxHeightCells = parsed.pickupBoxHeightCells;
-        float pickupMaxDistance = parsed.pickupMaxDistance;
-        float pickupDepthThreshold = parsed.pickupDepthThreshold;
-        Stage::PickupOffsetMode pickupOffsetMode = parsed.pickupOffsetMode;
-        float3 pickupOffsetLocalCells = parsed.pickupOffsetLocalCells;
-        float heightBonusThreshold = parsed.heightBonusThreshold;
-        float heightBonusSeconds = parsed.heightBonusSeconds;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
 
         if (!planeZSet)
@@ -246,20 +232,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "platformScale not specified; using default ("
                 << platformScale.x << ',' << platformScale.y << ',' << platformScale.z << ").\n";
-        }
-
-        if (!parsed.heightBonusThresholdSet)
-        {
-            heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
-            std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusThreshold not specified; defaulting to " << heightBonusThreshold << "\n";
-        }
-
-        if (!parsed.heightBonusSecondsSet)
-        {
-            heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
-            std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds not specified; defaulting to " << heightBonusSeconds << "\n";
         }
 
         if (!parsed.backgroundTextureSet)
@@ -611,31 +583,6 @@ namespace Stage
             return fallback;
         };
 
-        auto sanitizeDepthThreshold = [](float value, float fallback, const char* label)
-        {
-            if (std::isfinite(value))
-            {
-                if (value >= 0.0f)
-                {
-                    return value;
-                }
-
-                std::ostringstream oss;
-                oss << kLogPrefix << label << " value " << value
-                    << " invalid; using fallback " << fallback << "\n";
-                return fallback;
-            }
-
-            if (std::isinf(value))
-            {
-                return value;
-            }
-
-            std::ostringstream oss;
-            oss << kLogPrefix << label << " invalid; using fallback " << fallback << "\n";
-            return fallback;
-        };
-
         cellSizeWorld = sanitizePositive(cellSizeWorld, StageConfigDefaults::kDefaultCellSizeWorld, "cellSizeWorld");
 
         auto computeWorldDimension = [&](float fraction, float gridCells, float fallback)
@@ -678,101 +625,7 @@ namespace Stage
             StageConfigDefaults::kDefaultVerticalSpeedCellsPerSec,
             "verticalSpeedCellsPerSec");
 
-        pickupBoxWidthCells = sanitizePositive(
-            pickupBoxWidthCells,
-            StageConfigDefaults::kDefaultPickupBoxWidthCells,
-            "pickupBoxWidthCells");
-
-        pickupBoxHeightCells = sanitizePositive(
-            pickupBoxHeightCells,
-            StageConfigDefaults::kDefaultPickupBoxHeightCells,
-            "pickupBoxHeightCells");
-
-        pickupMaxDistance = sanitizePositive(
-            pickupMaxDistance,
-            StageConfigDefaults::kDefaultPickupMaxDistance,
-            "pickupMaxDistance");
-        pickupDepthThreshold = sanitizeDepthThreshold(
-            pickupDepthThreshold,
-            StageConfigDefaults::kDefaultPickupDepthThreshold,
-            "pickupDepthThreshold");
-
-        auto sanitizeVectorFinite = [](const float3& value, const float3& fallback, const char* label)
-        {
-            if (std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z))
-            {
-                return value;
-            }
-
-            std::ostringstream oss;
-            oss << kLogPrefix << label << " contains non-finite component; using fallback ("
-                << fallback.x << ',' << fallback.y << ',' << fallback.z << ")\n";
-            return fallback;
-        };
-
-        pickupOffsetLocalCells = sanitizeVectorFinite(
-            pickupOffsetLocalCells,
-            StageConfigDefaults::DefaultPickupOffsetLocalCells(),
-            "pickupOffsetLocalCells");
-
-        const float3 pickupOffsetLocalWorld
-        {
-            pickupOffsetLocalCells.x * cellSizeWorld,
-            pickupOffsetLocalCells.y * cellSizeWorld,
-            pickupOffsetLocalCells.z * cellSizeWorld,
-        };
-
-        Stage::PickupOffset pickupOffset
-        {
-            pickupOffsetMode,
-            pickupOffsetLocalWorld,
-        };
-
-        const Stage::PickupOffset defaultPickupOffsetWorld
-        {
-            StageConfigDefaults::kDefaultPickupOffsetMode,
-            float3{ StageConfigDefaults::DefaultPickupOffsetLocalCells().x * cellSizeWorld,
-                StageConfigDefaults::DefaultPickupOffsetLocalCells().y * cellSizeWorld,
-                StageConfigDefaults::DefaultPickupOffsetLocalCells().z * cellSizeWorld },
-        };
-
-        pickupOffset.localOffset = sanitizeVectorFinite(
-            pickupOffset.localOffset,
-            defaultPickupOffsetWorld.localOffset,
-            "pickupOffsetLocalWorld");
-
         const float playerMoveSpeedWorld = horizontalSpeedCellsPerSec * cellSizeWorld;
-
-        if (!std::isfinite(heightBonusThreshold) || heightBonusThreshold <= 0.0f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusThreshold value " << heightBonusThreshold
-                << " invalid; using default " << StageConfigDefaults::kDefaultHeightBonusThreshold << "\n";
-            heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
-        }
-
-        if (!std::isfinite(heightBonusSeconds))
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds value " << heightBonusSeconds
-                << " invalid; using default " << StageConfigDefaults::kDefaultHeightBonusSeconds << "\n";
-            heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
-        }
-        else if (heightBonusSeconds <= 0.0f)
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds <= 0. Bonus events disabled.\n";
-            heightBonusSeconds = 0.0f;
-        }
-        else if (std::fabs(heightBonusSeconds - StageConfigDefaults::kDefaultHeightBonusSeconds)
-            > std::numeric_limits<float>::epsilon())
-        {
-            std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds=" << heightBonusSeconds
-                << " overridden to requirement default " << StageConfigDefaults::kDefaultHeightBonusSeconds
-                << " (+5s per crossing).\n";
-            heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
-        }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
         const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //ミニフェーズ
@@ -795,15 +648,6 @@ namespace Stage
         normalized.playerVerticalSpeedCellsPerSec = verticalSpeedCellsPerSec;
         normalized.playerHorizontalSpeedWorld = playerMoveSpeedWorld;
         normalized.playerVerticalSpeedWorld = verticalSpeedCellsPerSec * cellSizeWorld;
-        normalized.pickupBoxWidthCells = pickupBoxWidthCells;
-        normalized.pickupBoxHeightCells = pickupBoxHeightCells;
-        normalized.pickupBoxWidthWorld = pickupBoxWidthCells * cellSizeWorld;
-        normalized.pickupBoxHeightWorld = pickupBoxHeightCells * cellSizeWorld;
-        normalized.pickupMaxDistance = pickupMaxDistance;
-        normalized.pickupDepthThreshold = pickupDepthThreshold;
-        normalized.pickupOffset = pickupOffset;
-        normalized.heightBonusThreshold = heightBonusThreshold;
-        normalized.heightBonusSeconds = heightBonusSeconds;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
@@ -832,22 +676,7 @@ namespace Stage
         normalized.playerVerticalSpeedCellsPerSec = StageConfigDefaults::kDefaultVerticalSpeedCellsPerSec;
         normalized.playerHorizontalSpeedWorld = StageConfigDefaults::DefaultPlayerMoveSpeed();
         normalized.playerVerticalSpeedWorld = StageConfigDefaults::kDefaultVerticalSpeedCellsPerSec * StageConfigDefaults::kDefaultCellSizeWorld;
-        normalized.pickupBoxWidthCells = StageConfigDefaults::kDefaultPickupBoxWidthCells;
-        normalized.pickupBoxHeightCells = StageConfigDefaults::kDefaultPickupBoxHeightCells;
-        normalized.pickupBoxWidthWorld = StageConfigDefaults::kDefaultPickupBoxWidthCells * StageConfigDefaults::kDefaultCellSizeWorld;
-        normalized.pickupBoxHeightWorld = StageConfigDefaults::kDefaultPickupBoxHeightCells * StageConfigDefaults::kDefaultCellSizeWorld;
-        normalized.pickupMaxDistance = StageConfigDefaults::kDefaultPickupMaxDistance;
-        normalized.pickupDepthThreshold = StageConfigDefaults::kDefaultPickupDepthThreshold;
-        normalized.pickupOffset = PickupOffset
-        {
-            StageConfigDefaults::kDefaultPickupOffsetMode,
-            float3{ StageConfigDefaults::DefaultPickupOffsetLocalCells().x * StageConfigDefaults::kDefaultCellSizeWorld,
-                StageConfigDefaults::DefaultPickupOffsetLocalCells().y * StageConfigDefaults::kDefaultCellSizeWorld,
-                StageConfigDefaults::DefaultPickupOffsetLocalCells().z * StageConfigDefaults::kDefaultCellSizeWorld },
-        };
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
-        normalized.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
-        normalized.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
         normalized.secondaryUsedDefaults = false;
