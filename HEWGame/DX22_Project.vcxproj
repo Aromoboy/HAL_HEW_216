@@ -267,7 +267,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Scene\Scene.cpp" />
     <ClCompile Include="Game\Scene\SceneComposer.cpp" />
     <ClCompile Include="Game\Scene\SceneManager.cpp" />
-    <ClCompile Include="Game\Scene\ScenePowerUp.cpp" />
     <ClCompile Include="Game\Scene\SelectScene.cpp" />
     <ClCompile Include="Game\Scene\SettingScene.cpp" />
     <ClCompile Include="Game\Scene\Startup.cpp" />
@@ -397,7 +396,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Scene\Scene.h" />
     <ClInclude Include="Game\Scene\SceneComposer.h" />
     <ClInclude Include="Game\Scene\SceneManager.h" />
-    <ClInclude Include="Game\Scene\ScenePowerUp.h" />
     <ClInclude Include="Game\Scene\SelectScene.h" />
     <ClInclude Include="Game\Scene\SettingScene.h" />
     <ClInclude Include="Game\Scene\TitleScene.h" />

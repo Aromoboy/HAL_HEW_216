@@ -333,9 +333,6 @@
     <ClCompile Include="Game\Scene\SceneManager.cpp">
       <Filter>Game\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Scene\ScenePowerUp.cpp">
-      <Filter>Game\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Game\Scene\SelectScene.cpp">
       <Filter>Game\Scene</Filter>
     </ClCompile>
@@ -721,9 +718,6 @@
       <Filter>Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Game\Scene\SceneManager.h">
-      <Filter>Game\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Scene\ScenePowerUp.h">
       <Filter>Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Game\Scene\SelectScene.h">
