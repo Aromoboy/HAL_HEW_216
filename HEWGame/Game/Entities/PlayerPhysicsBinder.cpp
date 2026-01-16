@@ -1,13 +1,9 @@
 #include "Entities/PlayerPhysicsBinder.h"
 
-#include "Entities/Player.h"
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <sstream>
-
-#include <box2d/box2d.h>
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -84,61 +80,4 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
-    void PlayerPhysicsBinder::ClampScreenBounds(Player& player)
-    {
-        if (!m_hasScreenBounds)
-        {
-            return;
-        }
-
-        if (!player.HasBox2DBody())
-        {
-            return;
-        }
-
-        const b2BodyId bodyId = player.GetBox2DBodyId();
-        const float3 position = Player::ToWorldPosition(b2Body_GetPosition(bodyId));
-        const float originalX = position.x;
-        const float originalY = position.y;
-
-        float wrappedX = position.x;
-        if (position.x < m_minScreenX)
-        {
-            wrappedX = m_maxScreenX;
-        }
-        else if (position.x > m_maxScreenX)
-        {
-            wrappedX = m_minScreenX;
-        }
-
-        float wrappedY = position.y;
-        if (position.y < m_minScreenY)
-        {
-            wrappedY = m_maxScreenY;
-        }
-        else if (position.y > m_maxScreenY)
-        {
-            wrappedY = m_minScreenY;
-        }
-
-        if (wrappedX == position.x && wrappedY == position.y)
-        {
-            return;
-        }
-
-        b2Body_SetTransform(
-            bodyId,
-            Player::ToBox2DPosition(float3{ wrappedX, wrappedY, 0.0f }),
-            b2Body_GetRotation(bodyId));
-
-        std::ostringstream oss;
-        oss << kPlayerLogPrefix << "スクリーンラップを適用しました prevX=" << originalX
-            << " newX=" << wrappedX
-            << " prevY=" << originalY
-            << " newY=" << wrappedY
-            << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']'
-            << " boundsY=[" << m_minScreenY << ',' << m_maxScreenY << ']';
-        oss << "\n";
-        PlayerDebugTrace(oss.str());
-    }
 }
