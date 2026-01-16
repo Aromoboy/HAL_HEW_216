@@ -3,6 +3,7 @@
 #include "Core/StepTimer.h"
 #include "GameFlow/PhaseManager.h"
 #include "SweetsManager.h"
+#include "Sweets/BaseSweets.h"
 
 #include <algorithm>
 #include <cmath>
