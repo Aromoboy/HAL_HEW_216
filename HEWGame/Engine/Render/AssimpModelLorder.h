@@ -16,7 +16,6 @@
 #include "TextureCache.h"
 
 #include "IModelLoader.h"
-#include "Animation.h"
 
 #include "DirectXTex.h"
 #include <algorithm>
@@ -58,7 +57,6 @@ AssimpModelLorder();
         ID3D11Device* device,
         TextureCache& textureCache,
         const MaterialTuningSettings& materialTuningSettings) override;
-	virtual std::shared_ptr<Animation> LoadAnimation(const std::string& path) override;
 
 private:
 	
@@ -73,7 +71,7 @@ private:
 	DirectX::XMMATRIX GetMatrixFromAssimpMatrix(aiMatrix4x4 M);
 	NodeIndexDX FindNode(const char* name, const std::vector<NodeDX>&);
 
-	void MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outNodes, Animation::AnimationArray& a_outAnimeTransform);
+	void MakeNode(const aiScene* ptr, std::vector<NodeDX>& a_outNodes);
 	// Model生成用関数
 	std::vector<std::shared_ptr<MeshDX>> MakeMesh(const aiScene*, AABB& outBounds, bool& hasBounds, std::vector<NodeDX> a_nodes);
 	std::vector<std::shared_ptr<MaterialDX>> MakeMaterial(

@@ -164,7 +164,7 @@ namespace SweetsSpace
         Register(SweetsType::Melon, "Melon", "Assets/Model/meron_high.fbx",
             "Low-poly curved Melon fruit", "Melon");
 
-        RegisterExtra("Fairy", "Assets/Model/base.fbx", "Cross-plane fighter plane");
+        RegisterExtra("Fairy", "Assets/Model/base.fbx", "Fighter jet prototype");
         RegisterExtraAlias("Fairy", "Player");
     }
 

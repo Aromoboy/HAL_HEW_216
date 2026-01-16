@@ -1,7 +1,6 @@
 ﻿#include "Entities/PlayerModel.h"
 
 #include "AABB.h"
-#include "AnimationCache.h"
 #include "Entities/Player.h"
 #include "ModelCache.h"
 #include "ModelPivot.h"
@@ -236,27 +235,6 @@ namespace Entities
             PlayerDebugTrace(oss.str());
         }
 
-        Render::AnimationCache& animationCache = Render::AnimationCache::Instance();
-
-        //const std::string playerIdleAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
-        //const std::string playerStabAnimationPath = "Assets/Animation/yousei_StabAnimations.fbx";
-
-        //m_idleAnimation = animationCache.Get(playerIdleAnimationPath);
-        //m_stabAnimation = animationCache.Get(playerStabAnimationPath);
-
-        if (m_idleAnimation)
-        {
-            m_idleAnimation->SetLoop(true);
-        }
-
-        if (m_stabAnimation)
-        {
-            m_stabAnimation->SetLoop(false);
-        }
-
-        m_activeAnimation = m_idleAnimation;
-        player.m_animation = m_activeAnimation;
-
         if (!modelPath.empty())
         {
             m_fairyModel = cache.Get(modelPath);
@@ -318,24 +296,6 @@ namespace Entities
         RefreshRenderTransform();
     }
 
-    void PlayerModel::UpdateAnimation(Player& player)
-    {
-        if (m_activeAnimation)
-        {
-            m_activeAnimation->Step(1.0f / 60.0f);
-
-            if (m_activeAnimation == m_stabAnimation && m_activeAnimation->IsPlayEnd())
-            {
-                m_activeAnimation = m_idleAnimation;
-                player.m_animation = m_activeAnimation;
-                if (m_idleAnimation)
-                {
-                    m_idleAnimation->SetLoop(true);
-                }
-            }
-        }
-    }
-
     void PlayerModel::Draw(const Player& player, Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera)
     {
         if (!player.m_model)
@@ -348,28 +308,12 @@ namespace Entities
             return;
         }
 
-        renderer.Draw(*player.m_model, m_renderTransform, &camera, m_activeAnimation.get());
-    }
-
-    void PlayerModel::PlayStabAnimation(Player& player)
-    {
-        m_activeAnimation = m_stabAnimation;
-        player.m_animation = m_activeAnimation;
-        if (m_activeAnimation)
-        {
-            m_activeAnimation->SetLoop(false);
-            m_activeAnimation->Play();
-        }
+        renderer.Draw(*player.m_model, m_renderTransform, &camera);
     }
 
     Transform PlayerModel::GetRenderTransform() const
     {
         return m_renderTransform;
-    }
-
-    std::shared_ptr<Animation> PlayerModel::GetActiveAnimation() const
-    {
-        return m_activeAnimation;
     }
 
     void PlayerModel::RefreshRenderTransform()

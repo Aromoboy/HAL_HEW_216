@@ -1,6 +1,5 @@
 #include "SceneGameLoader.h"
 
-#include "AnimationCache.h"
 #include "AssimpModelLorder.h"
 #include "ModelCache.h"
 #include "AppGame.h"
@@ -45,7 +44,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     Result result{};
 
     Render::ModelCache& cache = Render::ModelCache::Instance();
-    Render::AnimationCache& animeCache = Render::AnimationCache::Instance();
 
     if (!config.device)
     {
@@ -57,10 +55,6 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         if (!cache.IsConfiguredFor(config.device, textureCache))
         {
             cache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device, textureCache);
-        }
-        if (!animeCache.IsConfiguredFor(config.device))
-        {
-            animeCache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device);
         }
     }
 

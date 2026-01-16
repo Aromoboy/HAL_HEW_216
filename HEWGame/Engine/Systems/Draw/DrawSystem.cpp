@@ -186,15 +186,13 @@ namespace Systems
                                 continue;
                         }
 
-                        Animation* animation = entity->GetAnimation();
-
                         const Transform transform = entity->GetRenderTransform();
                         if (!ValidateTransform(transform, entity))
                         {
                                 continue;
                         }
 
-                        m_commands.push_back(DrawCommand{ entity, model, animation, transform });
+                        m_commands.push_back(DrawCommand{ entity, model, transform });
                 }
 
                 for (auto* physical : m_physicalColliderRenderables)
@@ -341,7 +339,7 @@ namespace Systems
                     continue;
                 }
 
-                m_renderer->Draw(*command.model, command.transform, camera.get(), command.animation);
+                m_renderer->Draw(*command.model, command.transform, camera.get());
             }
 
 

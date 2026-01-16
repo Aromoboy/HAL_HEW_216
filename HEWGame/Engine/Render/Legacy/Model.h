@@ -20,29 +20,14 @@ public:
 		None,			// DirectX準拠(反転する
 		XFlip,			// Maya準拠
 		ZFlip,			// DirectX準拠(Mayaから180回転した状態
-		ZFlipUseAnime,	// DirecX準拠(アニメーションさせる場合
-	};
-
-private:
-	// アニメーション計算領域
-	enum AnimeTransform
-	{
-		MAIN,			// 通常再生
-		BLEND,			// ブレンド再生
-		PARAMETRIC0,	// 合成A
-		PARAMETRIC1,	// 合成B
-		MAX_TRANSFORM
 	};
 
 public:
 	// 型定義
 	using NodeIndex	= int;	// ボーン(階層)番号
-	using AnimeNo	= int;	// アニメーション番号
 
 	// 定数定義
 	static const NodeIndex	INDEX_NONE = -1;		// 該当ノードなし
-	static const AnimeNo	ANIME_NONE = -1;		// 該当アニメーションなし
-	static const AnimeNo	PARAMETRIC_ANIME = -2;	// 合成アニメーション
 
 private:
 	// 内部型定義
@@ -50,25 +35,6 @@ private:
 
 	// 内部定数定義
 	static const UINT		MAX_BONE			=	200;	// １メッシュの最大ボーン数(ここを変更する場合.hlsl側の定義も変更する
-
-	// アニメーションの変換情報
-	struct Transform
-	{
-		DirectX::XMFLOAT3	translate;
-		DirectX::XMFLOAT4	quaternion;
-		DirectX::XMFLOAT3	scale;
-	};
-	using Key			= std::pair<float, Transform>;
-	using Timeline		= std::map<float, Transform>;
-	using Transforms	= std::vector<Transform>;
-
-	// アニメーションとボーンの関連付け情報
-	struct Channel
-	{
-		NodeIndex	index;
-		Timeline	timeline;
-	};
-	using Channels = std::vector<Channel>;
 
 	// ボーン情報
 	struct Node
@@ -124,17 +90,6 @@ public:
 	};
 	using Materials = std::vector<Material>;
 
-	// アニメーション情報
-	struct Animation
-	{
-		float		nowTime;	// 現在の再生時間
-		float		totalTime;	// 最大再生時間
-		float		speed;		// 再生速度
-		bool		isLoop;		// ループ指定
-		Channels	channels;	// 変換情報
-	};
-	using Animations = std::vector<Animation>;
-
 public:
 	Model();
 	~Model();
@@ -150,36 +105,7 @@ public:
 	const Material* GetMaterial(unsigned int index);
 	uint32_t GetMaterialNum();
 	DirectX::XMMATRIX GetBone(NodeIndex index);
-	const Animation* GetAnimation(AnimeNo no);
 
-	//--- アニメーション
-	// アニメーションの読み込み
-	AnimeNo AddAnimation(const char* file);
-	// アニメーションの更新
-	void Step(float tick);
-
-	// アニメーションの再生
-	void Play(AnimeNo no, bool loop, float speed = 1.0f);
-	// アニメーションのブレンド再生
-	void PlayBlend(AnimeNo no, float blendTime, bool loop, float speed = 1.0f);
-	// アニメーションの合成設定
-	void SetParametric(AnimeNo no1, AnimeNo no2);
-	// アニメーションの合成割合設定
-	void SetParametricBlend(float blendRate);
-	// アニメーションの現在再生時間を変更
-	void SetAnimationTime(AnimeNo no, float time);
-
-	// 再生フラグ
-	bool IsPlay(AnimeNo no);
-	// 現在再生中のアニメ番号
-	AnimeNo GetPlayNo();
-	// ブレンド中のアニメ番号
-	AnimeNo GetBlendNo();
-
-#ifdef _DEBUG
-	static std::string GetError();
-	void DrawBone();
-#endif
 
 
 private:
@@ -192,12 +118,6 @@ private:
 	void MakeWeight(const void* ptr, int meshIdx);
 
 	// 内部計算
-	bool AnimeNoCheck(AnimeNo no);
-	void InitAnime(AnimeNo no);
-	void CalcAnime(AnimeTransform kind, AnimeNo no);
-	void UpdateAnime(AnimeNo no, float tick);
-	void CalcBones(NodeIndex node, const DirectX::XMMATRIX parent);
-	void LerpTransform(Transform* pOut, const Transform& a, const Transform& b, float rate);
 
 private:
 	static VertexShader*	m_pDefVS;		// デフォルト頂点シェーダー
@@ -214,18 +134,8 @@ private:
 	Meshes			m_meshes;		// メッシュ配列
 	Materials		m_materials;	// マテリアル配列
 	Nodes			m_nodes;		// 階層情報
-	Animations		m_animes;		// アニメ配列
 	VertexShader*	m_pVS;			// 設定中の頂点シェーダ
 	PixelShader*	m_pPS;			// 設定中のピクセルシェーダ
-	
-	AnimeNo			m_playNo;			// 現在再生中のアニメ番号
-	AnimeNo			m_blendNo;			// ブレンド再生を行うアニメ番号
-	AnimeNo			m_parametric[2];	// 合成再生を行うアニメ番号
-	float			m_blendTime;		// 現在の遷移経過時間
-	float			m_blendTotalTime;	// アニメ遷移にかかる合計時間
-	float			m_parametricBlend;	// パラメトリックの再生割合
-
-	Transforms		m_nodeTransform[MAX_TRANSFORM];	// アニメーション別変形情報
 
 
 	// 以下越智による変更点
