@@ -99,6 +99,26 @@ namespace
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
         }
 
+        float ResolvePlayerYaw(const Transform& transform)
+        {
+            constexpr float kYawAxisEpsilon = 1.0e-4f;
+
+            const float absYawZ = std::fabs(transform.rotation.z);
+            const float absYawY = std::fabs(transform.rotation.y);
+
+            if (absYawY > absYawZ + kYawAxisEpsilon)
+            {
+                return transform.rotation.y;
+            }
+
+            return transform.rotation.z;
+        }
+
+        float3 ForwardFromYaw(float yaw)
+        {
+            return float3{ std::cos(yaw), std::sin(yaw), 0.0f };
+        }
+
         float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
         {
             DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
@@ -1015,9 +1035,9 @@ void SceneGame::FireMissile()
     }
 
     const Transform playerTransform = player->GetTransform();
-    const float yaw = playerTransform.rotation.z;
-    const float3 forward{ std::cos(yaw), std::sin(yaw), 0.0f };
     constexpr float kSpawnOffset = 1.5f;
+    const float yaw = ResolvePlayerYaw(playerTransform);
+    const float3 forward = ForwardFromYaw(yaw);
     constexpr float kMissileSpeed = 40.0f;
     constexpr float kMissileLifetimeSeconds = 6.0f;
 
@@ -1058,6 +1078,20 @@ void SceneGame::FireMissile()
     missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
 
     m_drawSystem->RegisterRenderable(*missile);
+
+#if defined(_DEBUG)
+    if (g_DebugDrawEnabled)
+    {
+        constexpr float kForwardDebugLength = 3.0f;
+        const DirectX::XMFLOAT4 debugColor(1.0f, 0.2f, 0.2f, 0.9f);
+        const DirectX::XMFLOAT3 lineStart(playerTransform.position.x, playerTransform.position.y, playerTransform.position.z);
+        const DirectX::XMFLOAT3 lineEnd(
+            lineStart.x + forward.x * (kSpawnOffset + kForwardDebugLength),
+            lineStart.y + forward.y * (kSpawnOffset + kForwardDebugLength),
+            lineStart.z + forward.z * (kSpawnOffset + kForwardDebugLength));
+        Geometory::AddLine(lineStart, lineEnd, debugColor);
+    }
+#endif
 
     m_activeMissiles.push_back(MissileInstance{ std::move(missile), kMissileLifetimeSeconds });
     m_fireMissileHintEnabled = true;
