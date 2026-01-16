@@ -2,8 +2,8 @@
 
 #include "Core/StepTimer.h"
 #include "GameFlow/PhaseManager.h"
-#include "SweetsManager.h"
-#include "Sweets/BaseSweets.h"
+#include "MeteorsManager.h"
+#include "Meteors/BaseMeteors.h"
 
 #include <algorithm>
 #include <cmath>
@@ -104,35 +104,35 @@ namespace GameplayProgression
         TowerTelemetryResult result{};
         result.state = std::move(state);
 
-        if (!input.sweetsManager)
+        if (!input.meteorsManager)
         {
             if (input.log)
             {
-                input.log("[ERROR] m_sweetsManager is nullptr!\n");
+                input.log("[ERROR] m_meteorsManager is nullptr!\n");
             }
             return result;
         }
 
-        const SweetsSpace::SweetsState states[] = {
-            SweetsSpace::SweetsState::Active,
-            SweetsSpace::SweetsState::Stacked,
-            SweetsSpace::SweetsState::Ground,
+        const MeteorsSpace::MeteorsState states[] = {
+            MeteorsSpace::MeteorsState::Active,
+            MeteorsSpace::MeteorsState::Stacked,
+            MeteorsSpace::MeteorsState::Ground,
         };
 
         float highestTop = 0.0f;
 
-        for (SweetsSpace::SweetsState stateValue : states)
+        for (MeteorsSpace::MeteorsState stateValue : states)
         {
-            auto& list = input.sweetsManager->GetByState(stateValue);
-            for (const auto& sweets : list)
+            auto& list = input.meteorsManager->GetByState(stateValue);
+            for (const auto& meteors : list)
             {
-                if (!sweets || sweets->IsPendingDestroy())
+                if (!meteors || meteors->IsPendingDestroy())
                 {
                     continue;
                 }
 
-                sweets->SyncColliderBounds();
-                const AABB bounds = sweets->GetAABB();
+                meteors->SyncColliderBounds();
+                const AABB bounds = meteors->GetAABB();
                 highestTop = std::max(highestTop, bounds.max.y);
             }
         }

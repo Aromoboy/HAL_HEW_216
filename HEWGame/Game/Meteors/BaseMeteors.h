@@ -7,12 +7,12 @@
 #include "Entities/PhysicalEntity.h"
 #include "VisualTransform.h"
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class BaseSweets : public Entities::PhysicalEntity
+    class BaseMeteors : public Entities::PhysicalEntity
     {
     public:
-        BaseSweets(const std::string& tag,
+        BaseMeteors(const std::string& tag,
             const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
             std::optional<Physics::Box2DShapeConfig> shapeConfig = std::nullopt,
@@ -22,7 +22,7 @@ namespace SweetsSpace
             int priority = 0,
             bool allowMeshPhysics = true);
 
-        ~BaseSweets() override = default;
+        ~BaseMeteors() override = default;
 
         void OnUpdate(const Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;

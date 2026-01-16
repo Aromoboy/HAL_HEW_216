@@ -25,7 +25,7 @@
 #include "ModelDX.h"
 #include "MeshDX.h"
 #include "MaterialDX.h"
-#include "SweetsPrototypeManifest.h"
+#include "MeteorsPrototypeManifest.h"
 #include "ModelCache.h"
 
 #if defined(_WIN32)
@@ -85,23 +85,23 @@ namespace
         return fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
-    std::optional<std::string> MapSweetsTypeToTexture(SweetsSpace::SweetsType type)
+    std::optional<std::string> MapMeteorsTypeToTexture(MeteorsSpace::MeteorsType type)
     {
-        using SweetsSpace::SweetsType;
+        using MeteorsSpace::MeteorsType;
         switch (type)
         {
-        case SweetsType::Strawberry:
+        case MeteorsType::Strawberry:
             return "Assets/Texture/MercuryNM.jpg";
-        case SweetsType::Blueberry:
+        case MeteorsType::Blueberry:
             return "Assets/Texture/meteor.jpg";
-        case SweetsType::Pineapple:
+        case MeteorsType::Pineapple:
             return "Assets/Texture/Meteorite_Diffuse.png";
         }
     }
 
     std::optional<std::string> ResolveTextureFromManifest(const std::string& normalizedModelPath)
     {
-        for (const auto& entry : SweetsSpace::SweetsPrototypeManifest::Instance().Enumerate())
+        for (const auto& entry : MeteorsSpace::MeteorsPrototypeManifest::Instance().Enumerate())
         {
             std::string candidate = NormalizePath(entry.descriptor.modelPath);
             if (candidate.empty())
@@ -111,7 +111,7 @@ namespace
 
             if (EndsWithPath(normalizedModelPath, candidate))
             {
-                return MapSweetsTypeToTexture(entry.type);
+                return MapMeteorsTypeToTexture(entry.type);
             }
         }
 

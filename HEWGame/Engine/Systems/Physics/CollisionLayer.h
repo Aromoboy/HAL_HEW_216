@@ -8,6 +8,6 @@ namespace Collision
         Player,
         Floor,
         Stage,
-        Sweets,
+        Meteors,
     };
 }

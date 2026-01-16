@@ -41,7 +41,7 @@ namespace
     constexpr uint16_t kPlayerCategory = 0x0002;
     constexpr uint16_t kFloorCategory = 0x0004;
     constexpr uint16_t kStageCategory = 0x0008;
-    constexpr uint16_t kSweetsCategory = 0x0010;
+    constexpr uint16_t kMeteorsCategory = 0x0010;
     constexpr float kScaleAssertionEpsilon = 0.0001f;
 
     void DebugTrace(const std::string& message)
@@ -67,8 +67,8 @@ namespace
             return kFloorCategory;
         case Collision::CollisionLayer::Stage:
             return kStageCategory;
-        case Collision::CollisionLayer::Sweets:
-            return kSweetsCategory;
+        case Collision::CollisionLayer::Meteors:
+            return kMeteorsCategory;
         default:
             return kDefaultCategory;
         }
@@ -80,18 +80,18 @@ namespace
         {
         case Collision::CollisionLayer::Player:
             // プレイヤーは全部と当たる
-            return kDefaultCategory | kFloorCategory | kStageCategory | kSweetsCategory | kPlayerCategory;
+            return kDefaultCategory | kFloorCategory | kStageCategory | kMeteorsCategory | kPlayerCategory;
         case Collision::CollisionLayer::Floor:
             // 床はプレイヤーとスイーツと当たる
-            return kDefaultCategory | kPlayerCategory | kSweetsCategory;
+            return kDefaultCategory | kPlayerCategory | kMeteorsCategory;
         case Collision::CollisionLayer::Stage:
             // ステージ装飾はプレイヤーとスイーツと当たる（接地扱いは別）
-            return kPlayerCategory | kSweetsCategory;
-        case Collision::CollisionLayer::Sweets:
+            return kPlayerCategory | kMeteorsCategory;
+        case Collision::CollisionLayer::Meteors:
             // スイーツ同士も当てたいならここで制御
-            return kDefaultCategory | kFloorCategory | kStageCategory | kPlayerCategory | kSweetsCategory;
+            return kDefaultCategory | kFloorCategory | kStageCategory | kPlayerCategory | kMeteorsCategory;
         default:
-            return kDefaultCategory | kPlayerCategory | kFloorCategory | kStageCategory | kSweetsCategory;
+            return kDefaultCategory | kPlayerCategory | kFloorCategory | kStageCategory | kMeteorsCategory;
         }
     }
 
@@ -171,7 +171,7 @@ namespace Systems
         m_tuning.defaultRestitution = m_defaultShapeDef.material.restitution;
         m_tuning.restitutionThreshold = std::max(0.0f, tuning.restitutionThreshold);
         m_tuning.hitEventThreshold = std::max(0.0f, tuning.hitEventThreshold);
-        m_tuning.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
+        m_tuning.continuousCollisionForMeteors = tuning.continuousCollisionForMeteors;
         m_tuning.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
         m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
@@ -885,7 +885,7 @@ namespace Systems
             && maxColliderExtent <= Entities::PhysicalEntity::ToBox2DLength(m_tuning.smallDynamicContinuousThreshold);
 
         bool enableContinuousCollision = false;
-        if (m_tuning.continuousCollisionForSweets && layer == Collision::CollisionLayer::Sweets)
+        if (m_tuning.continuousCollisionForMeteors && layer == Collision::CollisionLayer::Meteors)
         {
             enableContinuousCollision = true;
         }

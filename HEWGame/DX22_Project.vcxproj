@@ -72,16 +72,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Meteors;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Meteors;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Meteors;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Meteors;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -274,15 +274,15 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Stage\StageConfigParser.cpp" />
     <ClCompile Include="Game\Stage\StageData.cpp" />
     <ClCompile Include="Game\Stage\StageLayoutLoader.cpp" />
-    <ClCompile Include="Game\Sweets\BaseSweets.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsContacts.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsFactory.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsLifecycle.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsManager.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsPrototypeManifest.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsRegistry.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsRenderer.cpp" />
-    <ClCompile Include="Game\Sweets\SweetsSpawner.cpp" />
+    <ClCompile Include="Game\Meteors\BaseMeteors.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsContacts.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsFactory.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsLifecycle.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsManager.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsPrototypeManifest.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsRegistry.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsRenderer.cpp" />
+    <ClCompile Include="Game\Meteors\MeteorsSpawner.cpp" />
     <ClCompile Include="Game\UI\BackgroundRenderer.cpp" />
     <ClCompile Include="Game\UI\HudRenderer.cpp" />
     <ClCompile Include="Game\UI\ResultRenderer.cpp" />
@@ -398,17 +398,17 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Stage\StageConfigParser.h" />
     <ClInclude Include="Game\Stage\StageData.h" />
     <ClInclude Include="Game\Stage\StageLayoutLoader.h" />
-    <ClInclude Include="Game\Sweets\BaseSweets.h" />
-    <ClInclude Include="Game\Sweets\SweetsContacts.h" />
-    <ClInclude Include="Game\Sweets\SweetsFactory.h" />
-    <ClInclude Include="Game\Sweets\SweetsKeyUtils.h" />
-    <ClInclude Include="Game\Sweets\SweetsLifecycle.h" />
-    <ClInclude Include="Game\Sweets\SweetsManager.h" />
-    <ClInclude Include="Game\Sweets\SweetsPrototypeManifest.h" />
-    <ClInclude Include="Game\Sweets\SweetsRegistry.h" />
-    <ClInclude Include="Game\Sweets\SweetsRenderer.h" />
-    <ClInclude Include="Game\Sweets\SweetsSpawner.h" />
-    <ClInclude Include="Game\Sweets\SweetsTypes.h" />
+    <ClInclude Include="Game\Meteors\BaseMeteors.h" />
+    <ClInclude Include="Game\Meteors\MeteorsContacts.h" />
+    <ClInclude Include="Game\Meteors\MeteorsFactory.h" />
+    <ClInclude Include="Game\Meteors\MeteorsKeyUtils.h" />
+    <ClInclude Include="Game\Meteors\MeteorsLifecycle.h" />
+    <ClInclude Include="Game\Meteors\MeteorsManager.h" />
+    <ClInclude Include="Game\Meteors\MeteorsPrototypeManifest.h" />
+    <ClInclude Include="Game\Meteors\MeteorsRegistry.h" />
+    <ClInclude Include="Game\Meteors\MeteorsRenderer.h" />
+    <ClInclude Include="Game\Meteors\MeteorsSpawner.h" />
+    <ClInclude Include="Game\Meteors\MeteorsTypes.h" />
     <ClInclude Include="Game\UI\BackgroundRenderer.h" />
     <ClInclude Include="Game\UI\HudRenderer.h" />
     <ClInclude Include="Game\UI\ResultRenderer.h" />

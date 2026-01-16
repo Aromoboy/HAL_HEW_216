@@ -308,7 +308,7 @@ std::string HudRenderer::BuildHudString(const HudDisplayData& data) const
         stream << "  E=FireMissile";
     }
     stream << "  R=Retry)";
-    stream << "\nSweets " << data.sweetsCount;
+    stream << "\nMeteors " << data.meteorsCount;
     if (data.showGlueDebug)
     {
         stream << std::fixed << std::setprecision(2);

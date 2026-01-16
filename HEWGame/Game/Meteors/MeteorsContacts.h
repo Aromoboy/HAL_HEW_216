@@ -6,7 +6,7 @@
 
 #include <box2d/box2d.h>
 
-#include "Sweets/SweetsTypes.h"
+#include "Meteors/MeteorsTypes.h"
 #include "Systems/Physics/ContactEventInfo.h"
 
 namespace Entities
@@ -19,9 +19,9 @@ namespace Systems
     class PhysicsMachine;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsContacts
+    class MeteorsContacts
     {
     public:
         struct GlueDebugSnapshot
@@ -29,8 +29,8 @@ namespace SweetsSpace
             struct GlueLink
             {
                 b2Vec2 anchorWorld{};
-                ActiveSweets* cream{ nullptr };
-                ActiveSweets* fruit{ nullptr };
+                ActiveMeteors* cream{ nullptr };
+                ActiveMeteors* fruit{ nullptr };
                 bool fruitFrozen{ false };
             };
 
@@ -42,23 +42,23 @@ namespace SweetsSpace
             float cleanupPerSec{ 0.0f };
         };
 
-        SweetsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine);
+        MeteorsContacts(Systems::PhysicsMachine* physicsMachine, bool* warnedMissingPhysicsMachine);
 
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
 
-        bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
-        bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
+        bool HasSupportingContact(const ActiveMeteors& meteors, bool* foundationOnly = nullptr) const;
+        bool HasEverCollidedWithMeteors(const ActiveMeteors& meteors) const;
 
-        void ClearContactState(ActiveSweets* sweets);
-        void ClearSweetsContact(ActiveSweets* sweets);
+        void ClearContactState(ActiveMeteors* meteors);
+        void ClearMeteorsContact(ActiveMeteors* meteors);
         void Reset();
 
-        void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
+        void RemoveCreamWeldJointsForMeteors(ActiveMeteors* meteors, const char* context);
         void ClearCreamWeldJoints(const char* context);
         void ProcessPendingGlue();
 
-        void OnStateChanged(ActiveSweets* sweets, SweetsState previousState, SweetsState newState);
+        void OnStateChanged(ActiveMeteors* meteors, MeteorsState previousState, MeteorsState newState);
         void TickDebugStats(float dt);
         GlueDebugSnapshot BuildDebugSnapshot() const;
 
@@ -88,8 +88,8 @@ namespace SweetsSpace
 
         struct PendingGlue
         {
-            ActiveSweets* cream{ nullptr };
-            ActiveSweets* fruit{ nullptr };
+            ActiveMeteors* cream{ nullptr };
+            ActiveMeteors* fruit{ nullptr };
             b2ContactId contactId{ b2_nullContactId };
             b2ShapeId shapeIdA{ b2_nullShapeId };
             b2ShapeId shapeIdB{ b2_nullShapeId };
@@ -97,8 +97,8 @@ namespace SweetsSpace
 
         struct CreamWeldEntry
         {
-            ActiveSweets* cream{ nullptr };
-            ActiveSweets* fruit{ nullptr };
+            ActiveMeteors* cream{ nullptr };
+            ActiveMeteors* fruit{ nullptr };
             b2JointId jointId{ b2_nullJointId };
             b2Vec2 anchorWorld{};
         };
@@ -123,7 +123,7 @@ namespace SweetsSpace
         struct ContactState
         {
             int foundationContacts{ 0 };
-            int sweetsContacts{ 0 };
+            int meteorsContacts{ 0 };
         };
 
         struct ContactIdHash
@@ -148,8 +148,8 @@ namespace SweetsSpace
             }
         };
 
-        void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
-        void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
+        void UpdateContactStateBegin(ActiveMeteors* meteors, Entities::PhysicalEntity* other);
+        void UpdateContactStateEnd(ActiveMeteors* meteors, Entities::PhysicalEntity* other);
         bool TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const;
         bool TryGetContactAnchorData(const b2ContactId& contactId, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
             ContactAnchorData& outAnchor) const;
@@ -157,30 +157,30 @@ namespace SweetsSpace
             const ContactAnchorData& anchorData, b2Vec2& outAnchor) const;
         bool DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const;
         Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
-        void FreezeFruitBody(ActiveSweets& fruit);
-        void UnfreezeFruitBody(ActiveSweets& fruit);
+        void FreezeFruitBody(ActiveMeteors& fruit);
+        void UnfreezeFruitBody(ActiveMeteors& fruit);
         bool IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const;
         bool IsGlueBreakForceExceeded(b2JointId jointId) const;
         void UpdateBreakableJoints();
-        void LogGlueReject(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
-        void LogGlueDestroy(const char* reason, const ActiveSweets* cream, const Entities::PhysicalEntity* target) const;
-        void LogGlueCreateFruitToCream(const ActiveSweets* cream, const ActiveSweets* fruit, const b2Vec2& anchorWorld) const;
+        void LogGlueReject(const char* reason, const ActiveMeteors* cream, const Entities::PhysicalEntity* target) const;
+        void LogGlueDestroy(const char* reason, const ActiveMeteors* cream, const Entities::PhysicalEntity* target) const;
+        void LogGlueCreateFruitToCream(const ActiveMeteors* cream, const ActiveMeteors* fruit, const b2Vec2& anchorWorld) const;
         void CleanupInvalidJoint(const b2ContactId& contactId, CreamWeldEntry& entry);
-        void RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream);
-        void RemovePendingGlueForSweets(ActiveSweets* sweets);
+        void RemoveFruitCreamLink(ActiveMeteors* fruit, ActiveMeteors* cream);
+        void RemovePendingGlueForMeteors(ActiveMeteors* meteors);
         void TickGlueCooldowns(float dt);
-        bool IsGlueCooldownActive(const ActiveSweets& fruit) const;
+        bool IsGlueCooldownActive(const ActiveMeteors& fruit) const;
 
         Systems::PhysicsMachine* m_physicsMachine;
         bool* m_warnedMissingPhysicsMachine;
         GlueTuning m_glueTuning{};
         mutable GlueStats m_glueStats{};
-        std::unordered_map<ActiveSweets*, ContactState> m_contactStates;
-        std::unordered_set<ActiveSweets*> m_hasSweetsContact;
+        std::unordered_map<ActiveMeteors*, ContactState> m_contactStates;
+        std::unordered_set<ActiveMeteors*> m_hasMeteorsContact;
         std::unordered_map<b2ContactId, PendingGlue, ContactIdHash, ContactIdEqual> m_pendingGlue;
         std::unordered_map<b2ContactId, CreamWeldEntry, ContactIdHash, ContactIdEqual> m_creamWeldJoints;
-        std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
-        std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
-        std::unordered_map<ActiveSweets*, float> m_glueCooldown;
+        std::unordered_map<ActiveMeteors*, std::unordered_set<ActiveMeteors*>> m_fruitToCreams;
+        std::unordered_map<ActiveMeteors*, FrozenBodyState> m_frozenFruitStates;
+        std::unordered_map<ActiveMeteors*, float> m_glueCooldown;
     };
 }

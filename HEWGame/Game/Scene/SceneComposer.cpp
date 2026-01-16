@@ -14,8 +14,8 @@
 #include "ModelCache.h"
 #include "Engine/Render/ModelDX.h"
 #include "SceneGameConfigLoader.h"
-#include "SweetsManager.h"
-#include "SweetsPrototypeManifest.h"
+#include "MeteorsManager.h"
+#include "MeteorsPrototypeManifest.h"
 #include "Systems/Draw/DrawSystem.h"
 #include "Systems/Physics/PhysicsBinder.h"
 #include "UIManager.h"
@@ -179,17 +179,17 @@ void SceneComposer::ComposeConfig(Composition& result)
         DebugTrace(oss.str());
     }
 
-    auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+    auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
     const bool manifestLoaded = manifest.ReloadFromCsv();
     {
         std::ostringstream oss;
         oss << kLogPrefix << "Manifest config " << (manifestLoaded ? "applied" : "missing; using defaults")
-            << " path='" << SweetsSpace::SweetsPrototypeManifest::kDefaultConfigPath << "'\n";
+            << " path='" << MeteorsSpace::MeteorsPrototypeManifest::kDefaultConfigPath << "'\n";
         const auto prototypes = manifest.Enumerate();
         oss << kLogPrefix << " Manifest entries=" << prototypes.size() << "\n";
         for (const auto& entry : prototypes)
         {
-            oss << kLogPrefix << "  Entry " << SweetsSpace::ToString(entry.type) << " key='"
+            oss << kLogPrefix << "  Entry " << MeteorsSpace::ToString(entry.type) << " key='"
                 << entry.descriptor.key << "' model='" << entry.descriptor.modelPath << "'\n";
         }
         DebugTrace(oss.str());
@@ -230,7 +230,7 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.hitEventThreshold = tuning.hitEventThreshold;
     physicsParameters.maxStepDt = tuning.maxStepDt;
     physicsParameters.maxAccumulatedSteps = tuning.maxAccumulatedSteps;
-    physicsParameters.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
+    physicsParameters.continuousCollisionForMeteors = tuning.continuousCollisionForMeteors;
     physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
     physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
@@ -254,35 +254,35 @@ void SceneComposer::ComposePhysics(Composition& result)
     }
     if (result.drawSystem && physicsMachine)
     {
-        result.sweetsManager = std::make_unique<SweetsSpace::SweetsManager>(
+        result.meteorsManager = std::make_unique<MeteorsSpace::MeteorsManager>(
             *result.drawSystem,
             *physicsMachine,
             m_scheduler);
     }
 
-    if (result.sweetsManager)
+    if (result.meteorsManager)
     {
-        result.sweetsManager->SetSpawnOrigins(
+        result.meteorsManager->SetSpawnOrigins(
             result.stageData.GetSpawnPointsPrimary(),
             result.stageData.GetSpawnPointsSecondary());
-        const bool spawnConfigLoaded = result.sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
+        const bool spawnConfigLoaded = result.meteorsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
+            oss << kLogPrefix << "Meteors spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
                 << " from '" << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionSpawnPhases << "'.\n";
             DebugTrace(oss.str());
         }
         {
-            const auto presets = result.sweetsManager->EnumerateFactoryPresets();
-            const auto colliderShapeToString = [](SweetsSpace::ColliderShape shape)
+            const auto presets = result.meteorsManager->EnumerateFactoryPresets();
+            const auto colliderShapeToString = [](MeteorsSpace::ColliderShape shape)
             {
                 switch (shape)
                 {
-                case SweetsSpace::ColliderShape::Box:
+                case MeteorsSpace::ColliderShape::Box:
                     return "Box";
-                case SweetsSpace::ColliderShape::Capsule:
+                case MeteorsSpace::ColliderShape::Capsule:
                     return "Capsule";
-                case SweetsSpace::ColliderShape::Circle:
+                case MeteorsSpace::ColliderShape::Circle:
                     return "Circle";
                 default:
                     return "Unknown";

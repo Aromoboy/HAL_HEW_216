@@ -47,9 +47,9 @@ namespace Core
     struct UpdateContext;
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    class SweetsManager;
+    class MeteorsManager;
 }
 
 class SceneGameUIOverlay;
@@ -111,7 +111,7 @@ private:
     void OnStageFail();
     void ResetPlaySession();
     void ToggleGameplaySystems(bool enabled);
-    int GetSweetsCount() const;
+    int GetMeteorsCount() const;
     void Initialize(const Stage::StageData& stageData);
 
 protected:
@@ -124,7 +124,7 @@ protected:
     std::unique_ptr<Entities::Player> player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
-    std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
+    std::unique_ptr<MeteorsSpace::MeteorsManager> m_meteorsManager;
     SceneGameContactHandler m_contactHandler;
     PlayerController m_playerController;
     bool m_inputRegistered = false;
@@ -132,14 +132,14 @@ protected:
     bool m_contactDispatchRegistered = false;
     bool m_cameraRigRegistered = false;
     bool m_drawRegistered = false;
-    bool m_sweetsRegistered = false;
-    bool m_sweetsLateRegistered = false;
+    bool m_meteorsRegistered = false;
+    bool m_meteorsLateRegistered = false;
     bool m_loadFailed = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     GameplayRulesSystem m_gameplayRules;
     void BroadcastPhaseAdvance(int newPhase);
-    void ForwardSweetsPhaseChange(int newPhase);
+    void ForwardMeteorsPhaseChange(int newPhase);
     StageState m_stageState = StageState::Intro;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;

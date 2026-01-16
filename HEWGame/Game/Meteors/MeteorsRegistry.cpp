@@ -1,30 +1,30 @@
-#include "Sweets/SweetsRegistry.h"
+#include "Meteors/MeteorsRegistry.h"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
 #include "AABB.h"
-#include "Sweets/BaseSweets.h"
+#include "Meteors/BaseMeteors.h"
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    SweetsRegistry::SweetsRegistry()
+    MeteorsRegistry::MeteorsRegistry()
     {
-        m_byState.emplace(SweetsState::Active, SweetsList{});
-        m_byState.emplace(SweetsState::Stacked, SweetsList{});
-        m_byState.emplace(SweetsState::Ground, SweetsList{});
-        m_byState.emplace(SweetsState::Carried, SweetsList{});
+        m_byState.emplace(MeteorsState::Active, MeteorsList{});
+        m_byState.emplace(MeteorsState::Stacked, MeteorsList{});
+        m_byState.emplace(MeteorsState::Ground, MeteorsList{});
+        m_byState.emplace(MeteorsState::Carried, MeteorsList{});
     }
 
-    SweetsRegistry::SweetsList& SweetsRegistry::GetByState(SweetsState state)
+    MeteorsRegistry::MeteorsList& MeteorsRegistry::GetByState(MeteorsState state)
     {
         return m_byState[state];
     }
 
-    const SweetsRegistry::SweetsList& SweetsRegistry::GetByState(SweetsState state) const
+    const MeteorsRegistry::MeteorsList& MeteorsRegistry::GetByState(MeteorsState state) const
     {
-        static const SweetsList kEmpty;
+        static const MeteorsList kEmpty;
         auto it = m_byState.find(state);
         if (it == m_byState.end())
         {
@@ -33,9 +33,9 @@ namespace SweetsSpace
         return it->second;
     }
 
-    std::optional<SweetsState> SweetsRegistry::GetState(const std::shared_ptr<ActiveSweets>& sweets) const
+    std::optional<MeteorsState> MeteorsRegistry::GetState(const std::shared_ptr<ActiveMeteors>& meteors) const
     {
-        auto it = m_lookup.find(sweets);
+        auto it = m_lookup.find(meteors);
         if (it == m_lookup.end())
         {
             return std::nullopt;
@@ -43,15 +43,15 @@ namespace SweetsSpace
         return it->second;
     }
 
-    std::optional<SweetsState> SweetsRegistry::SetState(const std::shared_ptr<ActiveSweets>& sweets, SweetsState state)
+    std::optional<MeteorsState> MeteorsRegistry::SetState(const std::shared_ptr<ActiveMeteors>& meteors, MeteorsState state)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return std::nullopt;
         }
 
-        auto found = m_lookup.find(sweets);
-        const SweetsState previousState = (found != m_lookup.end()) ? found->second : SweetsState::Active;
+        auto found = m_lookup.find(meteors);
+        const MeteorsState previousState = (found != m_lookup.end()) ? found->second : MeteorsState::Active;
         if (found != m_lookup.end())
         {
             if (found->second == state)
@@ -60,35 +60,35 @@ namespace SweetsSpace
             }
 
             auto& currentList = GetByState(found->second);
-            currentList.remove(sweets);
+            currentList.remove(meteors);
         }
 
         auto& targetList = GetByState(state);
-        targetList.push_back(sweets);
-        m_lookup[sweets] = state;
+        targetList.push_back(meteors);
+        m_lookup[meteors] = state;
 
         return previousState;
     }
 
-    void SweetsRegistry::Remove(const std::shared_ptr<ActiveSweets>& sweets)
+    void MeteorsRegistry::Remove(const std::shared_ptr<ActiveMeteors>& meteors)
     {
-        if (!sweets)
+        if (!meteors)
         {
             return;
         }
 
-        auto found = m_lookup.find(sweets);
+        auto found = m_lookup.find(meteors);
         if (found == m_lookup.end())
         {
             return;
         }
 
         auto& currentList = GetByState(found->second);
-        currentList.remove(sweets);
+        currentList.remove(meteors);
         m_lookup.erase(found);
     }
 
-    int SweetsRegistry::CountAll() const
+    int MeteorsRegistry::CountAll() const
     {
         int count = 0;
         for (const auto& pair : m_byState)
@@ -98,35 +98,35 @@ namespace SweetsSpace
         return count;
     }
 
-    std::unordered_map<SweetsState, SweetsRegistry::SweetsList, SweetsRegistry::SweetsStateHash>&
-    SweetsRegistry::MutableStateMap()
+    std::unordered_map<MeteorsState, MeteorsRegistry::MeteorsList, MeteorsRegistry::MeteorsStateHash>&
+    MeteorsRegistry::MutableStateMap()
     {
         return m_byState;
     }
 
-    const std::unordered_map<SweetsState, SweetsRegistry::SweetsList, SweetsRegistry::SweetsStateHash>&
-    SweetsRegistry::StateMap() const
+    const std::unordered_map<MeteorsState, MeteorsRegistry::MeteorsList, MeteorsRegistry::MeteorsStateHash>&
+    MeteorsRegistry::StateMap() const
     {
         return m_byState;
     }
 
-    std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState>& SweetsRegistry::Lookup()
+    std::unordered_map<std::shared_ptr<ActiveMeteors>, MeteorsState>& MeteorsRegistry::Lookup()
     {
         return m_lookup;
     }
 
-    const std::unordered_map<std::shared_ptr<ActiveSweets>, SweetsState>& SweetsRegistry::Lookup() const
+    const std::unordered_map<std::shared_ptr<ActiveMeteors>, MeteorsState>& MeteorsRegistry::Lookup() const
     {
         return m_lookup;
     }
 
-    PickupQueryResult SweetsRegistry::FindNearestCarryable(
+    PickupQueryResult MeteorsRegistry::FindNearestCarryable(
         const float3& pickupCenter,
         float halfWidth,
         float halfHeight,
         float halfDepth,
         float depthThreshold,
-        const std::vector<std::shared_ptr<ActiveSweets>>& exclude,
+        const std::vector<std::shared_ptr<ActiveMeteors>>& exclude,
         float maxDistance) const
     {
         PickupQueryResult result{};
@@ -183,16 +183,16 @@ namespace SweetsSpace
             return outside > 0.0f ? outside : 0.0f;
         };
 
-        const auto isExcluded = [&](const std::shared_ptr<ActiveSweets>& sweets)
+        const auto isExcluded = [&](const std::shared_ptr<ActiveMeteors>& meteors)
         {
-            return std::find(exclude.begin(), exclude.end(), sweets) != exclude.end();
+            return std::find(exclude.begin(), exclude.end(), meteors) != exclude.end();
         };
 
-        std::shared_ptr<ActiveSweets> best;
+        std::shared_ptr<ActiveMeteors> best;
         float bestDistanceSq = std::numeric_limits<float>::max();
         float nearestMeasuredDepthDelta = std::numeric_limits<float>::quiet_NaN();
 
-        const auto scanState = [&](SweetsState state)
+        const auto scanState = [&](MeteorsState state)
         {
             auto it = m_byState.find(state);
             if (it == m_byState.end())
@@ -200,20 +200,20 @@ namespace SweetsSpace
                 return;
             }
 
-            for (const auto& sweets : it->second)
+            for (const auto& meteors : it->second)
             {
-                if (!sweets || sweets->IsPendingDestroy())
+                if (!meteors || meteors->IsPendingDestroy())
                 {
                     continue;
                 }
 
-                if (isExcluded(sweets))
+                if (isExcluded(meteors))
                 {
                     continue;
                 }
 
-                sweets->SyncColliderBounds();
-                const AABB bounds = sweets->GetAABB();
+                meteors->SyncColliderBounds();
+                const AABB bounds = meteors->GetAABB();
                 if (!intersects(bounds))
                 {
                     continue;
@@ -227,15 +227,15 @@ namespace SweetsSpace
                 if (distanceSq <= bestDistanceSq)
                 {
                     bestDistanceSq = distanceSq;
-                    best = sweets;
+                    best = meteors;
                     nearestMeasuredDepthDelta = computeDepthDelta(bounds);
                 }
             }
         };
 
-        scanState(SweetsState::Ground);
-        scanState(SweetsState::Active);
-        scanState(SweetsState::Stacked);
+        scanState(MeteorsState::Ground);
+        scanState(MeteorsState::Active);
+        scanState(MeteorsState::Stacked);
 
         if (bestDistanceSq == std::numeric_limits<float>::max())
         {
@@ -261,26 +261,26 @@ namespace SweetsSpace
 
         result.result = PickupResult::Success;
         result.failReason = PickupFailReason::None;
-        result.sweets = best;
+        result.meteors = best;
         return result;
     }
 
-    float SweetsRegistry::GetHighestStackedHeight() const
+    float MeteorsRegistry::GetHighestStackedHeight() const
     {
         float maxHeight = 0.0f;
-        const auto& stacked = GetByState(SweetsState::Stacked);
-        for (const auto& sweets : stacked)
+        const auto& stacked = GetByState(MeteorsState::Stacked);
+        for (const auto& meteors : stacked)
         {
-            if (!sweets || sweets->IsPendingDestroy())
+            if (!meteors || meteors->IsPendingDestroy())
             {
                 continue;
             }
 
-            sweets->SyncColliderBounds();
-            const AABB bounds = sweets->GetAABB();
-            float sweetsTop = bounds.max.y;
+            meteors->SyncColliderBounds();
+            const AABB bounds = meteors->GetAABB();
+            float meteorsTop = bounds.max.y;
 
-            maxHeight = std::max(maxHeight, sweetsTop);
+            maxHeight = std::max(maxHeight, meteorsTop);
         }
 
         return maxHeight;

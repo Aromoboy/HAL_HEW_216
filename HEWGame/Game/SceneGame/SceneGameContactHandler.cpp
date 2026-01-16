@@ -1,24 +1,24 @@
 #include "SceneGameContactHandler.h"
 
 #include "Systems/Physics/IPhysicsBinder.h"
-#include "SweetsManager.h"
+#include "MeteorsManager.h"
 
-void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder, SweetsSpace::SweetsManager* sweetsManager)
+void SceneGameContactHandler::Bind(Systems::IPhysicsBinder& binder, MeteorsSpace::MeteorsManager* meteorsManager)
 {
-    m_sweetsManager = sweetsManager;
+    m_meteorsManager = meteorsManager;
     binder.AddContactHandler(
         [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const Systems::ContactEventInfo& info)
         {
-            if (m_sweetsManager)
+            if (m_meteorsManager)
             {
-                m_sweetsManager->OnContactBegin(&a, &b, info);
+                m_meteorsManager->OnContactBegin(&a, &b, info);
             }
         },
         [this](Entities::PhysicalEntity& a, Entities::PhysicalEntity& b, const Systems::ContactEventInfo& info)
         {
-            if (m_sweetsManager)
+            if (m_meteorsManager)
             {
-                m_sweetsManager->OnContactEnd(&a, &b, info);
+                m_meteorsManager->OnContactEnd(&a, &b, info);
             }
         });
 }

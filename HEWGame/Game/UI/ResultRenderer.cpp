@@ -360,7 +360,7 @@ std::string ResultRenderer::BuildHudString(const ResultDisplayData& data) const
         stream << "  E=FireMissile";
     }
     stream << "  R=Retry)";
-    stream << "\nSweets " << data.sweetsCount;
+    stream << "\nMeteors " << data.meteorsCount;
     return stream.str();
 }
 

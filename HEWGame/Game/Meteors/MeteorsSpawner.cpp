@@ -1,4 +1,4 @@
-#include "Sweets/SweetsSpawner.h"
+#include "Meteors/MeteorsSpawner.h"
 
 #include <algorithm>
 #include <array>
@@ -11,9 +11,9 @@
 #include <unordered_map>
 
 #include "Diagnostics/Logger.h"
-#include "Sweets/BaseSweets.h"
-#include "Sweets/SweetsFactory.h"
-#include "Sweets/SweetsRegistry.h"
+#include "Meteors/BaseMeteors.h"
+#include "Meteors/MeteorsFactory.h"
+#include "Meteors/MeteorsRegistry.h"
 
 #if defined(_WIN32)
 #    ifndef NOMINMAX
@@ -36,12 +36,12 @@ namespace
     }
 #endif
 
-    constexpr const char* kLogPrefix = "[SweetsManager] ";
+    constexpr const char* kLogPrefix = "[MeteorsManager] ";
     constexpr float kDefaultSpawnIntervalSeconds = 2.5f;
     constexpr float kDefaultBurstIntervalSeconds = 0.5f;
     constexpr int kDefaultSimultaneousSpawnCount = 1;
     constexpr int kDefaultSimultaneousLiveTarget = kDefaultSimultaneousSpawnCount;
-    constexpr int kDefaultLiveSweetsCap = 24;
+    constexpr int kDefaultLiveMeteorsCap = 24;
     constexpr float kMinimumBurstIntervalSeconds = 0.05f;
     constexpr float kMinimumSpawnIntervalSeconds = 0.1f;
     constexpr bool kAutoIncludeMissingWeightKinds = true;
@@ -98,10 +98,10 @@ namespace
         return std::string(begin, end);
     }
 
-    std::vector<::SweetsSpace::WeightedSweetsType> ParseWeights(const std::string& raw, bool* outError)
+    std::vector<::MeteorsSpace::WeightedMeteorsType> ParseWeights(const std::string& raw, bool* outError)
     {
-        std::vector<::SweetsSpace::WeightedSweetsType> weights;
-        auto& manifest = SweetsSpace::SweetsPrototypeManifest::Instance();
+        std::vector<::MeteorsSpace::WeightedMeteorsType> weights;
+        auto& manifest = MeteorsSpace::MeteorsPrototypeManifest::Instance();
         std::string token;
         std::istringstream stream(raw);
 
@@ -235,9 +235,9 @@ namespace
     }
 }
 
-namespace SweetsSpace
+namespace MeteorsSpace
 {
-    SweetsSpawner::SweetsSpawner(SweetsFactory& factory, SweetsRegistry& registry, SpawnCallback spawnCallback)
+    MeteorsSpawner::MeteorsSpawner(MeteorsFactory& factory, MeteorsRegistry& registry, SpawnCallback spawnCallback)
         : m_factory(&factory)
         , m_registry(&registry)
         , m_spawnCallback(std::move(spawnCallback))
@@ -251,19 +251,19 @@ namespace SweetsSpace
         , m_autoSimultaneousIncrement(kAutoSimultaneousIncrement)
         , m_autoSimultaneousCap(kAutoSimultaneousCap)
         , m_random(std::random_device{}())
-        , m_liveSweetsCap(kDefaultLiveSweetsCap)
+        , m_liveMeteorsCap(kDefaultLiveMeteorsCap)
     {
         ApplyDefaultPhaseConfigs();
     }
 
-    void SweetsSpawner::RunSpawnScheduler(float deltaSeconds)
+    void MeteorsSpawner::RunSpawnScheduler(float deltaSeconds)
     {
-        const int liveSweets = CountLiveSweets();
-        const bool liveCapActive = (m_liveSweetsCap > 0);
-        const bool spawnBlockedByCap = liveCapActive && liveSweets >= m_liveSweetsCap;
+        const int liveMeteors = CountLiveMeteors();
+        const bool liveCapActive = (m_liveMeteorsCap > 0);
+        const bool spawnBlockedByCap = liveCapActive && liveMeteors >= m_liveMeteorsCap;
 
-        m_spawnPausedDueToLiveSweets = spawnBlockedByCap;
-        m_lastLiveSweetsCount = liveSweets;
+        m_spawnPausedDueToLiveMeteors = spawnBlockedByCap;
+        m_lastLiveMeteorsCount = liveMeteors;
 
         if (m_phaseConfigs.empty())
         {
@@ -326,19 +326,19 @@ namespace SweetsSpace
         }
 
         const int pendingRequests = static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
-        const int projectedLive = liveSweets + pendingRequests;
+        const int projectedLive = liveMeteors + pendingRequests;
         const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
         const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
 
         if (desiredLiveTarget <= 0)
         {
             EmitSpawnRequests(deltaSeconds);
-            m_lastLiveSweetsCount = CountLiveSweets();
+            m_lastLiveMeteorsCount = CountLiveMeteors();
             return;
         }
 
         const bool forceSeedNewBatch = (!m_batchInitialSpawnDone && m_stackedInBatch == 0);
-        const bool liveAtTarget = liveSweets >= desiredLiveTarget;
+        const bool liveAtTarget = liveMeteors >= desiredLiveTarget;
         if (liveAtTarget && !forceSeedNewBatch)
         {
             if (!m_batchInitialSpawnDone)
@@ -352,7 +352,7 @@ namespace SweetsSpace
             }
 
             EmitSpawnRequests(deltaSeconds);
-            m_lastLiveSweetsCount = CountLiveSweets();
+            m_lastLiveMeteorsCount = CountLiveMeteors();
             return;
         }
 
@@ -372,7 +372,7 @@ namespace SweetsSpace
             }
 
             EmitSpawnRequests(deltaSeconds);
-            m_lastLiveSweetsCount = CountLiveSweets();
+            m_lastLiveMeteorsCount = CountLiveMeteors();
             m_pendingTopUpAfterDrop = false;
             return;
         }
@@ -388,10 +388,10 @@ namespace SweetsSpace
         m_batchInitialSpawnDone = true;
 
         EmitSpawnRequests(deltaSeconds);
-        m_lastLiveSweetsCount = CountLiveSweets();
+        m_lastLiveMeteorsCount = CountLiveMeteors();
     }
 
-    bool SweetsSpawner::LoadPhaseSpawnConfig(const std::string& path)
+    bool MeteorsSpawner::LoadPhaseSpawnConfig(const std::string& path)
     {
         std::ifstream file(path);
         if (!file.is_open())
@@ -414,7 +414,7 @@ namespace SweetsSpace
             }
         }
 
-        std::unordered_map<SweetsType, float, SweetsTypeHash> defaultWeightLookup;
+        std::unordered_map<MeteorsType, float, MeteorsTypeHash> defaultWeightLookup;
         for (const auto& entry : BuildDefaultWeights())
         {
             defaultWeightLookup[entry.kind] = entry.weight;
@@ -674,7 +674,7 @@ namespace SweetsSpace
         return !parseError;
     }
 
-    void SweetsSpawner::ForceSpawnRefresh()
+    void MeteorsSpawner::ForceSpawnRefresh()
     {
         m_spawnTimer = 0.0f;
         m_burstTimer = 0.0f;
@@ -696,7 +696,7 @@ namespace SweetsSpace
         m_currentBurstRemaining = 0;
     }
 
-    void SweetsSpawner::SetSpawnOrigins(
+    void MeteorsSpawner::SetSpawnOrigins(
         const std::vector<float3>& primary,
         const std::vector<float3>& secondary,
         std::optional<float> spawnHeightOffset)
@@ -710,48 +710,48 @@ namespace SweetsSpace
         m_warnedMissingSpawnOrigins = false;
     }
 
-    void SweetsSpawner::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
+    void MeteorsSpawner::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
     {
         m_randomRotationMinDegrees = minDegrees;
         m_randomRotationMaxDegrees = maxDegrees;
     }
 
-    void SweetsSpawner::SetLiveSweetsCap(int cap)
+    void MeteorsSpawner::SetLiveMeteorsCap(int cap)
     {
         const int sanitizedCap = std::max(0, cap);
-        const bool changed = (sanitizedCap != m_liveSweetsCap);
-        m_liveSweetsCap = sanitizedCap;
-        const bool capActive = (m_liveSweetsCap > 0);
+        const bool changed = (sanitizedCap != m_liveMeteorsCap);
+        m_liveMeteorsCap = sanitizedCap;
+        const bool capActive = (m_liveMeteorsCap > 0);
 
         std::ostringstream oss;
         oss << kLogPrefix << "同時出現上限は " << (sanitizedCap > 0 ? "設定" : "無効")
             << " (cap=" << sanitizedCap << ", queued=" << m_spawnQueue.size()
-            << ", liveCount=" << m_lastLiveSweetsCount << ") にしたよ\n";
+            << ", liveCount=" << m_lastLiveMeteorsCount << ") にしたよ\n";
         DebugTrace(oss.str());
 
-        if (changed && m_spawnPausedDueToLiveSweets && (!capActive || m_lastLiveSweetsCount < m_liveSweetsCap))
+        if (changed && m_spawnPausedDueToLiveMeteors && (!capActive || m_lastLiveMeteorsCount < m_liveMeteorsCap))
         {
-            m_spawnPausedDueToLiveSweets = false;
+            m_spawnPausedDueToLiveMeteors = false;
         }
     }
 
-    void SweetsSpawner::NotifyPhaseChanged(int newPhase)
+    void MeteorsSpawner::NotifyPhaseChanged(int newPhase)
     {
         m_currentPhase = std::max(0, newPhase);
         OnPhaseConfigurationChanged(m_currentPhase);
     }
 
-    int SweetsSpawner::CountLiveSweets() const
+    int MeteorsSpawner::CountLiveMeteors() const
     {
         if (!m_registry)
         {
             return 0;
         }
 
-        const std::array<SweetsState, 3> liveStates = {
-            SweetsState::Active,
-            SweetsState::Ground,
-            SweetsState::Carried,
+        const std::array<MeteorsState, 3> liveStates = {
+            MeteorsState::Active,
+            MeteorsState::Ground,
+            MeteorsState::Carried,
         };
 
         int total = 0;
@@ -760,9 +760,9 @@ namespace SweetsSpace
             const auto it = m_registry->StateMap().find(state);
             if (it != m_registry->StateMap().end())
             {
-                for (const auto& sweets : it->second)
+                for (const auto& meteors : it->second)
                 {
-                    if (sweets && !sweets->IsPendingDestroy())
+                    if (meteors && !meteors->IsPendingDestroy())
                     {
                         ++total;
                     }
@@ -773,7 +773,7 @@ namespace SweetsSpace
         return total;
     }
 
-    int SweetsSpawner::ComputeDesiredLiveTarget(int remainingToStack) const
+    int MeteorsSpawner::ComputeDesiredLiveTarget(int remainingToStack) const
     {
         if (remainingToStack <= 0)
         {
@@ -783,31 +783,31 @@ namespace SweetsSpace
         return std::max(1, std::min(m_simultaneousLiveTarget, remainingToStack));
     }
 
-    int SweetsSpawner::GetBatchStackTarget() const
+    int MeteorsSpawner::GetBatchStackTarget() const
     {
         return m_batchStackTarget;
     }
 
-    int SweetsSpawner::GetStackedInBatch() const
+    int MeteorsSpawner::GetStackedInBatch() const
     {
         return m_stackedInBatch;
     }
 
-    void SweetsSpawner::OnStateChanged(const std::shared_ptr<ActiveSweets>& sweets, SweetsState previousState, SweetsState newState)
+    void MeteorsSpawner::OnStateChanged(const std::shared_ptr<ActiveMeteors>& meteors, MeteorsState previousState, MeteorsState newState)
     {
-        (void)sweets;
-        if (newState == SweetsState::Stacked && previousState != SweetsState::Stacked)
+        (void)meteors;
+        if (newState == MeteorsState::Stacked && previousState != MeteorsState::Stacked)
         {
             ++m_stackedInBatch;
 
             std::ostringstream oss;
             oss << kLogPrefix << "積み上げ進捗=" << m_stackedInBatch
-                << '/' << m_batchStackTarget << " tag='" << (sweets ? sweets->GetTag() : "<null>") << "' だよ \n";
+                << '/' << m_batchStackTarget << " tag='" << (meteors ? meteors->GetTag() : "<null>") << "' だよ \n";
             DebugTrace(oss.str());
         }
     }
 
-    void SweetsSpawner::OnSweetsRemoved(int remainingToStack, int liveAfterRemoval, const char* context)
+    void MeteorsSpawner::OnMeteorsRemoved(int remainingToStack, int liveAfterRemoval, const char* context)
     {
         const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
         if (!m_batchCoolingDown && desiredLiveTarget > 0 && liveAfterRemoval < desiredLiveTarget)
@@ -824,17 +824,17 @@ namespace SweetsSpace
         }
     }
 
-    const std::vector<PhaseSpawnConfig>& SweetsSpawner::GetPhaseConfigs() const
+    const std::vector<PhaseSpawnConfig>& MeteorsSpawner::GetPhaseConfigs() const
     {
         return m_phaseConfigs;
     }
 
-    int SweetsSpawner::GetActivePhaseConfigIndex() const
+    int MeteorsSpawner::GetActivePhaseConfigIndex() const
     {
         return m_activePhaseConfigIndex;
     }
 
-    void SweetsSpawner::EnqueueSpawns(int count)
+    void MeteorsSpawner::EnqueueSpawns(int count)
     {
         if (count <= 0)
         {
@@ -876,7 +876,7 @@ namespace SweetsSpace
         m_currentBurstRemaining = enqueued;
     }
 
-    void SweetsSpawner::EmitSpawnRequests(float deltaSeconds)
+    void MeteorsSpawner::EmitSpawnRequests(float deltaSeconds)
     {
         if (m_spawnQueue.empty() || !m_spawnCallback)
         {
@@ -908,7 +908,7 @@ namespace SweetsSpace
         }
     }
 
-    std::string SweetsSpawner::ChooseKindFromActiveConfig()
+    std::string MeteorsSpawner::ChooseKindFromActiveConfig()
     {
         if (m_phaseConfigs.empty())
         {
@@ -939,7 +939,7 @@ namespace SweetsSpace
 
         std::uniform_real_distribution<float> dist(0.0f, totalWeight);
         float roll = dist(m_random);
-        std::optional<SweetsType> chosenType;
+        std::optional<MeteorsType> chosenType;
         for (const auto& entry : config.weights)
         {
             if (roll <= entry.weight)
@@ -955,7 +955,7 @@ namespace SweetsSpace
             chosenType = config.weights.back().kind;
         }
 
-        const auto* descriptor = SweetsPrototypeManifest::Instance().Find(*chosenType);
+        const auto* descriptor = MeteorsPrototypeManifest::Instance().Find(*chosenType);
         if (!descriptor)
         {
             std::ostringstream oss;
@@ -968,7 +968,7 @@ namespace SweetsSpace
         return NormalizeKey(descriptor->key);
     }
 
-    void SweetsSpawner::OnPhaseConfigurationChanged(int newPhase)
+    void MeteorsSpawner::OnPhaseConfigurationChanged(int newPhase)
     {
         const int sanitizedPhase = std::max(0, newPhase);
         const int maxExistingIndex = std::max(0, static_cast<int>(m_phaseConfigs.size()) - 1);
@@ -1044,7 +1044,7 @@ namespace SweetsSpace
         LogActiveSpawnParameters(activeConfig, target);
     }
 
-    void SweetsSpawner::EnsurePhaseConfigAvailable(int phaseIndex)
+    void MeteorsSpawner::EnsurePhaseConfigAvailable(int phaseIndex)
     {
         if (phaseIndex < 0)
         {
@@ -1078,7 +1078,7 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsSpawner::LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const
+    void MeteorsSpawner::LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Spawn] phase=" << phaseIndex;
@@ -1119,7 +1119,7 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    PhaseSpawnConfig SweetsSpawner::GenerateAutoPhaseConfig(const PhaseSpawnConfig& previous, int previousIndex) const
+    PhaseSpawnConfig MeteorsSpawner::GenerateAutoPhaseConfig(const PhaseSpawnConfig& previous, int previousIndex) const
     {
         PhaseSpawnConfig generated = previous;
         generated.autoGenerated = true;
@@ -1148,7 +1148,7 @@ namespace SweetsSpace
         return generated;
     }
 
-    std::vector<WeightedSweetsType> SweetsSpawner::NormalizeWeights(const std::vector<WeightedSweetsType>& weights) const
+    std::vector<WeightedMeteorsType> MeteorsSpawner::NormalizeWeights(const std::vector<WeightedMeteorsType>& weights) const
     {
         float total = 0.0f;
         for (const auto& entry : weights)
@@ -1161,7 +1161,7 @@ namespace SweetsSpace
             return weights;
         }
 
-        std::vector<WeightedSweetsType> normalized;
+        std::vector<WeightedMeteorsType> normalized;
         normalized.reserve(weights.size());
         for (const auto& entry : weights)
         {
@@ -1170,7 +1170,7 @@ namespace SweetsSpace
         return normalized;
     }
 
-    void SweetsSpawner::LogAutoGenerationPolicy(const char* context) const
+    void MeteorsSpawner::LogAutoGenerationPolicy(const char* context) const
     {
         std::ostringstream oss;
         oss << kLogPrefix << "[Spawn] auto-generation policy (" << context << ") intervalFactor=" << m_autoSpawnIntervalFactor
@@ -1180,10 +1180,10 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsSpawner::ApplyDefaultPhaseConfigs()
+    void MeteorsSpawner::ApplyDefaultPhaseConfigs()
     {
         m_phaseConfigs.clear();
-        std::vector<WeightedSweetsType> baseWeights = BuildDefaultWeights();
+        std::vector<WeightedMeteorsType> baseWeights = BuildDefaultWeights();
         if (baseWeights.empty())
         {
             DebugTrace(std::string(kLogPrefix) + "デフォルトのスポーン設定を作れないよ スイーツが何も登録されてない \n");
@@ -1222,15 +1222,15 @@ namespace SweetsSpace
         LogAutoGenerationPolicy("defaults");
     }
 
-    std::vector<WeightedSweetsType> SweetsSpawner::BuildDefaultWeights() const
+    std::vector<WeightedMeteorsType> MeteorsSpawner::BuildDefaultWeights() const
     {
-        std::vector<WeightedSweetsType> weights;
+        std::vector<WeightedMeteorsType> weights;
         if (!m_factory)
         {
             return weights;
         }
         weights.reserve(m_factory->GetSpawners().size());
-        auto& manifest = SweetsPrototypeManifest::Instance();
+        auto& manifest = MeteorsPrototypeManifest::Instance();
         for (const auto& entry : m_factory->GetSpawners())
         {
             float spawnWeight = 1.0f;
@@ -1268,7 +1268,7 @@ namespace SweetsSpace
         return weights;
     }
 
-    SweetsSpawner::SpawnOriginSelection SweetsSpawner::NextSpawnOrigin()
+    MeteorsSpawner::SpawnOriginSelection MeteorsSpawner::NextSpawnOrigin()
     {
         const bool hasPrimary = !m_spawnOriginsPrimary.empty();
         const bool hasSecondary = !m_spawnOriginsSecondary.empty();
@@ -1320,7 +1320,7 @@ namespace SweetsSpace
         return selectFromLane(m_spawnOriginsSecondary, m_spawnOriginCursorSecondary, "secondary");
     }
 
-    Transform SweetsSpawner::BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection)
+    Transform MeteorsSpawner::BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection)
     {
         Transform transform{};
         transform.position = originSelection.origin;
@@ -1380,11 +1380,11 @@ namespace SweetsSpace
         return transform;
     }
 
-    void SweetsSpawner::EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
+    void MeteorsSpawner::EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
         const std::unordered_set<std::string>& registeredKindsNormalized,
-        const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const
+        const std::unordered_map<MeteorsType, float, MeteorsTypeHash>& defaultWeightLookup) const
     {
-        auto& manifest = SweetsPrototypeManifest::Instance();
+        auto& manifest = MeteorsPrototypeManifest::Instance();
 
         std::unordered_set<std::string> presentNormalized;
         for (const auto& weight : config.weights)
@@ -1398,7 +1398,7 @@ namespace SweetsSpace
             presentNormalized.insert(NormalizeKey(descriptor->key));
         }
 
-        std::vector<SweetsType> missingTypes;
+        std::vector<MeteorsType> missingTypes;
         missingTypes.reserve(registeredKindsNormalized.size());
         for (const auto& normalizedKind : registeredKindsNormalized)
         {
@@ -1419,7 +1419,7 @@ namespace SweetsSpace
             return;
         }
 
-        std::sort(missingTypes.begin(), missingTypes.end(), [](SweetsType lhs, SweetsType rhs)
+        std::sort(missingTypes.begin(), missingTypes.end(), [](MeteorsType lhs, MeteorsType rhs)
         {
             return static_cast<int>(lhs) < static_cast<int>(rhs);
         });
