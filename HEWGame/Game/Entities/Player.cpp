@@ -62,6 +62,11 @@ namespace Entities
         m_movementSystem.SetSpeedMultiplier(multiplier);
     }
 
+    void Player::SetYawOffsetRadians(float yawOffsetRadians)
+    {
+        m_movementSystem.SetYawOffsetRadians(yawOffsetRadians);
+    }
+
     float Player::GetMoveSpeed() const
     {
         return m_movementSystem.GetMoveSpeed();

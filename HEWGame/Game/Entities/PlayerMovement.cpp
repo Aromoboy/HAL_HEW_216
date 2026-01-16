@@ -135,6 +135,21 @@ namespace
     {
         return float3{ std::cos(yaw), std::sin(yaw), 0.0f };
     }
+
+    struct YawAxisInfo
+    {
+        float yaw = 0.0f;
+        bool useYAxis = false;
+    };
+
+    YawAxisInfo ResolveYawAxis(const float3& rotation)
+    {
+        constexpr float kYawAxisEpsilon = 1.0e-4f;
+        const float absYawZ = std::fabs(rotation.z);
+        const float absYawY = std::fabs(rotation.y);
+        const bool useYAxis = absYawY > absYawZ + kYawAxisEpsilon;
+        return YawAxisInfo{ useYAxis ? rotation.y : rotation.z, useYAxis };
+    }
 }
 
 namespace Entities
@@ -152,6 +167,9 @@ namespace Entities
         if (!m_hasBaseRotation)
         {
             m_baseRotation = player.GetTransform().rotation;
+            const auto resolvedYaw = ResolveYawAxis(m_baseRotation);
+            m_baseYaw = resolvedYaw.yaw;
+            m_useYawAxisY = resolvedYaw.useYAxis;
             m_hasBaseRotation = true;
             m_currentHeading = 0.0f;
             m_hasCurrentHeading = true;
@@ -168,7 +186,9 @@ namespace Entities
 
         if (!m_hasCurrentHeading)
         {
-            m_currentHeading = player.GetTransform().rotation.z - m_baseRotation.z;
+            const float currentYaw = (m_useYawAxisY ? player.GetTransform().rotation.y : player.GetTransform().rotation.z)
+                - m_yawOffsetRadians;
+            m_currentHeading = currentYaw - m_baseYaw;
             m_currentHeading = WrapRadians(m_currentHeading);
             m_hasCurrentHeading = true;
         }
@@ -211,11 +231,21 @@ namespace Entities
 
             float3 updatedRotation = player.GetTransform().rotation;
             updatedRotation.x = m_baseRotation.x + m_currentRoll;
+            const float yawWithOffset = m_baseYaw + m_currentHeading + m_yawOffsetRadians;
+            if (m_useYawAxisY)
+            {
+                updatedRotation.y = yawWithOffset;
+                updatedRotation.z = m_baseRotation.z;
+            }
+            else
+            {
+                updatedRotation.z = yawWithOffset;
+                updatedRotation.y = m_baseRotation.y;
+            }
 
             if (hasInput)
             {
                 float3 targetRotation = updatedRotation;
-                targetRotation.z = m_baseRotation.z + m_currentHeading;
 
                 if (hasBody)
                 {
@@ -374,6 +404,26 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "速度倍率を " << m_speedMultiplier << "x に設定しました \n";
+        PlayerDebugTrace(oss.str());
+    }
+
+    void PlayerMovement::SetYawOffsetRadians(float yawOffsetRadians)
+    {
+        if (!std::isfinite(yawOffsetRadians))
+        {
+            PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のヨーオフセット指定を無視しました \n");
+            return;
+        }
+
+        if (std::fabs(m_yawOffsetRadians - yawOffsetRadians) < std::numeric_limits<float>::epsilon())
+        {
+            return;
+        }
+
+        m_yawOffsetRadians = yawOffsetRadians;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "ヨーオフセットを " << m_yawOffsetRadians << " rad に設定しました \n";
         PlayerDebugTrace(oss.str());
     }
 
