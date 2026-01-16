@@ -85,4 +85,5 @@ private:
         std::optional<float> m_maxYWrap;
         float m_scrollY;
         bool m_hasScrollY;
+        std::optional<float> m_lastTargetYRaw;
 };

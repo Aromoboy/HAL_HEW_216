@@ -48,6 +48,7 @@ CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
         , m_maxYWrap(std::nullopt)
         , m_scrollY(0.0f)
         , m_hasScrollY(false)
+        , m_lastTargetYRaw(std::nullopt)
 {
 }
 
@@ -293,6 +294,37 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
         const auto& targetTransform = targetEntity->GetTransform();
         const float3 targetRotation = m_inheritRotation ? targetTransform.rotation : float3{ 0.0f, 0.0f, 0.0f };
         float3 targetPosition = targetTransform.position;
+        const float rawTargetY = targetPosition.y;
+
+        if (m_minYWrap && m_maxYWrap && std::isfinite(*m_minYWrap) && std::isfinite(*m_maxYWrap)
+            && std::isfinite(rawTargetY))
+        {
+                const float minY = std::min(*m_minYWrap, *m_maxYWrap);
+                const float maxY = std::max(*m_minYWrap, *m_maxYWrap);
+                const float wrapRange = maxY - minY;
+                if (wrapRange > 0.0f && m_lastTargetYRaw && std::isfinite(*m_lastTargetYRaw))
+                {
+                        const float delta = rawTargetY - *m_lastTargetYRaw;
+                        if (std::fabs(delta) > wrapRange * 0.5f)
+                        {
+                                const float wrapDelta = delta > 0.0f ? wrapRange : -wrapRange;
+                                if (m_hasScrollY)
+                                {
+                                        m_scrollY += wrapDelta;
+                                }
+                                if (m_camera)
+                                {
+                                        float3 cameraPosition = m_camera->GetPosition();
+                                        if (std::isfinite(cameraPosition.y))
+                                        {
+                                                cameraPosition.y += wrapDelta;
+                                                m_camera->SetPosition(cameraPosition);
+                                        }
+                                }
+                        }
+                }
+        }
+        m_lastTargetYRaw = rawTargetY;
 
         if (m_followPositionY)
         {
@@ -375,6 +407,22 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 {
                         newZ = currentPosValue.z +
                                (desiredPosValue.z - currentPosValue.z) * alphaXZ;
+                }
+
+                if (m_minYWrap && m_maxYWrap && std::isfinite(*m_minYWrap) && std::isfinite(*m_maxYWrap))
+                {
+                        const float minY = std::min(*m_minYWrap, *m_maxYWrap);
+                        const float maxY = std::max(*m_minYWrap, *m_maxYWrap);
+                        const float wrapRange = maxY - minY;
+                        if (wrapRange > 0.0f && std::isfinite(newY))
+                        {
+                                float offset = std::fmod(newY - minY, wrapRange);
+                                if (offset < 0.0f)
+                                {
+                                        offset += wrapRange;
+                                }
+                                newY = minY + offset;
+                        }
                 }
 
                 m_camera->SetPosition(float3{ newX, newY, newZ });
