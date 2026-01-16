@@ -113,11 +113,19 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     const b2BodyType playerBodyType = kPlayerIsKinematic ? b2_kinematicBody : b2_dynamicBody;
     const std::string resolvedColliderKey = NormalizeColliderKey(ResolvePlayerColliderKey(playerColliderKey));
     Physics::ColliderBuilder colliderBuilder(m_log, m_logPrefix);
-    std::map<std::string, Collision::ColliderDefinition> playerColliderDefinitions;
+    std::map<std::string, Collision::ColliderDefinition> rawColliderDefinitions;
     const bool hasPlayerColliderDefinitions = Collision::LoadColliderDefinitions(
         GameplayConfig::kConfigPath,
         GameplayConfig::kSectionPlayerColliders,
-        playerColliderDefinitions);
+        rawColliderDefinitions);
+    std::map<std::string, Collision::ColliderDefinition> playerColliderDefinitions;
+    if (hasPlayerColliderDefinitions)
+    {
+        for (const auto& entry : rawColliderDefinitions)
+        {
+            playerColliderDefinitions[NormalizeColliderKey(entry.first)] = entry.second;
+        }
+    }
     Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
     colliderRequest.key = resolvedColliderKey;
     colliderRequest.transform = trans;
@@ -129,13 +137,22 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
     colliderRequest.scaleOffset = true;
     colliderRequest.tuning = &config.playerColliderTuning;
     colliderRequest.allowFallback = false;
-    if (hasPlayerColliderDefinitions)
+    if (!playerColliderDefinitions.empty())
     {
         colliderRequest.configDefinitions = &playerColliderDefinitions;
     }
     if (resolvedColliderKey == "player")
     {
         colliderRequest.forceConfig = true;
+        colliderRequest.allowFallback = true;
+    }
+
+    {
+        const bool configHasPlayer = playerColliderDefinitions.find("player") != playerColliderDefinitions.end();
+        std::ostringstream oss;
+        oss << m_logPrefix << "[PlayerCollider] Config definitions=" << playerColliderDefinitions.size()
+            << " key='player' present=" << std::boolalpha << configHasPlayer << "\n";
+        LogMessage(m_log, oss.str());
     }
 
     {
