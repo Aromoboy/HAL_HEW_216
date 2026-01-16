@@ -163,6 +163,16 @@ namespace Stage
         return m_backgroundSafeScrollY;
     }
 
+    std::optional<float> StageData::GetBackgroundSafeWindowY() const noexcept
+    {
+        return m_backgroundSafeWindowY;
+    }
+
+    std::optional<float> StageData::GetBackgroundSoftnessY() const noexcept
+    {
+        return m_backgroundSoftnessY;
+    }
+
     void StageData::ApplyDefaults()
     {
         const StageConfigNormalized defaults = BuildDefaultStageConfig();
@@ -187,6 +197,8 @@ namespace Stage
         m_playerVerticalSpeedWorld = normalized.playerVerticalSpeedWorld;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
         m_backgroundSafeScrollY = normalized.backgroundSafeScrollY;
+        m_backgroundSafeWindowY = normalized.backgroundSafeWindowY;
+        m_backgroundSoftnessY = normalized.backgroundSoftnessY;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
     }
@@ -207,6 +219,8 @@ namespace Stage
             << " playerVerticalSpeedWorld=" << m_playerVerticalSpeedWorld
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " backgroundSafeScrollY=" << (m_backgroundSafeScrollY ? *m_backgroundSafeScrollY : 0.0f)
+            << " backgroundSafeWindowY=" << (m_backgroundSafeWindowY ? *m_backgroundSafeWindowY : 0.0f)
+            << " backgroundSoftnessY=" << (m_backgroundSoftnessY ? *m_backgroundSoftnessY : 0.0f)
             << " detail=" << detail << "\n";
 
         for (std::size_t i = 0; i < m_platforms.size(); ++i)

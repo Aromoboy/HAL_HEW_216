@@ -163,6 +163,10 @@ namespace Stage
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
         result.backgroundSafeScrollY = 0.0f;
         result.backgroundSafeScrollYSet = false;
+        result.backgroundSafeWindowY = 0.0f;
+        result.backgroundSafeWindowYSet = false;
+        result.backgroundSoftnessY = 0.0f;
+        result.backgroundSoftnessYSet = false;
 
         for (const auto& entry : lines)
         {
@@ -588,6 +592,36 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse background.safeScrollY on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "background.safeWindow")
+            {
+                try
+                {
+                    result.backgroundSafeWindowY = std::stof(rawValue);
+                    result.backgroundSafeWindowYSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse background.safeWindow on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "background.softness")
+            {
+                try
+                {
+                    result.backgroundSoftnessY = std::stof(rawValue);
+                    result.backgroundSoftnessYSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse background.softness on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }
