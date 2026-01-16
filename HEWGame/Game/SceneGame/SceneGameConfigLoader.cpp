@@ -2273,6 +2273,21 @@ namespace SceneGameConfig
                     DebugTrace(oss.str());
                 }
             }
+            else if (key == GameplayConfig::kMissileKeyRotationOffset)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.rotationOffset = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse rotationOffset line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
             else
             {
                 std::ostringstream oss;
@@ -2289,7 +2304,8 @@ namespace SceneGameConfig
             << "' section='" << GameplayConfig::kSectionMissileSettings
             << "' loaded=" << std::boolalpha << settings.loadedFromFile
             << " parsedFields=" << parsedFields
-            << " scale=(" << settings.scale.x << ',' << settings.scale.y << ',' << settings.scale.z << ")\n";
+            << " scale=(" << settings.scale.x << ',' << settings.scale.y << ',' << settings.scale.z << ")"
+            << " rotationOffset=" << settings.rotationOffset << "\n";
         DebugTrace(oss.str());
 
         return settings;

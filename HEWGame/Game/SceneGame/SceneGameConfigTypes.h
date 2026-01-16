@@ -29,6 +29,7 @@ namespace SceneGameConfig
     struct MissileSettings
     {
         float3 scale{ 1.0f, 1.0f, 1.0f };
+        float rotationOffset = 0.0f;
         bool loadedFromFile = false;
     };
 
