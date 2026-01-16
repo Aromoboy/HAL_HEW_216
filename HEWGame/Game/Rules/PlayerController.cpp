@@ -190,11 +190,15 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     const float minX = camPos.x - halfWidth;
     const float maxX = camPos.x + halfWidth;
+    const float minY = camPos.y - halfHeight;
+    const float maxY = camPos.y + halfHeight;
 
     const bool changed =
         !m_cachedPlayerBoundsValid ||
         HasMeaningfulDifference(m_cachedPlayerMinX, minX) ||
-        HasMeaningfulDifference(m_cachedPlayerMaxX, maxX);
+        HasMeaningfulDifference(m_cachedPlayerMaxX, maxX) ||
+        HasMeaningfulDifference(m_cachedPlayerMinY, minY) ||
+        HasMeaningfulDifference(m_cachedPlayerMaxY, maxY);
 
     if (kEnablePlayerBoundsLogging)
     {
@@ -213,7 +217,9 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
                 << " halfWidth=" << halfWidth
                 << " halfHeight=" << halfHeight
                 << " => minX=" << minX
-                << " maxX=" << maxX << "\n";
+                << " maxX=" << maxX
+                << " minY=" << minY
+                << " maxY=" << maxY << "\n";
             if (m_log)
             {
                 m_log(oss.str());
@@ -222,7 +228,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
         }
     }
 
-    input.player->SetScreenBounds(minX, maxX);
+    input.player->SetScreenBounds(minX, maxX, minY, maxY);
 
     if (input.sweetsManager)
     {
@@ -232,5 +238,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     m_cachedPlayerMinX = minX;
     m_cachedPlayerMaxX = maxX;
+    m_cachedPlayerMinY = minY;
+    m_cachedPlayerMaxY = maxY;
     m_cachedPlayerBoundsValid = true;
 }

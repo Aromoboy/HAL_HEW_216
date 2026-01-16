@@ -45,9 +45,9 @@ namespace Entities
         return m_isKinematic;
     }
 
-    void PlayerPhysicsBinder::SetScreenBounds(float minX, float maxX)
+    void PlayerPhysicsBinder::SetScreenBounds(float minX, float maxX, float minY, float maxY)
     {
-        if (!std::isfinite(minX) || !std::isfinite(maxX))
+        if (!std::isfinite(minX) || !std::isfinite(maxX) || !std::isfinite(minY) || !std::isfinite(maxY))
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限のスクリーン範囲を無視しました \n");
             return;
@@ -55,14 +55,20 @@ namespace Entities
 
         const float sanitizedMinX = std::min(minX, maxX);
         const float sanitizedMaxX = std::max(minX, maxX);
+        const float sanitizedMinY = std::min(minY, maxY);
+        const float sanitizedMaxY = std::max(minY, maxY);
         const bool hadBounds = m_hasScreenBounds;
         const bool boundsChanged = !hadBounds
             || std::fabs(m_minScreenX - sanitizedMinX) > std::numeric_limits<float>::epsilon()
-            || std::fabs(m_maxScreenX - sanitizedMaxX) > std::numeric_limits<float>::epsilon();
+            || std::fabs(m_maxScreenX - sanitizedMaxX) > std::numeric_limits<float>::epsilon()
+            || std::fabs(m_minScreenY - sanitizedMinY) > std::numeric_limits<float>::epsilon()
+            || std::fabs(m_maxScreenY - sanitizedMaxY) > std::numeric_limits<float>::epsilon();
 
         m_hasScreenBounds = true;
         m_minScreenX = sanitizedMinX;
         m_maxScreenX = sanitizedMaxX;
+        m_minScreenY = sanitizedMinY;
+        m_maxScreenY = sanitizedMaxY;
 
         if (!boundsChanged)
         {
@@ -71,7 +77,9 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "スクリーン範囲を minX=" << m_minScreenX
-            << " maxX=" << m_maxScreenX;
+            << " maxX=" << m_maxScreenX
+            << " minY=" << m_minScreenY
+            << " maxY=" << m_maxScreenY;
         oss << "\n";
         PlayerDebugTrace(oss.str());
     }
@@ -91,6 +99,7 @@ namespace Entities
         const b2BodyId bodyId = player.GetBox2DBodyId();
         const float3 position = Player::ToWorldPosition(b2Body_GetPosition(bodyId));
         const float originalX = position.x;
+        const float originalY = position.y;
 
         float wrappedX = position.x;
         if (position.x < m_minScreenX)
@@ -102,20 +111,33 @@ namespace Entities
             wrappedX = m_minScreenX;
         }
 
-        if (wrappedX == position.x)
+        float wrappedY = position.y;
+        if (position.y < m_minScreenY)
+        {
+            wrappedY = m_maxScreenY;
+        }
+        else if (position.y > m_maxScreenY)
+        {
+            wrappedY = m_minScreenY;
+        }
+
+        if (wrappedX == position.x && wrappedY == position.y)
         {
             return;
         }
 
         b2Body_SetTransform(
             bodyId,
-            Player::ToBox2DPosition(float3{ wrappedX, position.y, 0.0f }),
+            Player::ToBox2DPosition(float3{ wrappedX, wrappedY, 0.0f }),
             b2Body_GetRotation(bodyId));
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "スクリーンラップを適用しました prevX=" << originalX
             << " newX=" << wrappedX
-            << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']';
+            << " prevY=" << originalY
+            << " newY=" << wrappedY
+            << " boundsX=[" << m_minScreenX << ',' << m_maxScreenX << ']'
+            << " boundsY=[" << m_minScreenY << ',' << m_maxScreenY << ']';
         oss << "\n";
         PlayerDebugTrace(oss.str());
     }

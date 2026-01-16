@@ -69,6 +69,8 @@ private:
     const char* m_logPrefix = "";
     float m_cachedPlayerMinX = 0.0f;
     float m_cachedPlayerMaxX = 0.0f;
+    float m_cachedPlayerMinY = 0.0f;
+    float m_cachedPlayerMaxY = 0.0f;
     bool m_cachedPlayerBoundsValid = false;
     float m_playerBoundsLogCooldownSeconds = 0.0f;
 };
