@@ -1,6 +1,7 @@
 #ifndef ___ASSIMP_MODE_LORDER___
 #define ___ASSIMP_MODE_LORDER___
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -49,6 +50,7 @@ class AssimpModelLorder : public IModelLoader
 {
 public:
 AssimpModelLorder();
+explicit AssimpModelLorder(std::chrono::milliseconds importTimeout);
 
 ~AssimpModelLorder() override = default;
 
@@ -84,6 +86,7 @@ private:
 	void MakeVertexWeight(const void* a_ptr, int a_meshIndex, std::vector<NodeDX>& a_nodes, AssimpModelLorder::Vertices& a_vertices, std::vector<BoneDX>& a_bones);
 	void MakeVertexWeightFromNode(const void* scene, const void* ptr, AssimpModelLorder::Vertices& a_vertices, std::vector<NodeDX> a_nodes, std::vector<BoneDX>& a_bones);
 
+    std::chrono::milliseconds m_importTimeout{ std::chrono::milliseconds(2000) };
 
 
 };

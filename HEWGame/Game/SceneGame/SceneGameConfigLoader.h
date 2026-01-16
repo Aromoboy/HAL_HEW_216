@@ -40,6 +40,7 @@ namespace SceneGameConfig
     PlayerSpawnTransform LoadPlayerTransformConfig();
     PhysicsTuningSettings LoadPhysicsTuningSettings();
     bool LoadModelTextureLoadingSetting();
+    ModelImportSettings LoadModelImportSettings();
     RenderPostProcessSettings LoadRenderPostProcessSettings();
     RenderFadeSettings LoadRenderFadeSettings();
     LightingSettings LoadLightingSettings();

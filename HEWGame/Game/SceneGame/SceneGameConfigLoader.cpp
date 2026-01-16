@@ -409,6 +409,60 @@ namespace SceneGameConfig
         return enabled;
     }
 
+    ModelImportSettings LoadModelImportSettings()
+    {
+        ModelImportSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderSettingsSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ModelImport] Missing config; defaulting importTimeoutMs=" << settings.importTimeoutMs
+                << " section='" << kRenderSettingsSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        bool parsedTimeout = false;
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            { return static_cast<char>(std::tolower(c)); });
+
+            if (key == "model.importtimeoutms" || key == "modelimporttimeoutms")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.importTimeoutMs = std::max(*parsed, 100);
+                    parsedTimeout = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[ModelImport] Parsed model.importTimeoutMs=" << settings.importTimeoutMs
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[ModelImport] Invalid model.importTimeoutMs value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << settings.importTimeoutMs << "\n";
+                    DebugTrace(oss.str());
+                }
+            }
+        }
+
+        if (!parsedTimeout)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[ModelImport] model.importTimeoutMs not found; using default="
+                << settings.importTimeoutMs << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
     RenderPostProcessSettings LoadRenderPostProcessSettings()
     {
         RenderPostProcessSettings settings{};
