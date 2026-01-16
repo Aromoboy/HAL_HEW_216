@@ -40,6 +40,7 @@ namespace Entities
         void SetMoveSpeeds(float horizontal, float vertical);
         void SetBaseMoveSpeed(float horizontal, float vertical);
         void SetSpeedMultiplier(float multiplier);
+        void SetYawOffsetRadians(float yawOffsetRadians);
         float GetMoveSpeed() const;
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;

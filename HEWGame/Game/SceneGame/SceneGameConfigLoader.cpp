@@ -2194,6 +2194,21 @@ namespace SceneGameConfig
                     ++parsedFields;
                 }
             }
+            else if (key == GameplayConfig::kPlayerTransformKeyYawOffsetDegrees)
+            {
+                if (auto parsedFloat = TryParseFloatToken(value))
+                {
+                    result.playerYawOffsetRadians = *parsedFloat * kDegToRad;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[PlayerTransform] Failed to parse player yaw offset line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
             else if (key == GameplayConfig::kPlayerTransformKeyMissileYawOffsetDegrees)
             {
                 if (auto parsedFloat = TryParseFloatToken(value))
@@ -2228,6 +2243,7 @@ namespace SceneGameConfig
             << " rotationRad=(" << result.transform.rotation.x << ',' << result.transform.rotation.y << ',' << result.transform.rotation.z << ')'
             << " scale=(" << result.transform.scale.x << ',' << result.transform.scale.y << ',' << result.transform.scale.z << ')'
             << " missileSpawnOffset=(" << result.missileSpawnOffset.x << ',' << result.missileSpawnOffset.y << ',' << result.missileSpawnOffset.z << ')'
+            << " playerYawOffsetRad=" << result.playerYawOffsetRadians
             << " missileYawOffsetRad=" << result.missileYawOffsetRadians
             << " rotationSource=" << (result.rotationFromDegrees ? "degrees" : "radians_or_default") << "\n";
         DebugTrace(oss.str());

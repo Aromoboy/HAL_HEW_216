@@ -24,6 +24,7 @@ namespace SceneGameConfig
         float3 missileSpawnOffset{ 1.5f, 0.0f, 0.0f };
         bool loadedFromFile = false;
         bool rotationFromDegrees = false;
+        float playerYawOffsetRadians = 0.0f;
         float missileYawOffsetRadians = 0.0f;
     };
 
