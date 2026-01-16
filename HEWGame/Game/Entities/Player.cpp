@@ -103,6 +103,16 @@ namespace Entities
         return m_renderAlpha;
     }
 
+    void Player::SetInvulnerable(bool invulnerable)
+    {
+        m_invulnerable = invulnerable;
+    }
+
+    bool Player::IsInvulnerable() const
+    {
+        return m_invulnerable;
+    }
+
     void Player::RegisterWrapDeltaY(float deltaY)
     {
         if (!std::isfinite(deltaY))

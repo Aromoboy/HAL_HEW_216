@@ -1098,9 +1098,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             m_playerBlinkAlpha = 1.0f;
         }
 
+
         if (player)
         {
             player->SetRenderAlpha(m_playerBlinkAlpha);
+            player->SetInvulnerable(m_playerInvulnerable);
         }
 
         m_playerController.UpdatePlayerBounds({
@@ -2591,6 +2593,7 @@ void SceneGame::ResetPlaySession()
         m_playerBlinkTimer = 0.0f;
         m_playerBlinkAlpha = 1.0f;
         player->SetRenderAlpha(m_playerBlinkAlpha);
+        player->SetInvulnerable(m_playerInvulnerable);
     }
 
     if (player && m_cameraRig)
