@@ -73,6 +73,7 @@ namespace Systems
         std::shared_ptr<Box2DPhysicsSystem> GetBox2DSystem() const;
         Core::IUpdatable* GetContactDispatchNode() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
+        bool IsRegisteredEntityPointer(const Entities::PhysicalEntity* ptr) const;
         const PhysicsTuningParameters& GetTuningParameters() const;
 
         void SetGravity(float gravity);

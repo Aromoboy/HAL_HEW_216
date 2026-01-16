@@ -273,6 +273,16 @@ namespace Systems
         return m_bodies;
     }
 
+    bool PhysicsMachine::IsRegisteredEntityPointer(const Entities::PhysicalEntity* ptr) const
+    {
+        if (!ptr)
+        {
+            return false;
+        }
+
+        return std::find(m_bodies.begin(), m_bodies.end(), ptr) != m_bodies.end();
+    }
+
     const PhysicsTuningParameters& PhysicsMachine::GetTuningParameters() const
     {
         return m_tuning;
