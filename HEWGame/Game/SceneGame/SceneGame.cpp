@@ -944,6 +944,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.hud.sweetsCount = GetSweetsCount();
         uiData.hud.timeUp = isTimeUp;
         uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
+        uiData.hud.showFireMissileHint = m_fireMissileHintEnabled;
         if (player)
         {
             uiData.hud.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
@@ -969,6 +970,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.result.sweetsCount = GetSweetsCount();
         uiData.result.timeUp = isTimeUp;
         uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
+        uiData.result.showFireMissileHint = m_fireMissileHintEnabled;
         if (player)
         {
             uiData.result.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
@@ -1058,6 +1060,7 @@ void SceneGame::FireMissile()
     m_drawSystem->RegisterRenderable(*missile);
 
     m_activeMissiles.push_back(MissileInstance{ std::move(missile), kMissileLifetimeSeconds });
+    m_fireMissileHintEnabled = true;
 }
 
 void SceneGame::UpdateMissiles(float deltaSeconds)
