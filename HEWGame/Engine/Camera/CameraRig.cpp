@@ -22,6 +22,12 @@ namespace
                 }
                 return value;
         }
+
+        float SmoothStep(float value)
+        {
+                const float t = Clamp01(value);
+                return t * t * (3.0f - 2.0f * t);
+        }
 }
 
 CameraRig::CameraRig(std::shared_ptr<CameraSpace::BaseCamera> camera)
@@ -274,13 +280,31 @@ float CameraRig::ClampScrollY(float scrollY) const
                         return minY + offset;
                 }
         }
+        float springRange = 0.0f;
+        if (m_minYClamp && m_maxYClamp && std::isfinite(*m_minYClamp) && std::isfinite(*m_maxYClamp))
+        {
+                const float range = std::fabs(*m_maxYClamp - *m_minYClamp);
+                if (std::isfinite(range) && range > 0.0f)
+                {
+                        springRange = range * 0.1f;
+                }
+        }
+        if (!std::isfinite(springRange) || springRange <= 0.0f)
+        {
+                springRange = 1.0f;
+        }
+
         if (m_minYClamp && std::isfinite(*m_minYClamp) && clamped < *m_minYClamp)
         {
-                clamped = *m_minYClamp;
+                const float overshoot = *m_minYClamp - clamped;
+                const float eased = SmoothStep(overshoot / springRange);
+                clamped = *m_minYClamp - springRange * eased;
         }
         if (m_maxYClamp && std::isfinite(*m_maxYClamp) && clamped > *m_maxYClamp)
         {
-                clamped = *m_maxYClamp;
+                const float overshoot = clamped - *m_maxYClamp;
+                const float eased = SmoothStep(overshoot / springRange);
+                clamped = *m_maxYClamp + springRange * eased;
         }
         return clamped;
 }
