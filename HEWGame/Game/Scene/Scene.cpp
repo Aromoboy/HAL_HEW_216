@@ -7,8 +7,11 @@
 #include "Debug.h"
 #include "Render/DirectX.h"
 
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <memory>
+#include <sstream>
 #include <utility>
 
 namespace SceneSpace
@@ -81,7 +84,25 @@ Scene::Scene()
                 }
 
                 const float deltaTime = timer.DeltaTime();
-                Core::UpdateContext ctx(deltaTime, timer);
+                float clampedDeltaTime = deltaTime;
+                if (!m_initialFrameProcessed)
+                {
+                        if (m_initialFrameClampMaxDt > 0.0f
+                            && std::isfinite(deltaTime)
+                            && deltaTime > m_initialFrameClampMaxDt)
+                        {
+                                clampedDeltaTime = m_initialFrameClampMaxDt;
+                                std::ostringstream oss;
+                                oss << "[Scene] First frame dt clamped: dt=" << deltaTime
+                                    << " -> " << clampedDeltaTime
+                                    << " (maxStepDt=" << m_initialFrameClampMaxDt << ")\n";
+                                DebugLog::DebugMessage(oss.str());
+                        }
+
+                        m_initialFrameProcessed = true;
+                }
+
+                Core::UpdateContext ctx(clampedDeltaTime, timer);
 
                 m_scheduler.Tick(ctx);
         }
@@ -107,6 +128,11 @@ void Scene::RootDraw()
         void Scene::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
         {
                 Draw(activeCamera);
+        }
+
+        void Scene::ConfigureInitialFrameClamp(float maxStepDt)
+        {
+                m_initialFrameClampMaxDt = std::max(0.0f, maxStepDt);
         }
 
         void Scene::RegisterSceneUpdateNode(Core::UpdatePhase phase, int priority)
