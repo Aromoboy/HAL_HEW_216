@@ -666,8 +666,7 @@ void SceneGame::Draw()
                 postSettings.enableFxaa ? 1 : 0,
                 postTime,
                 postSettings.grainAmount,
-                postSettings.grainEnable ? 1 : 0,
-                postSettings.grainAnimate ? 1 : 0);
+                postSettings.grainEnable ? 1 : 0);
 
             postprocess->Bind(context);
 
@@ -954,13 +953,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     const auto& platform = m_stageData.GetPlatform(0);
     const float stageFloorY = platform.center.y;
     float deltaTime = ctx.timer.DeltaTime();
-    for (auto& obj : m_stageObjects)
-    {
-        if (obj.spinEnabled)
-        {
-            obj.currentRotation += obj.spinSpeed * deltaTime;
-        }
-    }
 
     for (auto& obj : m_stageObjects)
     {
@@ -1039,14 +1031,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     case StageState::ShowingResult:
         break;
-    }
-
-    for (auto& obj : m_stageObjects)
-    {
-        if (obj.spinEnabled)
-        {
-            obj.currentRotation += obj.spinSpeed * deltaTime;
-        }
     }
 
     if (m_stageState == StageState::ShowingResult)
@@ -1497,20 +1481,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                     DebugTrace(std::string(kLogPrefix) + "描画中: " + obj.modelPath + "\n");
 #endif
 
-                    Transform renderTransform = obj.transform;
-                    
-                    // 回転アニメーションを適用
-                    if (obj.spinEnabled)
-                    {
-                        if (obj.spinAxis.y > 0.5f)  // Y軸回転
-                            renderTransform.rotation.y += obj.currentRotation;
-                        else if (obj.spinAxis.x > 0.5f)  // X軸回転
-                            renderTransform.rotation.x += obj.currentRotation;
-                        else if (obj.spinAxis.z > 0.5f)  // Z軸回転
-                            renderTransform.rotation.z += obj.currentRotation;
-                    }
-
-                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
+                    m_renderer->Draw(*obj.model, obj.transform, activeCamera.get(), nullptr);
                 }
                 else
                 {

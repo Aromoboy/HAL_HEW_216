@@ -165,7 +165,7 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             values.push_back(token);
         }
 
-        if (values.size() < 15)
+        if (values.size() < 10)
         {
             continue;
         }
@@ -200,25 +200,13 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             continue;
         }
 
-        std::string spinValue = values[10];
-        std::transform(spinValue.begin(), spinValue.end(), spinValue.begin(), ::tolower);
-
-        obj.spinEnabled = (spinValue == "true" || spinValue == "1" || spinValue == "yes" || spinValue == "on");
-        if (!TryParseFloat(values[11], obj.spinAxis.x, logPrefix, "spinAxis.x")
-            || !TryParseFloat(values[12], obj.spinAxis.y, logPrefix, "spinAxis.y")
-            || !TryParseFloat(values[13], obj.spinAxis.z, logPrefix, "spinAxis.z")
-            || !TryParseFloat(values[14], obj.spinSpeed, logPrefix, "spinSpeed"))
+        if (values.size() > 10)
         {
-            continue;
+            obj.materialKey = Trim(values[10]);
         }
-        obj.currentRotation = 0.0f;
-        if (values.size() > 15)
+        if (values.size() > 11)
         {
-            obj.materialKey = Trim(values[15]);
-        }
-        if (values.size() > 16)
-        {
-            obj.colliderPresetId = NormalizeKey(values[16]);
+            obj.colliderPresetId = NormalizeKey(values[11]);
         }
         if (!obj.materialKey.empty())
         {
