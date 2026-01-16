@@ -269,6 +269,12 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         result.player->SetBaseMoveSpeed(config.playerBaseHorizontalSpeed, config.playerBaseVerticalSpeed);
         result.player->SetSpeedMultiplier(config.playerSpeedMultiplier);
         result.player->SetYawOffsetRadians(config.playerSpawnTransform.playerYawOffsetRadians);
+        result.player->ConfigureMovement(
+            config.playerMovementSettings.accel,
+            config.playerMovementSettings.brake,
+            config.playerMovementSettings.turnRate,
+            config.playerMovementSettings.rollResponse,
+            config.playerMovementSettings.inputSmoothing);
         if (config.physicsBinder && boxColliderComponent && playerShapeConfig && colliderReady)
         {
             config.physicsBinder->RegisterPhysicsBody(*result.player);

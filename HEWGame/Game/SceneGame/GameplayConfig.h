@@ -5,9 +5,15 @@ namespace GameplayConfig
     inline constexpr const char* kConfigPath = "Assets/Config/gameplay.cfg";
     inline constexpr const char* kSectionPhysicsTuning = "physics.tuning";
     inline constexpr const char* kSectionPlayerTransform = "player.transform";
+    inline constexpr const char* kSectionPlayerMovement = "player.movement";
     inline constexpr const char* kSectionCameraRig = "camera.rig";
     inline constexpr const char* kPlayerTransformKeyYawOffsetDegrees = "yawOffsetDegrees";
     inline constexpr const char* kPlayerTransformKeyMissileYawOffsetDegrees = "missileYawOffsetDegrees";
+    inline constexpr const char* kPlayerMovementKeyInputSmoothing = "inputSmoothing";
+    inline constexpr const char* kPlayerMovementKeyAccel = "accel";
+    inline constexpr const char* kPlayerMovementKeyBrake = "brake";
+    inline constexpr const char* kPlayerMovementKeyTurnRate = "turnRate";
+    inline constexpr const char* kPlayerMovementKeyRollResponse = "rollResponse";
     inline constexpr const char* kCameraRigKeyMode = "mode";
     inline constexpr const char* kCameraRigKeyMinY = "minY";
     inline constexpr const char* kCameraRigKeyMaxY = "maxY";

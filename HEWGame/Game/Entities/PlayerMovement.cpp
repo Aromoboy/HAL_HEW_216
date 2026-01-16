@@ -86,6 +86,11 @@ namespace
         return current + (delta > 0.0f ? maxDelta : -maxDelta);
     }
 
+    float Lerp(float start, float end, float t)
+    {
+        return start + (end - start) * t;
+    }
+
     float3 ClampSpeed(const float3& velocity, float maxSpeed)
     {
         if (!(maxSpeed > 0.0f) || !std::isfinite(maxSpeed))
@@ -175,8 +180,30 @@ namespace Entities
             m_hasCurrentHeading = true;
         }
 
-        const float horizontal = input.GetAxis(Core::ActionId::MoveX);
-        const float vertical = input.GetAxis(Core::ActionId::RotateYaw);
+        const float rawHorizontal = input.GetAxis(Core::ActionId::MoveX);
+        const float rawVertical = input.GetAxis(Core::ActionId::RotateYaw);
+        if (!m_hasSmoothedInput)
+        {
+            m_smoothedInputX = rawHorizontal;
+            m_smoothedInputY = rawVertical;
+            m_hasSmoothedInput = true;
+        }
+
+        float horizontal = rawHorizontal;
+        float vertical = rawVertical;
+        if (ctx.dt > 0.0f && m_inputSmoothing > 0.0f)
+        {
+            const float smoothingFactor = 1.0f - std::exp(-ctx.dt * m_inputSmoothing);
+            m_smoothedInputX = Lerp(m_smoothedInputX, rawHorizontal, smoothingFactor);
+            m_smoothedInputY = Lerp(m_smoothedInputY, rawVertical, smoothingFactor);
+            horizontal = m_smoothedInputX;
+            vertical = m_smoothedInputY;
+        }
+        else
+        {
+            m_smoothedInputX = rawHorizontal;
+            m_smoothedInputY = rawVertical;
+        }
 
         if (horizontal > 0.0f)      m_facingSign = 1.0f;
         else if (horizontal < 0.0f) m_facingSign = -1.0f;
@@ -337,6 +364,46 @@ namespace Entities
             }
         }
         m_wasMovingLastFrame = isMovingNow;
+    }
+
+    void PlayerMovement::ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing)
+    {
+        auto applySetting = [&](float value, float& target, const char* label) -> bool
+        {
+            if (!std::isfinite(value))
+            {
+                PlayerDebugTrace(std::string(kPlayerLogPrefix) + "非有限の移動設定を無視しました: " + label + "\n");
+                return false;
+            }
+
+            const float sanitized = std::max(0.0f, value);
+            if (std::fabs(target - sanitized) < std::numeric_limits<float>::epsilon())
+            {
+                return false;
+            }
+
+            target = sanitized;
+            return true;
+        };
+
+        bool updated = false;
+        updated = applySetting(accel, m_accel, "accel") || updated;
+        updated = applySetting(brake, m_brake, "brake") || updated;
+        updated = applySetting(turnRate, m_turnRate, "turnRate") || updated;
+        updated = applySetting(rollResponse, m_rollResponse, "rollResponse") || updated;
+        updated = applySetting(inputSmoothing, m_inputSmoothing, "inputSmoothing") || updated;
+
+        if (updated)
+        {
+            std::ostringstream oss;
+            oss << kPlayerLogPrefix << "移動設定を更新しました "
+                << " accel=" << m_accel
+                << " brake=" << m_brake
+                << " turnRate=" << m_turnRate
+                << " rollResponse=" << m_rollResponse
+                << " smoothing=" << m_inputSmoothing << "\n";
+            PlayerDebugTrace(oss.str());
+        }
     }
 
     void PlayerMovement::SetMoveSpeed(float speed)
