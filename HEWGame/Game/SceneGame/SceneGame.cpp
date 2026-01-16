@@ -1059,10 +1059,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         }
         else
         {
-            constexpr float kBlinkSpeed = 10.0f;
+            constexpr float kBlinkIntervalSeconds = 0.1f;
             m_playerBlinkTimer += deltaTime;
-            const float pulse = std::sin(m_playerBlinkTimer * kBlinkSpeed) * 0.5f + 0.5f;
-            m_playerBlinkAlpha = Lerp(0.35f, 1.0f, pulse);
+            while (m_playerBlinkTimer >= kBlinkIntervalSeconds)
+            {
+                m_playerBlinkTimer -= kBlinkIntervalSeconds;
+                m_playerBlinkAlpha = (m_playerBlinkAlpha <= 0.35f) ? 1.0f : 0.35f;
+            }
         }
     }
     else
@@ -1073,6 +1076,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     if (player)
     {
         player->SetRenderAlpha(m_playerBlinkAlpha);
+        player->SetInvulnerable(m_playerInvulnerable);
     }
 
     m_playerController.UpdatePlayerBounds({
@@ -2562,6 +2566,7 @@ void SceneGame::ResetPlaySession()
         m_playerBlinkTimer = 0.0f;
         m_playerBlinkAlpha = 1.0f;
         player->SetRenderAlpha(m_playerBlinkAlpha);
+        player->SetInvulnerable(m_playerInvulnerable);
     }
 
     if (player && m_cameraRig)

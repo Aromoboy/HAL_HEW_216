@@ -55,6 +55,8 @@ namespace Entities
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
         void SetRenderAlpha(float alpha);
         float GetRenderAlpha() const;
+        void SetInvulnerable(bool invulnerable);
+        bool IsInvulnerable() const;
         std::optional<WrapEvent> ConsumeWrapEvent();
         Transform GetRenderTransform() const override;
 
@@ -71,5 +73,6 @@ namespace Entities
         Core::Input* m_input = nullptr;
         std::optional<WrapEvent> m_pendingWrapEvent = std::nullopt;
         float m_renderAlpha = 1.0f;
+        bool m_invulnerable = false;
     };
 }

@@ -301,7 +301,7 @@ namespace Entities
 
         const float clampedAlpha = std::clamp(player.GetRenderAlpha(), 0.0f, 1.0f);
         std::vector<std::pair<std::shared_ptr<MaterialDX>, DirectX::XMFLOAT4>> restoreMaterials;
-        if (clampedAlpha < 1.0f)
+        if (player.IsInvulnerable())
         {
             const unsigned int materialCount = player.m_model->GetMeshCount();
             restoreMaterials.reserve(materialCount);
@@ -315,7 +315,7 @@ namespace Entities
 
                 DirectX::XMFLOAT4 diffuse = material->GetDiffuse();
                 restoreMaterials.emplace_back(material, diffuse);
-                diffuse.w *= clampedAlpha;
+                diffuse.w = clampedAlpha;
                 material->SetDiffuse(diffuse);
             }
         }
