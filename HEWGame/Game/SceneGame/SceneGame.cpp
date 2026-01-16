@@ -1338,20 +1338,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                     DebugTrace(std::string(kLogPrefix) + "描画中: " + obj.modelPath + "\n");
 #endif
 
-                    Transform renderTransform = obj.transform;
-                    
-                    // 回転アニメーションを適用
-                    if (obj.spinEnabled)
-                    {
-                        if (obj.spinAxis.y > 0.5f)  // Y軸回転
-                            renderTransform.rotation.y += obj.currentRotation;
-                        else if (obj.spinAxis.x > 0.5f)  // X軸回転
-                            renderTransform.rotation.x += obj.currentRotation;
-                        else if (obj.spinAxis.z > 0.5f)  // Z軸回転
-                            renderTransform.rotation.z += obj.currentRotation;
-                    }
-
-                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get());
+                    m_renderer->Draw(*obj.model, obj.transform, activeCamera.get());
                 }
                 else
                 {
