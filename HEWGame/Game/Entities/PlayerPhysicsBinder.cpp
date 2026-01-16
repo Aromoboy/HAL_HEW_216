@@ -94,9 +94,20 @@ namespace Entities
         m_wrapMargin = std::max(0.0f, margin);
     }
 
+    void PlayerPhysicsBinder::SetWrapEnabled(bool wrapX, bool wrapY)
+    {
+        m_wrapXEnabled = wrapX;
+        m_wrapYEnabled = wrapY;
+    }
+
     void PlayerPhysicsBinder::ClampScreenBounds(Player& player)
     {
         if (!m_hasScreenBounds)
+        {
+            return;
+        }
+
+        if (!m_wrapXEnabled && !m_wrapYEnabled)
         {
             return;
         }
@@ -112,7 +123,7 @@ namespace Entities
         bool wrapped = false;
         float wrapDeltaY = 0.0f;
 
-        if (spanX > kScreenWrapEpsilon)
+        if (m_wrapXEnabled && spanX > kScreenWrapEpsilon)
         {
             const float minX = m_minScreenX - m_wrapMargin;
             const float maxX = m_maxScreenX + m_wrapMargin;
@@ -128,7 +139,7 @@ namespace Entities
             }
         }
 
-        if (spanY > kScreenWrapEpsilon)
+        if (m_wrapYEnabled && spanY > kScreenWrapEpsilon)
         {
             const float minY = m_minScreenY - m_wrapMargin;
             const float maxY = m_maxScreenY + m_wrapMargin;

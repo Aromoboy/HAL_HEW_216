@@ -54,6 +54,7 @@ namespace Entities
         float GetVerticalMoveSpeed() const;
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
         void SetWrapMargin(float margin);
+        void SetWrapEnabled(bool wrapX, bool wrapY);
         void SetRenderAlpha(float alpha);
         float GetRenderAlpha() const;
         void SetInvulnerable(bool invulnerable);
