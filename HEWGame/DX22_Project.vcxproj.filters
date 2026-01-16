@@ -135,9 +135,6 @@
     <ClCompile Include="Engine\Core\FullscreenManager.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core\Gamepad.cpp">
-      <Filter>Engine\Core</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\Core\IndexBuffer.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
@@ -490,9 +487,6 @@
       <Filter>Engine\Core\Entities</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Core\FullscreenManager.h">
-      <Filter>Engine\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Core\Gamepad.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Core\IUpdatable.h">
