@@ -10,12 +10,6 @@
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
 
-#include "ConfigSectionReader.h"
-#include "GameplayConfig.h"
-
-#include <sstream>
-#include <string>
-#include <vector>
 
 namespace SceneSpace
 {
@@ -45,8 +39,6 @@ namespace SceneSpace
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
                 m_rig->Attach(m_target);
-
-                LoadPowerUpFile();
 
                 m_powerUpRenderer->Initialize(PowerUpHudLayoutConfig{ 512u,
                         240u,
@@ -165,61 +157,6 @@ namespace SceneSpace
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
-        }
-
-        bool ScenePowerUp::LoadPowerUpFile()
-        {
-                std::vector<Config::SectionLine> lines;
-                if (!Config::ReadSectionLines(GameplayConfig::kConfigPath, GameplayConfig::kSectionPowerUps, lines))
-                {
-                        return false;
-                }
-
-                int loaded = 0;
-                for (const auto& entry : lines)
-                {
-                        if (entry.key != "entry")
-                        {
-                                continue;
-                        }
-
-                        std::vector<std::string> tokens;
-                        std::stringstream ss(entry.value);
-                        std::string token;
-                        while (std::getline(ss, token, ','))
-                        {
-                                token = Config::Trim(token);
-                                if (!token.empty())
-                                {
-                                        tokens.push_back(token);
-                                }
-                        }
-
-                        if (tokens.size() < 7)
-                        {
-                                continue;
-                        }
-
-                        try
-                        {
-                                const std::string& name = tokens[0];
-                                const std::string& info = tokens[1];
-                                const std::string& textureKey = tokens[2];
-                                const int maxLevel = std::stoi(tokens[3]);
-                                const int defaultCost = std::stoi(tokens[4]);
-                                const int costAdditional = std::stoi(tokens[5]);
-                                const float costMagnification = std::stof(tokens[6]);
-
-                                m_powerUpManager->AddNode(name, info, textureKey, 0, maxLevel, defaultCost, costAdditional, costMagnification);
-                                ++loaded;
-                        }
-                        catch (const std::exception&)
-                        {
-                                continue;
-                        }
-                }
-
-                return loaded > 0;
         }
 
         void ScenePowerUp::ShutdownPowerUpSystems()

@@ -32,7 +32,6 @@ namespace SceneSpace
                 void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;
 
         private:
-                bool LoadPowerUpFile();
                 bool GetValue(std::string& a_outValue, std::string status, const char*checkKey);
                 void ShutdownPowerUpSystems();
 
