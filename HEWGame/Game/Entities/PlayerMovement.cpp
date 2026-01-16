@@ -86,6 +86,39 @@ namespace
         const float scale = maxSpeed / speed;
         return Scale(velocity, scale);
     }
+
+    constexpr float kTwoPi = 6.283185307179586f;
+
+    float WrapRadians(float angle)
+    {
+        if (!std::isfinite(angle))
+        {
+            return 0.0f;
+        }
+
+        return std::remainder(angle, kTwoPi);
+    }
+
+    float TurnTowards(float current, float target, float maxDelta)
+    {
+        if (!(maxDelta > 0.0f) || !std::isfinite(maxDelta))
+        {
+            return current;
+        }
+
+        const float delta = std::remainder(target - current, kTwoPi);
+        if (std::fabs(delta) <= maxDelta)
+        {
+            return target;
+        }
+
+        return current + (delta > 0.0f ? maxDelta : -maxDelta);
+    }
+
+    float3 ForwardFromYaw(float yaw)
+    {
+        return float3{ std::cos(yaw), std::sin(yaw), 0.0f };
+    }
 }
 
 namespace Entities
@@ -104,6 +137,8 @@ namespace Entities
         {
             m_baseRotation = player.GetTransform().rotation;
             m_hasBaseRotation = true;
+            m_currentHeading = 0.0f;
+            m_hasCurrentHeading = true;
         }
 
         const float horizontal = input.GetAxis(Core::ActionId::MoveX);
@@ -115,40 +150,55 @@ namespace Entities
         const float effectiveHorizontalSpeed = m_baseHorizontalMoveSpeed * m_speedMultiplier;
         const float effectiveVerticalSpeed = m_baseVerticalMoveSpeed * m_speedMultiplier;
 
+        if (!m_hasCurrentHeading)
+        {
+            m_currentHeading = player.GetTransform().rotation.z - m_baseRotation.z;
+            m_currentHeading = WrapRadians(m_currentHeading);
+            m_hasCurrentHeading = true;
+        }
+
+        const float inputSq = (horizontal * horizontal) + (vertical * vertical);
+        const bool hasInput = inputSq > std::numeric_limits<float>::epsilon();
+
+        const float desiredHeading = hasInput ? std::atan2(vertical, horizontal) : m_currentHeading;
+
         bool isMovingNow = false;
 
         if (ctx.dt > 0.0f && (effectiveHorizontalSpeed > 0.0f || effectiveVerticalSpeed > 0.0f))
         {
-            const bool hasInput = (horizontal != 0.0f || vertical != 0.0f);
             if (hasInput)
             {
                 isMovingNow = true;
             }
 
-            const float3 desired{
+            if (hasInput)
+            {
+                m_currentHeading = TurnTowards(m_currentHeading, desiredHeading, m_turnRate * ctx.dt);
+                m_currentHeading = WrapRadians(m_currentHeading);
+            }
+
+            const float3 desiredInput{
                 horizontal * effectiveHorizontalSpeed,
                 vertical * effectiveVerticalSpeed,
                 0.0f
             };
+            const float desiredSpeed = Length(desiredInput);
+            const float3 forward = ForwardFromYaw(m_currentHeading);
+            const float3 desired = Scale(forward, desiredSpeed);
 
             if (hasInput)
             {
-                const float movementSq = desired.x * desired.x + desired.y * desired.y;
-                if (movementSq > std::numeric_limits<float>::epsilon())
-                {
-                    const float movementAngle = std::atan2(desired.y, desired.x);
-                    float3 targetRotation = m_baseRotation;
-                    targetRotation.z += movementAngle;
+                float3 targetRotation = m_baseRotation;
+                targetRotation.z += m_currentHeading;
 
-                    if (hasBody)
-                    {
-                        const float3 currentPosition = player.GetTransform().position;
-                        player.SetTransformViaPhysics(currentPosition, targetRotation);
-                    }
-                    else
-                    {
-                        player.SetRotation(targetRotation);
-                    }
+                if (hasBody)
+                {
+                    const float3 currentPosition = player.GetTransform().position;
+                    player.SetTransformViaPhysics(currentPosition, targetRotation);
+                }
+                else
+                {
+                    player.SetRotation(targetRotation);
                 }
             }
 
