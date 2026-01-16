@@ -2674,6 +2674,21 @@ namespace SceneGameConfig
                     DebugTrace(oss.str());
                 }
             }
+            else if (key == GameplayConfig::kMissileKeySpeed)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.missileSpeed = *parsed;
+                    ++parsedFields;
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[MissileSettings] Failed to parse missileSpeed line=" << lineNumber
+                        << " value='" << value << "'\n";
+                    DebugTrace(oss.str());
+                }
+            }
             else if (key == GameplayConfig::kMissileKeyCollisionLayer)
             {
                 if (auto parsed = ParseCollisionLayerToken(value))
@@ -2734,6 +2749,7 @@ namespace SceneGameConfig
             << " linearDamping=" << settings.linearDamping
             << " angularDamping=" << settings.angularDamping
             << " gravityScale=" << settings.gravityScale
+            << " missileSpeed=" << settings.missileSpeed
             << " collisionLayer=";
         if (settings.collisionLayer)
         {

@@ -1383,7 +1383,6 @@ void SceneGame::FireMissile()
     constexpr float kSpawnOffset = 1.5f;
     const float yaw = ResolvePlayerYaw(playerTransform) + m_playerSpawnTransform.missileYawOffsetRadians;
     const float3 forward = ForwardFromYaw(yaw);
-    constexpr float kMissileSpeed = 40.0f;
     constexpr float kMissileLifetimeSeconds = 6.0f;
 
     const float missileYaw = std::atan2(forward.y, forward.x) + m_missileSettings.rotationOffset;
@@ -1460,7 +1459,7 @@ void SceneGame::FireMissile()
         return;
     }
     missile->SetGravityScale(m_missileSettings.gravityScale);
-    missile->SetLinearVelocity(float3{ forward.x * kMissileSpeed, forward.y * kMissileSpeed, 0.0f });
+    missile->SetLinearVelocity(float3{ forward.x * m_missileSettings.missileSpeed, forward.y * m_missileSettings.missileSpeed, 0.0f });
 
     std::vector<b2Filter> originalFilters;
     bool playerFilterIgnored = false;
