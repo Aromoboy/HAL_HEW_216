@@ -919,9 +919,12 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     });
     if (player)
     {
-        if (const auto wrapDelta = player->ConsumeWrapDeltaY())
+        if (const auto wrapEvent = player->ConsumeWrapEvent())
         {
-            ApplyPlayerWrapDeltaY(*wrapDelta);
+            if (wrapEvent->wrappedY)
+            {
+                ApplyPlayerWrapDeltaY(wrapEvent->deltaY);
+            }
         }
     }
 

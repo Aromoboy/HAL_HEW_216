@@ -22,6 +22,12 @@ namespace Entities
     class Player : public PhysicalEntity
     {
     public:
+        struct WrapEvent
+        {
+            float deltaY = 0.0f;
+            bool wrappedY = false;
+        };
+
         Player(const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
             Systems::PhysicsMachine* physicsMachine = nullptr,
@@ -46,7 +52,7 @@ namespace Entities
         float GetHorizontalMoveSpeed() const;
         float GetVerticalMoveSpeed() const;
         void SetScreenBounds(float minX, float maxX, float minY, float maxY);
-        std::optional<float> ConsumeWrapDeltaY();
+        std::optional<WrapEvent> ConsumeWrapEvent();
         Transform GetRenderTransform() const override;
 
     private:
@@ -60,6 +66,6 @@ namespace Entities
         PlayerMovement m_movementSystem;
         PlayerPhysicsBinder m_physicsBinder;
         Core::Input* m_input = nullptr;
-        std::optional<float> m_pendingWrapDeltaY = std::nullopt;
+        std::optional<WrapEvent> m_pendingWrapEvent = std::nullopt;
     };
 }

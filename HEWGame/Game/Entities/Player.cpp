@@ -95,21 +95,22 @@ namespace Entities
             return;
         }
 
-        if (m_pendingWrapDeltaY)
+        if (m_pendingWrapEvent)
         {
-            *m_pendingWrapDeltaY += deltaY;
+            m_pendingWrapEvent->deltaY += deltaY;
+            m_pendingWrapEvent->wrappedY = true;
         }
         else
         {
-            m_pendingWrapDeltaY = deltaY;
+            m_pendingWrapEvent = WrapEvent{ deltaY, true };
         }
     }
 
-    std::optional<float> Player::ConsumeWrapDeltaY()
+    std::optional<Player::WrapEvent> Player::ConsumeWrapEvent()
     {
-        std::optional<float> delta = m_pendingWrapDeltaY;
-        m_pendingWrapDeltaY = std::nullopt;
-        return delta;
+        std::optional<WrapEvent> event = m_pendingWrapEvent;
+        m_pendingWrapEvent = std::nullopt;
+        return event;
     }
 
 }
