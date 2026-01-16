@@ -13,6 +13,11 @@
 
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
+	if (!texture)
+	{
+		return;
+	}
+
 	// 各マトリクスと描画用のパラメーター
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
@@ -46,6 +51,11 @@ void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX
 
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix)
 {
+	if (!texture)
+	{
+		return;
+	}
+
 	// 各マトリクスと描画用のパラメーター
 	DirectX::XMFLOAT4X4 wvp[3];
 	DirectX::XMFLOAT4 param[3];
