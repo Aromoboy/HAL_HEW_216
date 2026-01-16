@@ -345,7 +345,11 @@ namespace
         {
             collider.shapeDef = registryDefinition->shapeDef;
         }
-        const float3 scaledOffset = request.scaleOffset ? ScaleVector(tuning.offset, request.transform.scale) : tuning.offset;
+        const bool applyScale = resolvedKey != "player";
+        const float3 shapeScale = applyScale ? request.transform.scale : float3{ 1.0f, 1.0f, 1.0f };
+        const float3 scaledOffset = (request.scaleOffset && applyScale)
+            ? ScaleVector(tuning.offset, shapeScale)
+            : tuning.offset;
         collider.colliderOffset = b2Vec2{ scaledOffset.x, scaledOffset.y };
 
         FootprintAccumulator footprint{};
@@ -353,8 +357,8 @@ namespace
         {
             const float combinedScale = std::max(0.0f, def.scale) * parentScale;
             const b2Vec2 scaledOffset{
-                parentOffset.x + def.offset.x * request.transform.scale.x,
-                parentOffset.y + def.offset.y * request.transform.scale.y
+                parentOffset.x + def.offset.x * shapeScale.x,
+                parentOffset.y + def.offset.y * shapeScale.y
             };
 
             const float marginX = def.margin2 ? def.margin2->x : (def.margin3 ? def.margin3->x : def.margin);
@@ -364,7 +368,7 @@ namespace
             {
             case Collision::ColliderKind::Circle:
             {
-                float radius = def.radius * combinedScale * std::max(request.transform.scale.x, request.transform.scale.y);
+                float radius = def.radius * combinedScale * std::max(shapeScale.x, shapeScale.y);
                 float marginRadius = def.margin;
                 if (def.margin2)
                 {
@@ -384,7 +388,7 @@ namespace
                 collider.shapes.push_back(shape);
                 footprint.IncludeCircle(center, radius);
 
-                float thickness = (def.thickness + (def.margin3 ? def.margin3->z * 2.0f : 0.0f)) * request.transform.scale.z;
+                float thickness = (def.thickness + (def.margin3 ? def.margin3->z * 2.0f : 0.0f)) * shapeScale.z;
                 thickness = std::max(thickness, kMinGeneratedThickness);
                 footprint.ExpandHalfZ(thickness + tuning.padding.z * 2.0f);
                 break;
@@ -395,8 +399,8 @@ namespace
                 vertices.reserve(def.points.size());
                 for (auto p : def.points)
                 {
-                    float vx = p.x * combinedScale * request.transform.scale.x;
-                    float vy = p.y * combinedScale * request.transform.scale.y;
+                    float vx = p.x * combinedScale * shapeScale.x;
+                    float vy = p.y * combinedScale * shapeScale.y;
                     if (marginX != 0.0f)
                     {
                         vx += (vx >= 0.0f) ? marginX : -marginX;
@@ -412,7 +416,7 @@ namespace
                 collider.AddPolygon(vertices);
                 footprint.IncludeVertices(vertices);
 
-                float thickness = (def.thickness + (def.margin3 ? def.margin3->z * 2.0f : 0.0f)) * request.transform.scale.z;
+                float thickness = (def.thickness + (def.margin3 ? def.margin3->z * 2.0f : 0.0f)) * shapeScale.z;
                 thickness = std::max(thickness, kMinGeneratedThickness);
                 footprint.ExpandHalfZ(thickness + tuning.padding.z * 2.0f);
                 break;
