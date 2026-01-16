@@ -471,6 +471,8 @@ namespace MeteorsSpace
             bool hasLiveTarget = false;
             bool hasInitialPerLane = false;
             bool hasPhaseStartBonus = false;
+            bool hasMeteorSeekSpeed = false;
+            bool hasMeteorSeekSpread = false;
 
             while (std::getline(stream, token, ','))
             {
@@ -562,6 +564,32 @@ namespace MeteorsSpace
                         hasPhaseStartBonus = true;
                     }
                     catch (const std::exception&)
+                    {
+                        parseError = true;
+                    }
+                }
+                else if (normalizedKey == "meteor_seek_speed")
+                {
+                    float speed = 0.0f;
+                    if (TryParseFloat(value, &speed))
+                    {
+                        config.meteorSeekSpeed = std::max(0.0f, speed);
+                        hasMeteorSeekSpeed = true;
+                    }
+                    else
+                    {
+                        parseError = true;
+                    }
+                }
+                else if (normalizedKey == "meteor_seek_spread_deg" || normalizedKey == "meteor_seek_spread_degrees")
+                {
+                    float spread = 0.0f;
+                    if (TryParseFloat(value, &spread))
+                    {
+                        config.meteorSeekSpreadDegrees = std::max(0.0f, spread);
+                        hasMeteorSeekSpread = true;
+                    }
+                    else
                     {
                         parseError = true;
                     }
@@ -692,7 +720,7 @@ namespace MeteorsSpace
             }
 
             if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
-                && !hasInitialPerLane && !hasPhaseStartBonus)
+                && !hasInitialPerLane && !hasPhaseStartBonus && !hasMeteorSeekSpeed && !hasMeteorSeekSpread)
             {
                 continue;
             }
@@ -1182,6 +1210,8 @@ namespace MeteorsSpace
             << " liveTarget=" << config.simultaneousLiveTarget
             << " initialPerLane=" << config.initialSpawnPerLane
             << " phaseStartBonusPerLane=" << config.phaseStartBonusPerLane
+            << " seekSpeed=" << std::fixed << std::setprecision(2) << config.meteorSeekSpeed
+            << " seekSpreadDeg=" << std::fixed << std::setprecision(2) << config.meteorSeekSpreadDegrees
             << " weights=";
 
         if (config.weights.empty())

@@ -1,5 +1,6 @@
 #include "MeteorsManager.h"
 
+#include <cmath>
 #include <sstream>
 
 #include <box2d/box2d.h>
@@ -75,6 +76,7 @@ namespace MeteorsSpace
         , m_lifecycle(m_registry, m_contacts, m_spawner, m_drawSystem, m_physicsMachine, m_scheduler,
             &m_warnedMissingDrawSystem, &m_warnedMissingPhysicsMachine, &m_warnedMissingScheduler)
         , m_renderer(m_registry)
+        , m_random(std::random_device{}())
     {
     }
 
@@ -241,6 +243,35 @@ namespace MeteorsSpace
                 synced.position.x = position.x;
                 synced.position.y = position.y;
                 meteors->SetTransform(synced);
+
+                const auto& configs = m_spawner.GetPhaseConfigs();
+                const int activeIndex = m_spawner.GetActivePhaseConfigIndex();
+                if (activeIndex >= 0 && activeIndex < static_cast<int>(configs.size()) && m_hasCachedPlayerPosition)
+                {
+                    const PhaseSpawnConfig& config = configs[activeIndex];
+                    if (config.meteorSeekSpeed > 0.0f)
+                    {
+                        const float dx = m_cachedPlayerPosition.x - position.x;
+                        const float dy = m_cachedPlayerPosition.y - position.y;
+                        const float distanceSq = dx * dx + dy * dy;
+                        if (distanceSq > 1e-6f)
+                        {
+                            float angle = std::atan2(dy, dx);
+                            if (config.meteorSeekSpreadDegrees > 0.0f)
+                            {
+                                std::uniform_real_distribution<float> spreadDist(
+                                    -config.meteorSeekSpreadDegrees,
+                                    config.meteorSeekSpreadDegrees);
+                                constexpr float kDegToRad = 3.1415926535f / 180.0f;
+                                angle += spreadDist(m_random) * kDegToRad;
+                            }
+                            const b2Vec2 direction{ std::cos(angle), std::sin(angle) };
+                            const b2Vec2 velocity{ direction.x * config.meteorSeekSpeed,
+                                direction.y * config.meteorSeekSpeed };
+                            b2Body_SetLinearVelocity(bodyId, velocity);
+                        }
+                    }
+                }
             }
         }
 
@@ -288,6 +319,12 @@ namespace MeteorsSpace
     void MeteorsManager::SetGeneratedColliderMinThickness(float thickness)
     {
         m_factory.SetGeneratedColliderMinThickness(thickness);
+    }
+
+    void MeteorsManager::SetPlayerWorldPosition(const float3& position)
+    {
+        m_cachedPlayerPosition = position;
+        m_hasCachedPlayerPosition = true;
     }
 
     void MeteorsManager::OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b,
