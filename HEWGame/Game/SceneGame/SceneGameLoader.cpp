@@ -5,6 +5,7 @@
 #include "AppGame.h"
 #include "ColliderRegistry.h"
 #include "Systems/Physics/ColliderBuilder.h"
+#include "SceneGameConfigLoader.h"
 #include "SweetsManager.h"
 #include "SweetsPrototypeManifest.h"
 #include "Systems/Draw/DrawSystem.h"
@@ -14,6 +15,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -54,7 +56,11 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         TextureCache& textureCache = App::Game::Instance().GetTextureCache();
         if (!cache.IsConfiguredFor(config.device, textureCache))
         {
-            cache.SetLoader(std::make_unique<AssimpModelLorder>(), config.device, textureCache);
+            const SceneGameConfig::ModelImportSettings modelImportSettings = SceneGameConfig::LoadModelImportSettings();
+            cache.SetLoader(
+                std::make_unique<AssimpModelLorder>(std::chrono::milliseconds(modelImportSettings.importTimeoutMs)),
+                config.device,
+                textureCache);
         }
     }
 

@@ -32,6 +32,7 @@
 #include "ShaderCache.h"
 #include <cassert>
 #include <algorithm>
+#include <chrono>
 #include <initializer_list>
 #include <cmath>
 #include <fstream>
@@ -343,7 +344,11 @@ bool SceneGame::Load(Core::Input& input)
         Render::ModelCache& modelCache = Render::ModelCache::Instance();
         if (!modelCache.IsConfiguredFor(device, textureCache))
         {
-            modelCache.SetLoader(std::make_unique<AssimpModelLorder>(), device, textureCache);
+            const SceneGameConfig::ModelImportSettings modelImportSettings = SceneGameConfig::LoadModelImportSettings();
+            modelCache.SetLoader(
+                std::make_unique<AssimpModelLorder>(std::chrono::milliseconds(modelImportSettings.importTimeoutMs)),
+                device,
+                textureCache);
         }
 
     }
