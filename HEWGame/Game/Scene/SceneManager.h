@@ -5,6 +5,7 @@
 #define __SCENE_MANAGER_H__
 
 #include "SceneGameConfigTypes.h"
+#include "SoundManagerEX.h"
 
 #include <memory>
 
@@ -87,6 +88,7 @@ namespace SceneSpace
 
         Core::StepTimer& m_timer;
         Core::Input& m_input;
+        std::unique_ptr<SoundManagerEX> m_soundManager;
         std::unique_ptr<IScene> m_activeScene;
         std::unique_ptr<IScene> m_pendingScene;
         bool m_sceneLoaded;
