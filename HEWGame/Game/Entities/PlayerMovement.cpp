@@ -2,8 +2,6 @@
 
 #include "Core/Input.h"
 #include "Entities/Player.h"
-#include "SoundManagerEX.h"
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -225,15 +223,8 @@ namespace Entities
 
         const float desiredHeading = hasInput ? std::atan2(vertical, horizontal) : m_currentHeading;
 
-        bool isMovingNow = false;
-
         if (ctx.dt > 0.0f)
         {
-            if (hasInput)
-            {
-                isMovingNow = true;
-            }
-
             if (hasInput)
             {
                 m_currentHeading = TurnTowards(m_currentHeading, desiredHeading, m_turnRate * ctx.dt);
@@ -320,50 +311,6 @@ namespace Entities
                 m_fallbackVelocity = { 0.0f, 0.0f, 0.0f };
             }
         }
-
-        // ===== 移動音（フェードアウト付き）=====
-        if (auto* sound = SoundManagerEX::GetInstance())
-        {
-            if (isMovingNow && !m_wasMovingLastFrame)
-            {
-                if (m_moveSoundFadingOut)
-                {
-                    m_moveSoundFadingOut = false;
-                    sound->SetVolume(m_moveSoundHandle, 0.3f);
-                }
-                else
-                {
-                    m_moveSoundHandle = sound->PlaySoundEX(
-                        "Assets/Audio/SE_Move.wav", true, 0.3f);
-                }
-            }
-            else if (!isMovingNow && m_wasMovingLastFrame && !m_moveSoundFadingOut)
-            {
-                if (m_moveSoundHandle != -1)
-                {
-                    m_moveSoundFadingOut = true;
-                    m_moveSoundFadeTimer = 0.0f;
-                }
-            }
-
-            if (m_moveSoundFadingOut && m_moveSoundHandle != -1)
-            {
-                m_moveSoundFadeTimer += ctx.dt;
-                if (m_moveSoundFadeTimer >= m_moveSoundFadeDuration)
-                {
-                    sound->StopSound(m_moveSoundHandle);
-                    m_moveSoundHandle = -1;
-                    m_moveSoundFadingOut = false;
-                    m_moveSoundFadeTimer = 0.0f;
-                }
-                else
-                {
-                    const float t = m_moveSoundFadeTimer / m_moveSoundFadeDuration;
-                    sound->SetVolume(m_moveSoundHandle, 0.3f * (1.0f - t));
-                }
-            }
-        }
-        m_wasMovingLastFrame = isMovingNow;
     }
 
     void PlayerMovement::ConfigureMovement(float accel, float brake, float turnRate, float rollResponse, float inputSmoothing)
