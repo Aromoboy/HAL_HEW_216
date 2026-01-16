@@ -120,14 +120,12 @@ namespace
             constexpr float kYawAxisEpsilon = 1.0e-4f;
 
             const float absYawZ = std::fabs(transform.rotation.z);
-            const float absYawY = std::fabs(transform.rotation.y);
-
-            if (absYawY > absYawZ + kYawAxisEpsilon)
+            if (absYawZ > kYawAxisEpsilon)
             {
-                return transform.rotation.y;
+                return transform.rotation.z;
             }
 
-            return transform.rotation.z;
+            return transform.rotation.y;
         }
 
         float3 ForwardFromYaw(float yaw)
@@ -1058,7 +1056,7 @@ void SceneGame::FireMissile()
         }
     }
 
-    const Transform playerTransform = player->GetTransform();
+    const Transform playerTransform = player->GetRenderTransform();
     constexpr float kSpawnOffset = 1.5f;
     const float yaw = ResolvePlayerYaw(playerTransform) + m_playerSpawnTransform.missileYawOffsetRadians;
     const float3 forward = ForwardFromYaw(yaw);
