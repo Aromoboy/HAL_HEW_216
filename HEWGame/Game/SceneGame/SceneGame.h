@@ -137,6 +137,7 @@ protected:
     GameFlow::PhaseManager m_phaseManager;
     GameplayRulesSystem m_gameplayRules;
     GuidelineSystem m_guidelineSystem;
+    float m_lastGuidelineHeight = 0.0f;
     void BroadcastPhaseAdvance(int newPhase);
     void ForwardSweetsPhaseChange(int newPhase);
     StageState m_stageState = StageState::Intro;
