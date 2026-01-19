@@ -41,6 +41,7 @@ void GuidelineSystem::ResetSession()
     m_triggeredThisHeight.clear();
     m_cooldownRemainingSeconds = 0.0f;
     m_triggerCooldownSeconds = 0.0f;
+    m_guidelineCrossCount = 0;
 }
 
 void GuidelineSystem::TickCooldowns(float deltaSeconds)
@@ -71,6 +72,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
         m_cooldownRemainingSeconds,
         m_cooldownDurationSeconds,
         m_triggerCooldownSeconds,
+        m_guidelineCrossCount,
         m_triggeredThisHeight
     };
 
@@ -78,7 +80,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
         input.sweetsManager,
         m_guidelineActor.get(),
         m_centerX,
-        input.timeBonusSeconds,
+        0.0f,
         input.globalCooldownSeconds,
         input.log,
         input.logPrefix
@@ -91,8 +93,12 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
         guidelineState = std::move(guidelineCheck.state);
         if (guidelineCheck.crossed)
         {
+            guidelineState.guidelineCrossCount += 1;
+            const float timeBonusSeconds = (guidelineState.guidelineCrossCount % 5 == 0) ? 30.0f : 5.0f;
+            GameplayProgression::GuidelineInput bonusInput = guidelineInput;
+            bonusInput.timeBonusSeconds = timeBonusSeconds;
             GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
-                GameplayProgression::HandleGuidelineAdvance(guidelineInput,
+                GameplayProgression::HandleGuidelineAdvance(bonusInput,
                                                             std::move(guidelineState),
                                                             std::move(pendingBonuses),
                                                             guidelineCheck.triggerHeight);
@@ -107,6 +113,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
     m_cooldownRemainingSeconds = guidelineState.cooldownRemainingSeconds;
     m_cooldownDurationSeconds = guidelineState.cooldownDurationSeconds;
     m_triggerCooldownSeconds = guidelineState.triggerCooldownSeconds;
+    m_guidelineCrossCount = guidelineState.guidelineCrossCount;
     m_triggeredThisHeight = std::move(guidelineState.triggeredThisHeight);
 
     UpdateResult result{};
@@ -127,6 +134,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::DebugForceAdvance(const UpdateInp
         m_cooldownRemainingSeconds,
         m_cooldownDurationSeconds,
         m_triggerCooldownSeconds,
+        m_guidelineCrossCount,
         m_triggeredThisHeight
     };
 
@@ -134,7 +142,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::DebugForceAdvance(const UpdateInp
         input.sweetsManager,
         m_guidelineActor.get(),
         m_centerX,
-        input.timeBonusSeconds,
+        0.0f,
         input.globalCooldownSeconds,
         input.log,
         input.logPrefix
@@ -146,8 +154,12 @@ GuidelineSystem::UpdateResult GuidelineSystem::DebugForceAdvance(const UpdateInp
         resolvedTriggerHeight = m_stepMeters;
     }
 
+    guidelineState.guidelineCrossCount += 1;
+    const float timeBonusSeconds = (guidelineState.guidelineCrossCount % 5 == 0) ? 30.0f : 5.0f;
+    GameplayProgression::GuidelineInput bonusInput = guidelineInput;
+    bonusInput.timeBonusSeconds = timeBonusSeconds;
     GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
-        GameplayProgression::HandleGuidelineAdvance(guidelineInput,
+        GameplayProgression::HandleGuidelineAdvance(bonusInput,
                                                     std::move(guidelineState),
                                                     std::move(pendingBonuses),
                                                     resolvedTriggerHeight);
@@ -158,6 +170,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::DebugForceAdvance(const UpdateInp
     m_cooldownRemainingSeconds = guidelineState.cooldownRemainingSeconds;
     m_cooldownDurationSeconds = guidelineState.cooldownDurationSeconds;
     m_triggerCooldownSeconds = guidelineState.triggerCooldownSeconds;
+    m_guidelineCrossCount = guidelineState.guidelineCrossCount;
     m_triggeredThisHeight = std::move(guidelineState.triggeredThisHeight);
 
     UpdateResult result{};

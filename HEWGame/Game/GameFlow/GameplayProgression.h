@@ -68,6 +68,7 @@ namespace GameplayProgression
         float cooldownRemainingSeconds = 0.0f;
         float cooldownDurationSeconds = 0.0f;
         float triggerCooldownSeconds = 0.0f;
+        int guidelineCrossCount = 0;
         std::unordered_set<SweetsSpace::ActiveSweets*> triggeredThisHeight;
     };
 
