@@ -3,6 +3,7 @@
 #include "Core/StepTimer.h"
 #include "GameFlow/PhaseManager.h"
 #include "GuidelineActor.h"
+#include "Stage/StageConfigNormalize.h"
 #include "SweetsManager.h"
 #include "Sweets/BaseSweets.h"
 
@@ -192,13 +193,32 @@ namespace GameplayProgression
 
     GuidelineState OnGuidelineCrossed(const GuidelineInput& input, GuidelineState state)
     {
-        if (!(state.heightMeters > 0.0f) || !(state.stepMeters > 0.0f))
+        if (!(state.heightMeters > 0.0f))
         {
             state.triggerCooldownSeconds = input.globalCooldownSeconds;
             return state;
         }
 
-        state.heightMeters += kGuidelineHeightIncrementMeters;
+        float stepMeters = state.stepMeters;
+        if (!(stepMeters > 0.0f) || !std::isfinite(stepMeters))
+        {
+            float fallbackStep = StageConfigDefaults::kDefaultGuidelineStep;
+            if (!(fallbackStep > 0.0f) || !std::isfinite(fallbackStep))
+            {
+                fallbackStep = kGuidelineHeightIncrementMeters;
+            }
+            if (input.log)
+            {
+                std::ostringstream oss;
+                oss << input.logPrefix << "[Guideline] invalid stepMeters=" << stepMeters
+                    << " using fallback=" << fallbackStep << "m\n";
+                input.log(oss.str());
+            }
+            stepMeters = fallbackStep;
+            state.stepMeters = stepMeters;
+        }
+
+        state.heightMeters += stepMeters;
         if (input.guidelineActor)
         {
             auto& transform = input.guidelineActor->GetTransform();
@@ -208,6 +228,13 @@ namespace GameplayProgression
         state.triggeredThisHeight.clear();
         state.cooldownRemainingSeconds = 0.0f;
         state.triggerCooldownSeconds = input.globalCooldownSeconds;
+        if (input.log)
+        {
+            std::ostringstream oss;
+            oss << input.logPrefix << "[Guideline] advanced step=" << std::fixed << std::setprecision(2)
+                << stepMeters << "m nextHeight=" << state.heightMeters << "m\n";
+            input.log(oss.str());
+        }
         return state;
     }
 
