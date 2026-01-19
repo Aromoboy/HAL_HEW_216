@@ -202,11 +202,7 @@ namespace GameplayProgression
         float stepMeters = state.stepMeters;
         if (!(stepMeters > 0.0f) || !std::isfinite(stepMeters))
         {
-            float fallbackStep = StageConfigDefaults::kDefaultGuidelineStep;
-            if (!(fallbackStep > 0.0f) || !std::isfinite(fallbackStep))
-            {
-                fallbackStep = kGuidelineHeightIncrementMeters;
-            }
+            float fallbackStep = kGuidelineHeightIncrementMeters;
             if (input.log)
             {
                 std::ostringstream oss;
