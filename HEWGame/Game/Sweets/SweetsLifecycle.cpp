@@ -201,9 +201,10 @@ namespace
         return SweetsSpace::SweetsState::Active;
     }
 
-    bool IsHorizontallyOutOfBounds(
+    bool IsOutOfBounds(
         ::SweetsSpace::ActiveSweets& sweets,
         const std::optional<std::pair<float, float>>& worldBounds,
+        const std::optional<float>& minVerticalBound,
         float margin,
         float fallbackLimit,
         bool* usedFallback)
@@ -227,7 +228,12 @@ namespace
             allowedMax = worldBounds->second + sanitizedMargin;
         }
 
-        return minX < allowedMin || maxX > allowedMax;
+        const bool outOfHorizontalBounds = minX < allowedMin || maxX > allowedMax;
+        const bool outOfVerticalBounds = minVerticalBound
+            ? (bounds.max.y < *minVerticalBound)
+            : false;
+
+        return outOfHorizontalBounds || outOfVerticalBounds;
     }
 }
 
@@ -266,6 +272,9 @@ namespace SweetsSpace
         std::vector<PendingStateChange> stateChanges;
         std::vector<std::shared_ptr<ActiveSweets>> missedSweets;
         const auto horizontalBounds = GetHorizontalBounds();
+        const std::optional<float> verticalBound = m_hasVerticalBound
+            ? std::optional<float>(m_minVerticalBound)
+            : std::nullopt;
         const float fallbackHorizontalLimit = ComputeFallbackHorizontalLimit(m_horizontalBoundsMargin);
 
         if (!m_registry)
@@ -319,9 +328,10 @@ namespace SweetsSpace
                 if (!isCarried)
                 {
                     bool usedFallbackBounds = false;
-                    const bool outOfBounds = IsHorizontallyOutOfBounds(
+                    const bool outOfBounds = IsOutOfBounds(
                         *sweets,
                         horizontalBounds,
+                        verticalBound,
                         m_horizontalBoundsMargin,
                         fallbackHorizontalLimit,
                         &usedFallbackBounds);
@@ -485,6 +495,32 @@ namespace SweetsSpace
         oss << kLogPrefix << "水平境界を更新したよ min=" << m_minHorizontalBound
             << " max=" << m_maxHorizontalBound
             << " margin=" << m_horizontalBoundsMargin << " (world units).\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsLifecycle::SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin)
+    {
+        SetHorizontalBounds(minX, maxX, margin);
+
+        if (!std::isfinite(minY))
+        {
+            DebugTrace(std::string(kLogPrefix) + "有限値じゃない垂直境界の更新は無視したよ \n");
+            return;
+        }
+
+        const bool changed = !m_hasVerticalBound
+            || HasMeaningfulDifference(m_minVerticalBound, minY);
+
+        m_hasVerticalBound = true;
+        m_minVerticalBound = minY;
+
+        if (!changed)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "垂直境界を更新したよ minY=" << m_minVerticalBound << " (world units).\n";
         DebugTrace(oss.str());
     }
 
