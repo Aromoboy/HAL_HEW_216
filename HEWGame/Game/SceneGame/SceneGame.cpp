@@ -1035,7 +1035,27 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
         if (guidelineResult.guidelineAdvanced)
         {
+            const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
+            m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+            if (guidelineDelta != 0.0f)
+            {
+                for (auto& obj : m_stageObjects)
+                {
+                    if (!IsOsara(obj))
+                    {
+                        continue;
+                    }
+
+                    obj.baseY += guidelineDelta;
+                    obj.transform.position.y += guidelineDelta;
+
+                    if (obj.physicsEntity)
+                    {
+                        obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+                    }
+                }
+            }
         }
         break;
     }
@@ -1139,6 +1159,7 @@ void SceneGame::ResetGuidelineHeight()
 {
     m_guidelineSystem.ResetHeight(m_stageData.GetGuidelineHeight(),
                                   m_stageData.GetGuidelineStep());
+    m_lastGuidelineHeight = m_stageData.GetGuidelineHeight();
 }
 
 
