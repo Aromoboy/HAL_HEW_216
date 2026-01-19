@@ -116,6 +116,58 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
     return result;
 }
 
+#if defined(_DEBUG)
+GuidelineSystem::UpdateResult GuidelineSystem::DebugForceAdvance(const UpdateInput& input,
+                                                                 std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses,
+                                                                 float triggerHeight)
+{
+    GameplayProgression::GuidelineState guidelineState{
+        m_heightMeters,
+        m_stepMeters,
+        m_cooldownRemainingSeconds,
+        m_cooldownDurationSeconds,
+        m_triggerCooldownSeconds,
+        m_triggeredThisHeight
+    };
+
+    const GameplayProgression::GuidelineInput guidelineInput{
+        input.sweetsManager,
+        m_guidelineActor.get(),
+        m_centerX,
+        input.timeBonusSeconds,
+        input.globalCooldownSeconds,
+        input.log,
+        input.logPrefix
+    };
+
+    float resolvedTriggerHeight = std::max(triggerHeight, m_heightMeters);
+    if (!(resolvedTriggerHeight > 0.0f))
+    {
+        resolvedTriggerHeight = m_stepMeters;
+    }
+
+    GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
+        GameplayProgression::HandleGuidelineAdvance(guidelineInput,
+                                                    std::move(guidelineState),
+                                                    std::move(pendingBonuses),
+                                                    resolvedTriggerHeight);
+    guidelineState = std::move(guidelineAdvance.state);
+
+    m_heightMeters = guidelineState.heightMeters;
+    m_stepMeters = guidelineState.stepMeters;
+    m_cooldownRemainingSeconds = guidelineState.cooldownRemainingSeconds;
+    m_cooldownDurationSeconds = guidelineState.cooldownDurationSeconds;
+    m_triggerCooldownSeconds = guidelineState.triggerCooldownSeconds;
+    m_triggeredThisHeight = std::move(guidelineState.triggeredThisHeight);
+
+    UpdateResult result{};
+    result.pendingBonuses = std::move(guidelineAdvance.pendingBonuses);
+    result.guidelineAdvanced = true;
+    result.guidelineHeightMeters = m_heightMeters;
+    return result;
+}
+#endif
+
 float GuidelineSystem::GetHeightMeters() const
 {
     return m_heightMeters;

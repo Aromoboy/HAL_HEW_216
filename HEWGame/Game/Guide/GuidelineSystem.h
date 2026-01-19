@@ -56,6 +56,11 @@ public:
     void TickCooldowns(float deltaSeconds);
     UpdateResult Update(const UpdateInput& input,
                         std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses);
+#if defined(_DEBUG)
+    UpdateResult DebugForceAdvance(const UpdateInput& input,
+                                   std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses,
+                                   float triggerHeight);
+#endif
 
     float GetHeightMeters() const;
     float GetStepMeters() const;

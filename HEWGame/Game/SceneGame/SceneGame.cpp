@@ -1163,6 +1163,28 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
                 oss << kLogPrefix << "[DebugDraw] r.DebugDrawEnabled="
                         << (g_DebugDrawEnabled ? 1 : 0) << " (F5).\n";
                 DebugTrace(oss.str());
+
+                const GuidelineSystem::UpdateInput guidelineInput{
+                        m_sweetsManager.get(),
+                        kGuidelineTimeBonusSeconds,
+                        kGuidelineGlobalCooldownSeconds,
+                        DebugTrace,
+                        kLogPrefix
+                };
+                const float triggerHeight = m_guidelineSystem.GetHeightMeters();
+                GuidelineSystem::UpdateResult guidelineResult =
+                        m_guidelineSystem.DebugForceAdvance(guidelineInput, {}, triggerHeight);
+                m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
+                if (guidelineResult.guidelineAdvanced)
+                {
+                        UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+                }
+                std::ostringstream cheatLog;
+                cheatLog << kLogPrefix << "[Cheat] forced guideline crossing (F5)"
+                        << " height=" << std::fixed << std::setprecision(2)
+                        << guidelineResult.guidelineHeightMeters << "m"
+                        << " phaseUpCount=" << m_gameplayRules.GetPhaseUpCount() << "\n";
+                DebugTrace(cheatLog.str());
         }
 
         if (input->IsTrigger(VK_F4))
