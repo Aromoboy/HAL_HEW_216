@@ -53,6 +53,7 @@ namespace
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
+    constexpr float kOutOfBoundsRespawnDelaySeconds = 4.0f;
 
     float ComputeSpeedSq(const Entities::PhysicalEntity& entity)
     {
@@ -271,6 +272,7 @@ namespace SweetsSpace
 
         std::vector<PendingStateChange> stateChanges;
         std::vector<std::shared_ptr<ActiveSweets>> missedSweets;
+        const float deltaSeconds = std::max(0.0f, ctx.dt);
         const auto horizontalBounds = GetHorizontalBounds();
         const std::optional<float> verticalBound = m_hasVerticalBound
             ? std::optional<float>(m_minVerticalBound)
@@ -306,6 +308,7 @@ namespace SweetsSpace
 
                 if (sweets->IsPendingDestroy())
                 {
+                    m_outOfBoundsTimers.erase(sweets);
                     ++it;
                     continue;
                 }
@@ -318,6 +321,7 @@ namespace SweetsSpace
                         << " から sweets ptr=" << sweets.get() << " を片付けたよ \n";
                     DebugTrace(oss.str());
 #endif
+                    m_outOfBoundsTimers.erase(sweets);
                     m_registry->Lookup().erase(sweets);
                     it = sweetsList.erase(it);
                     continue;
@@ -325,7 +329,13 @@ namespace SweetsSpace
 
                 const bool isCarried = (bucketState == SweetsState::Carried);
 
-                if (!isCarried)
+                if (isCarried)
+                {
+                    m_outOfBoundsTimers.erase(sweets);
+                    ++it;
+                    continue;
+                }
+
                 {
                     bool usedFallbackBounds = false;
                     const bool outOfBounds = IsOutOfBounds(
@@ -346,9 +356,24 @@ namespace SweetsSpace
 
                     if (outOfBounds)
                     {
-                        missedSweets.push_back(sweets);
+                        float& timer = m_outOfBoundsTimers[sweets];
+                        timer += deltaSeconds;
+                        if (timer >= kOutOfBoundsRespawnDelaySeconds)
+                        {
+                            m_outOfBoundsTimers.erase(sweets);
+                            missedSweets.push_back(sweets);
+                        }
                         ++it;
                         continue;
+                    }
+
+                    if (m_outOfBoundsTimers.erase(sweets) > 0)
+                    {
+#if defined(_DEBUG)
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "画面外タイマーを解除 tag='" << sweets->GetTag() << "'\n";
+                        DebugTrace(oss.str());
+#endif
                     }
 
                     const SweetsState desiredState = EvaluateState(*sweets, bucketState, *m_contacts);
@@ -421,6 +446,7 @@ namespace SweetsSpace
 
                 if (sweets->IsPendingDestroy())
                 {
+                    m_outOfBoundsTimers.erase(sweets);
                     auto watched = m_pendingLateDeletion.find(sweets);
                     if (watched == m_pendingLateDeletion.end())
                     {
@@ -440,6 +466,7 @@ namespace SweetsSpace
 
                     m_registry->Lookup().erase(sweets);
                     m_pendingLateDeletion.erase(watched);
+                    m_outOfBoundsTimers.erase(sweets);
                     it = sweetsList.erase(it);
                     ++removed;
                     continue;
@@ -575,6 +602,8 @@ namespace SweetsSpace
 
         std::size_t staged = 0;
         std::size_t alreadyPending = 0;
+
+        m_outOfBoundsTimers.clear();
 
         for (auto& entry : m_registry->MutableStateMap())
         {
@@ -827,6 +856,8 @@ namespace SweetsSpace
         {
             return;
         }
+
+        m_outOfBoundsTimers.erase(sweets);
 
         const SweetsState previousState = found->second;
         if (m_contacts)

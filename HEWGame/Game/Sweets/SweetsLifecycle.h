@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "Core/IUpdatable.h"
@@ -71,6 +72,7 @@ namespace SweetsSpace
         bool* m_warnedMissingScheduler;
 
         std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
+        std::unordered_map<std::shared_ptr<ActiveSweets>, float> m_outOfBoundsTimers;
         bool m_hasHorizontalBounds{ false };
         float m_minHorizontalBound{ 0.0f };
         float m_maxHorizontalBound{ 0.0f };
