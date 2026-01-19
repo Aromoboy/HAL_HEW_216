@@ -274,6 +274,11 @@ namespace SweetsSpace
         m_lifecycle.SetHorizontalBounds(minX, maxX, margin);
     }
 
+    void SweetsManager::SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin)
+    {
+        m_lifecycle.SetWorldBounds(minX, maxX, minY, margin);
+    }
+
     void SweetsManager::SetGeneratedColliderThicknessPadding(float factor)
     {
         m_factory.SetGeneratedColliderThicknessPadding(factor);

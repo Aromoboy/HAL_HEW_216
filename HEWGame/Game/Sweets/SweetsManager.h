@@ -127,6 +127,7 @@ namespace SweetsSpace
         bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
+        void SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin = std::nullopt);
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);

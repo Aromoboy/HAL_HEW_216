@@ -41,6 +41,7 @@ namespace SweetsSpace
         void OnLateUpdate(const Core::UpdateContext& ctx);
 
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
+        void SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin = std::nullopt);
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
 
         void Erase(const std::shared_ptr<ActiveSweets>& sweets);
@@ -75,6 +76,8 @@ namespace SweetsSpace
         float m_maxHorizontalBound{ 0.0f };
         float m_horizontalBoundsMargin{ 0.0f };
         bool m_warnedMissingHorizontalBounds{ false };
+        bool m_hasVerticalBound{ false };
+        float m_minVerticalBound{ 0.0f };
         std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
     };
 }
