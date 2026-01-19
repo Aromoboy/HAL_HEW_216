@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -2869,5 +2870,78 @@ namespace SceneGameConfig
         }
 
         return config;
+    }
+
+    SweetsOutOfBoundsSettings LoadSweetsOutOfBoundsSettings()
+    {
+        SweetsOutOfBoundsSettings settings{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionSweetsLifecycle, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Sweets lifecycle config section '" << GameplayConfig::kSectionSweetsLifecycle
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return settings;
+        }
+
+        for (const auto& entry : lines)
+        {
+            std::string key = ToLowerCopy(TrimWhitespace(entry.key));
+            const std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+
+            if (key == "sweets.outofboundsdespawn" || key == "outofboundsdespawn")
+            {
+                if (!ParseBool(value, settings.outOfBoundsDespawn))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets outOfBoundsDespawn value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "sweets.outofboundsrespawn" || key == "outofboundsrespawn")
+            {
+                if (!ParseBool(value, settings.outOfBoundsRespawn))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets outOfBoundsRespawn value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "sweets.outofboundsrespawndelay" || key == "outofboundsrespawndelay")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    if (std::isfinite(*parsed))
+                    {
+                        settings.outOfBoundsRespawnDelaySeconds = std::max(0.0f, *parsed);
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Non-finite sweets outOfBoundsRespawnDelay value '" << value
+                            << "' on line=" << lineNumber << "; keeping default.\n";
+                        ::DebugTrace(oss.str());
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets outOfBoundsRespawnDelay value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+        }
+
+        return settings;
     }
 }

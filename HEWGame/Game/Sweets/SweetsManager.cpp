@@ -269,6 +269,11 @@ namespace SweetsSpace
         return m_lifecycle.ReleaseCarriedSweets(sweets);
     }
 
+    void SweetsManager::SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds)
+    {
+        m_lifecycle.SetOutOfBoundsSettings(despawnEnabled, respawnEnabled, respawnDelaySeconds);
+    }
+
     void SweetsManager::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
     {
         m_lifecycle.SetHorizontalBounds(minX, maxX, margin);

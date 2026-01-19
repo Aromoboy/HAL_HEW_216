@@ -113,6 +113,7 @@ void SceneComposer::ComposeConfig(Composition& result)
     result.lightingSettings = SceneGameConfig::LoadLightingSettings();
     result.blobShadowSettings = SceneGameConfig::LoadBlobShadowSettings();
     result.materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
+    result.sweetsOutOfBoundsSettings = SceneGameConfig::LoadSweetsOutOfBoundsSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);

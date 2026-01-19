@@ -258,6 +258,9 @@ namespace SweetsSpace
         , m_warnedMissingDrawSystem(warnedMissingDrawSystem)
         , m_warnedMissingPhysicsMachine(warnedMissingPhysicsMachine)
         , m_warnedMissingScheduler(warnedMissingScheduler)
+        , m_outOfBoundsDespawnEnabled(true)
+        , m_outOfBoundsRespawnEnabled(true)
+        , m_outOfBoundsRespawnDelaySeconds(kOutOfBoundsRespawnDelaySeconds)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
     {
     }
@@ -270,8 +273,14 @@ namespace SweetsSpace
             SweetsState state;
         };
 
+        struct PendingRemoval
+        {
+            std::shared_ptr<ActiveSweets> sweets;
+            bool notifySpawner;
+        };
+
         std::vector<PendingStateChange> stateChanges;
-        std::vector<std::shared_ptr<ActiveSweets>> missedSweets;
+        std::vector<PendingRemoval> missedSweets;
         const float deltaSeconds = std::max(0.0f, ctx.dt);
         const auto horizontalBounds = GetHorizontalBounds();
         const std::optional<float> verticalBound = m_hasVerticalBound
@@ -354,14 +363,14 @@ namespace SweetsSpace
                         m_warnedMissingHorizontalBounds = true;
                     }
 
-                    if (outOfBounds)
+                    if (outOfBounds && m_outOfBoundsDespawnEnabled)
                     {
                         float& timer = m_outOfBoundsTimers[sweets];
                         timer += deltaSeconds;
-                        if (timer >= kOutOfBoundsRespawnDelaySeconds)
+                        if (timer >= m_outOfBoundsRespawnDelaySeconds)
                         {
                             m_outOfBoundsTimers.erase(sweets);
-                            missedSweets.push_back(sweets);
+                            missedSweets.push_back({ sweets, m_outOfBoundsRespawnEnabled });
                         }
                         ++it;
                         continue;
@@ -411,9 +420,9 @@ namespace SweetsSpace
 
         DeleteBatchContext missBatch{};
         missBatch.usesRemaining = static_cast<int>(missedSweets.size());
-        for (const auto& sweets : missedSweets)
+        for (const auto& entry : missedSweets)
         {
-            RemoveSweetsEntry(sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch);
+            RemoveSweetsEntry(entry.sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch, entry.notifySpawner);
         }
     }
 
@@ -486,6 +495,16 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
 #endif
+    }
+
+    void SweetsLifecycle::SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds)
+    {
+        m_outOfBoundsDespawnEnabled = despawnEnabled;
+        m_outOfBoundsRespawnEnabled = respawnEnabled;
+        if (std::isfinite(respawnDelaySeconds))
+        {
+            m_outOfBoundsRespawnDelaySeconds = std::max(0.0f, respawnDelaySeconds);
+        }
     }
 
     void SweetsLifecycle::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
@@ -839,7 +858,8 @@ namespace SweetsSpace
         DeleteReason reason,
         const char* context,
         bool logWarnings,
-        DeleteBatchContext* batchContext)
+        DeleteBatchContext* batchContext,
+        bool notifySpawner)
     {
         if (!sweets || !m_registry)
         {
@@ -875,7 +895,7 @@ namespace SweetsSpace
 
         UnregisterSweetsFromSystems(sweets, context, logWarnings);
 
-        if (m_spawner)
+        if (m_spawner && notifySpawner)
         {
             const int remainingToStack = std::max(0, m_spawner->GetBatchStackTarget() - m_spawner->GetStackedInBatch());
             const int liveAfterRemoval = m_spawner->CountLiveSweets();

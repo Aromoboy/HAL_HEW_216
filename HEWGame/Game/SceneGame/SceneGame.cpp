@@ -403,9 +403,17 @@ bool SceneGame::Load(Core::Input& input)
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
+    m_sweetsOutOfBoundsSettings = composition->sweetsOutOfBoundsSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->SetOutOfBoundsSettings(
+            m_sweetsOutOfBoundsSettings.outOfBoundsDespawn,
+            m_sweetsOutOfBoundsSettings.outOfBoundsRespawn,
+            m_sweetsOutOfBoundsSettings.outOfBoundsRespawnDelaySeconds);
+    }
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
     m_blobShadowRenderer = std::make_unique<BlobShadowRenderer>();

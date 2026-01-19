@@ -41,6 +41,7 @@ namespace SweetsSpace
         void OnUpdate(const Core::UpdateContext& ctx);
         void OnLateUpdate(const Core::UpdateContext& ctx);
 
+        void SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds);
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin = std::nullopt);
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
@@ -56,7 +57,8 @@ namespace SweetsSpace
             DeleteReason reason,
             const char* context,
             bool logWarnings,
-            DeleteBatchContext* batchContext);
+            DeleteBatchContext* batchContext,
+            bool notifySpawner);
 
     private:
         void UnregisterSweetsFromSystems(const std::shared_ptr<ActiveSweets>& sweets, const char* context, bool logWarnings);
@@ -71,6 +73,9 @@ namespace SweetsSpace
         bool* m_warnedMissingPhysicsMachine;
         bool* m_warnedMissingScheduler;
 
+        bool m_outOfBoundsDespawnEnabled;
+        bool m_outOfBoundsRespawnEnabled;
+        float m_outOfBoundsRespawnDelaySeconds;
         std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
         std::unordered_map<std::shared_ptr<ActiveSweets>, float> m_outOfBoundsTimers;
         bool m_hasHorizontalBounds{ false };

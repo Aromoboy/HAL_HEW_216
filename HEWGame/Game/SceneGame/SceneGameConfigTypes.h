@@ -136,6 +136,13 @@ namespace SceneGameConfig
         float offsetY = 0.0f;
     };
 
+    struct SweetsOutOfBoundsSettings
+    {
+        bool outOfBoundsDespawn = true;
+        bool outOfBoundsRespawn = true;
+        float outOfBoundsRespawnDelaySeconds = 4.0f;
+    };
+
     using MaterialTuningProfile = ::MaterialTuningProfile;
     using MaterialTuningSettings = ::MaterialTuningSettings;
 }
