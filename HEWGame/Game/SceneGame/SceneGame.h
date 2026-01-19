@@ -75,6 +75,7 @@ public:
     using MaterialTuningSettings = SceneGameConfig::MaterialTuningSettings;
     using CameraRigSettings = SceneGameConfig::CameraRigSettings;
     using GameCameraConfig = SceneGameConfig::GameCameraConfig;
+    using SweetsOutOfBoundsSettings = SceneGameConfig::SweetsOutOfBoundsSettings;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
@@ -152,6 +153,7 @@ protected:
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
+    SweetsOutOfBoundsSettings m_sweetsOutOfBoundsSettings{};
     GameCameraConfig m_gameCameraConfig{};
     CameraRigSettings m_cameraRigSettings{};
     std::optional<float> m_stagePlaneZ = std::nullopt;

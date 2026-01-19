@@ -21,6 +21,7 @@ namespace GameplayConfig
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
     inline constexpr const char* kSectionPowerUps = "powerups";
+    inline constexpr const char* kSectionSweetsLifecycle = "sweets.lifecycle";
     inline constexpr const char* kSectionSweetsManifest = "sweets.manifest";
     inline constexpr const char* kSectionColliderRegistry = "colliders.registry";
     inline constexpr const char* kSectionPlayerColliders = "colliders.player";

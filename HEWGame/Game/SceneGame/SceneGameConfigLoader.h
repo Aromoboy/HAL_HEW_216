@@ -47,6 +47,7 @@ namespace SceneGameConfig
     MaterialTuningSettings LoadMaterialTuningSettings();
     CameraRigSettings LoadCameraRigSettings();
     GameCameraConfig LoadGameCameraConfig();
+    SweetsOutOfBoundsSettings LoadSweetsOutOfBoundsSettings();
 }
 
 #endif
