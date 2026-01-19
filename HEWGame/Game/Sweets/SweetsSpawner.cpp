@@ -710,6 +710,45 @@ namespace SweetsSpace
         m_warnedMissingSpawnOrigins = false;
     }
 
+    void SweetsSpawner::OffsetSpawnOriginsY(float deltaY)
+    {
+        if (deltaY == 0.0f)
+        {
+            return;
+        }
+
+        for (auto& origin : m_spawnOriginsPrimary)
+        {
+            origin.y += deltaY;
+        }
+
+        for (auto& origin : m_spawnOriginsSecondary)
+        {
+            origin.y += deltaY;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SpawnOrigin] guideline advanced offsetY=" << deltaY;
+        if (!m_spawnOriginsPrimary.empty())
+        {
+            oss << " primaryY=" << m_spawnOriginsPrimary.front().y;
+        }
+        else
+        {
+            oss << " primaryY=none";
+        }
+        if (!m_spawnOriginsSecondary.empty())
+        {
+            oss << " secondaryY=" << m_spawnOriginsSecondary.front().y;
+        }
+        else
+        {
+            oss << " secondaryY=none";
+        }
+        oss << "\n";
+        DebugTrace(oss.str());
+    }
+
     void SweetsSpawner::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
     {
         m_randomRotationMinDegrees = minDegrees;

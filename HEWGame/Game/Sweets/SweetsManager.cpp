@@ -355,6 +355,11 @@ namespace SweetsSpace
         m_spawner.SetSpawnOrigins(primary, secondary, spawnHeightOffset);
     }
 
+    void SweetsManager::OffsetSpawnOriginsY(float deltaY)
+    {
+        m_spawner.OffsetSpawnOriginsY(deltaY);
+    }
+
     void SweetsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
     {
         m_spawner.SetRandomRotationRangeDegrees(minDegrees, maxDegrees);

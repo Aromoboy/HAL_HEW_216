@@ -1040,6 +1040,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
             if (guidelineDelta != 0.0f)
             {
+                if (m_sweetsManager)
+                {
+                    m_sweetsManager->OffsetSpawnOriginsY(guidelineDelta);
+                }
+
                 for (auto& obj : m_stageObjects)
                 {
                     if (!IsOsara(obj))
@@ -1198,7 +1203,32 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
                 m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
                 if (guidelineResult.guidelineAdvanced)
                 {
+                        const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
+                        m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
                         UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+                        if (guidelineDelta != 0.0f)
+                        {
+                                if (m_sweetsManager)
+                                {
+                                        m_sweetsManager->OffsetSpawnOriginsY(guidelineDelta);
+                                }
+
+                                for (auto& obj : m_stageObjects)
+                                {
+                                        if (!IsOsara(obj))
+                                        {
+                                                continue;
+                                        }
+
+                                        obj.baseY += guidelineDelta;
+                                        obj.transform.position.y += guidelineDelta;
+
+                                        if (obj.physicsEntity)
+                                        {
+                                                obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+                                        }
+                                }
+                        }
                 }
                 std::ostringstream cheatLog;
                 cheatLog << kLogPrefix << "[Cheat] forced guideline crossing (F5)"

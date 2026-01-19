@@ -34,6 +34,7 @@ namespace SweetsSpace
             const std::vector<float3>& primary,
             const std::vector<float3>& secondary,
             std::optional<float> spawnHeightOffset = std::nullopt);
+        void OffsetSpawnOriginsY(float deltaY);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void NotifyPhaseChanged(int newPhase);
