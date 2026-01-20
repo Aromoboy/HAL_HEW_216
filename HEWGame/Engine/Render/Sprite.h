@@ -43,7 +43,7 @@ public:
 	};
 
 #ifdef _DEBUG
-	static bool g_inSpritePass;
+	static int g_spritePassDepth;
 #endif
 
 private:

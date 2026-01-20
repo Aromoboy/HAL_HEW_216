@@ -23,8 +23,6 @@ namespace
     const float3 kDefaultGuidelineSpinAxis{ 0.0f, 1.0f, 0.0f };
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
-    const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
-    const float kDefaultMiniRewardMultipliers[] = { 1.0f };
 
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color, const DirectX::XMFLOAT4& fallback, const std::string& label)
     {
@@ -115,17 +113,6 @@ namespace Stage
         return defaults;
     }
 
-    const std::vector<float>& StageConfigDefaults::DefaultMiniThresholds()
-    {
-        static const std::vector<float> defaults(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
-        return defaults;
-    }
-
-    const std::vector<float>& StageConfigDefaults::DefaultMiniRewardMultipliers()
-    {
-        static const std::vector<float> defaults(std::begin(kDefaultMiniRewardMultipliers), std::end(kDefaultMiniRewardMultipliers));
-        return defaults;
-    }
 
     std::vector<float3> StageConfigDefaults::BuildDefaultSpawnPointsPrimary(float planeZ)
     {
@@ -217,11 +204,9 @@ namespace Stage
         normalized.secondaryParseError = parsed.secondaryParseError;
 
         std::vector<float> thresholds = parsed.thresholds;
-        std::vector<float> minithresholds = parsed.minithresholds;
         std::vector<float3> spawnPointsPrimary = parsed.spawnPointsPrimary;
         std::vector<float3> spawnPointsSecondary = parsed.spawnPointsSecondary;
         std::vector<float> rewardMultipliers = parsed.rewardMultipliers;
-        std::vector<float> minirewardMultipliers = parsed.minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides = parsed.platformOverrides;
         float planeZ = parsed.planeZ;
         bool planeZSet = parsed.planeZSet;
@@ -255,8 +240,9 @@ namespace Stage
         float guidelineSpinSpeedDegPerSec = parsed.guidelineSpinSpeedDegPerSec;
         std::string guidelineModelPath = parsed.guidelineModelPath;
         std::string guidelineMaterialKey = parsed.guidelineMaterialKey;
-        float heightBonusThreshold = parsed.heightBonusThreshold;
-        float heightBonusSeconds = parsed.heightBonusSeconds;
+        float guidelineTimeBonusSeconds = parsed.guidelineTimeBonusSeconds;
+        float guidelineMilestoneBonusSeconds = parsed.guidelineMilestoneBonusSeconds;
+        int guidelineMilestoneInterval = parsed.guidelineMilestoneInterval;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
 
         if (!planeZSet)
@@ -355,18 +341,28 @@ namespace Stage
                 << guidelineMaterialKey << "'.\n";
         }
 
-        if (!parsed.heightBonusThresholdSet)
+        if (!parsed.guidelineTimeBonusSecondsSet)
         {
-            heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
+            guidelineTimeBonusSeconds = StageConfigDefaults::kDefaultGuidelineTimeBonusSeconds;
             std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusThreshold not specified; defaulting to " << heightBonusThreshold << "\n";
+            oss << kLogPrefix << "guidelineTimeBonusSeconds not specified; defaulting to "
+                << guidelineTimeBonusSeconds << "\n";
         }
 
-        if (!parsed.heightBonusSecondsSet)
+        if (!parsed.guidelineMilestoneBonusSecondsSet)
         {
-            heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
+            guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
             std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds not specified; defaulting to " << heightBonusSeconds << "\n";
+            oss << kLogPrefix << "guidelineMilestoneBonusSeconds not specified; defaulting to "
+                << guidelineMilestoneBonusSeconds << "\n";
+        }
+
+        if (!parsed.guidelineMilestoneIntervalSet)
+        {
+            guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineMilestoneInterval not specified; defaulting to "
+                << guidelineMilestoneInterval << "\n";
         }
 
         if (!parsed.backgroundTextureSet)
@@ -585,31 +581,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
         }
-        //ミニフェーズ
-        if (minithresholds.empty())
-        {
-            minithresholds = StageConfigDefaults::DefaultMiniThresholds();
-            std::ostringstream oss;
-            oss << kLogPrefix << "No phaseMiniThresholds provided; using defaults.\n";
-        }
-
-        std::sort(minithresholds.begin(), minithresholds.end());
-        minithresholds.erase(
-            std::remove_if(minithresholds.begin(), minithresholds.end(), [](float value)
-                {
-                    return !std::isfinite(value) || value <= 0.0f;
-                }),
-            minithresholds.end());
-
-        minithresholds.erase(std::unique(minithresholds.begin(), minithresholds.end()), minithresholds.end());
-
-        if (minithresholds.empty())
-        {
-            minithresholds = StageConfigDefaults::DefaultMiniThresholds();
-            std::ostringstream oss;
-            oss << kLogPrefix << "All minithresholds were invalid; falling back to defaults.\n";
-        }
-
         const auto defaultSpawnPointsPrimary = StageConfigDefaults::BuildDefaultSpawnPointsPrimary(planeZ);
         const auto defaultSpawnPointsSecondary = StageConfigDefaults::BuildDefaultSpawnPointsSecondary(planeZ);
 
@@ -928,50 +899,49 @@ namespace Stage
             guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
         }
 
-        if (!std::isfinite(heightBonusThreshold) || heightBonusThreshold <= 0.0f)
+        if (!std::isfinite(guidelineTimeBonusSeconds))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusThreshold value " << heightBonusThreshold
-                << " invalid; using default " << StageConfigDefaults::kDefaultHeightBonusThreshold << "\n";
-            heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
+            oss << kLogPrefix << "guidelineTimeBonusSeconds value " << guidelineTimeBonusSeconds
+                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineTimeBonusSeconds << "\n";
+            guidelineTimeBonusSeconds = StageConfigDefaults::kDefaultGuidelineTimeBonusSeconds;
+        }
+        else if (guidelineTimeBonusSeconds < 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelineTimeBonusSeconds < 0. Bonus events disabled.\n";
+            guidelineTimeBonusSeconds = 0.0f;
         }
 
-        if (!std::isfinite(heightBonusSeconds))
+        if (!std::isfinite(guidelineMilestoneBonusSeconds))
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds value " << heightBonusSeconds
-                << " invalid; using default " << StageConfigDefaults::kDefaultHeightBonusSeconds << "\n";
-            heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
+            oss << kLogPrefix << "guidelineMilestoneBonusSeconds value " << guidelineMilestoneBonusSeconds
+                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds << "\n";
+            guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
         }
-        else if (heightBonusSeconds <= 0.0f)
+        else if (guidelineMilestoneBonusSeconds < 0.0f)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds <= 0. Bonus events disabled.\n";
-            heightBonusSeconds = 0.0f;
+            oss << kLogPrefix << "guidelineMilestoneBonusSeconds < 0. Milestone bonus disabled.\n";
+            guidelineMilestoneBonusSeconds = 0.0f;
         }
-        else if (std::fabs(heightBonusSeconds - StageConfigDefaults::kDefaultHeightBonusSeconds)
-            > std::numeric_limits<float>::epsilon())
+
+        if (guidelineMilestoneInterval <= 0)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "heightBonusSeconds=" << heightBonusSeconds
-                << " overridden to requirement default " << StageConfigDefaults::kDefaultHeightBonusSeconds
-                << " (+5s per crossing).\n";
-            heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
+            oss << kLogPrefix << "guidelineMilestoneInterval value " << guidelineMilestoneInterval
+                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelineMilestoneInterval << "\n";
+            guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
-        const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //ミニフェーズ
         EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount,
             kDefaultRewardMultipliers);
-        //ミニフェーズ
-        EnsureRewardMultiplierCoverage(minirewardMultipliers, minirequiredMultiplierCount,
-            kDefaultMiniRewardMultipliers);
 
         normalized.planeZ = planeZ;
         normalized.phaseThresholds = std::move(thresholds);
         normalized.phaseRewardMultipliers = std::move(rewardMultipliers);
-        normalized.phaseMiniThresholds = std::move(minithresholds);
-        normalized.phaseRewardMiniMultipliers = std::move(minirewardMultipliers);
         normalized.spawnPointsPrimary = std::move(spawnPointsPrimary);
         normalized.spawnPointsSecondary = std::move(spawnPointsSecondary);
         normalized.platforms = std::move(platformDescriptors);
@@ -997,8 +967,9 @@ namespace Stage
         normalized.guidelineSpinSpeedDegPerSec = guidelineSpinSpeedDegPerSec;
         normalized.guidelineModelPath = std::move(guidelineModelPath);
         normalized.guidelineMaterialKey = std::move(guidelineMaterialKey);
-        normalized.heightBonusThreshold = heightBonusThreshold;
-        normalized.heightBonusSeconds = heightBonusSeconds;
+        normalized.guidelineTimeBonusSeconds = guidelineTimeBonusSeconds;
+        normalized.guidelineMilestoneBonusSeconds = guidelineMilestoneBonusSeconds;
+        normalized.guidelineMilestoneInterval = guidelineMilestoneInterval;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
@@ -1013,11 +984,6 @@ namespace Stage
         normalized.phaseRewardMultipliers = StageConfigDefaults::DefaultRewardMultipliers();
         EnsureRewardMultiplierCoverage(normalized.phaseRewardMultipliers, normalized.phaseThresholds.size() + 1,
             kDefaultRewardMultipliers);
-        normalized.phaseMiniThresholds = StageConfigDefaults::DefaultMiniThresholds();
-        normalized.phaseRewardMiniMultipliers = StageConfigDefaults::DefaultMiniRewardMultipliers();
-        EnsureRewardMultiplierCoverage(normalized.phaseRewardMiniMultipliers, normalized.phaseMiniThresholds.size() + 1,
-            kDefaultMiniRewardMultipliers);
-
         normalized.spawnPointsPrimary = StageConfigDefaults::BuildDefaultSpawnPointsPrimary(StageConfigDefaults::kDefaultPlaneZ);
         normalized.spawnPointsSecondary.clear();
         normalized.platforms.clear();
@@ -1050,9 +1016,10 @@ namespace Stage
         normalized.guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
         normalized.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
         normalized.guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
+        normalized.guidelineTimeBonusSeconds = StageConfigDefaults::kDefaultGuidelineTimeBonusSeconds;
+        normalized.guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
+        normalized.guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
-        normalized.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
-        normalized.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
         normalized.secondaryUsedDefaults = false;

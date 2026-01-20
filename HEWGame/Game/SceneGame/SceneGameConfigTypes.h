@@ -136,6 +136,22 @@ namespace SceneGameConfig
         float offsetY = 0.0f;
     };
 
+    struct SweetsOutOfBoundsSettings
+    {
+        bool outOfBoundsDespawn = true;
+        bool outOfBoundsRespawn = true;
+        float outOfBoundsRespawnDelaySeconds = 4.0f;
+        float grabRespawnDelaySeconds = 20.0f;
+    };
+
+    struct SweetsSpawnLimitSettings
+    {
+        int spawnPerPointCap = 6;
+        int spawnPerPointInitial = 0;
+        int spawnTotalCap = 12;
+        bool hasSpawnLimits = false;
+    };
+
     using MaterialTuningProfile = ::MaterialTuningProfile;
     using MaterialTuningSettings = ::MaterialTuningSettings;
 }

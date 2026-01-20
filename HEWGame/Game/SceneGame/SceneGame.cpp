@@ -57,6 +57,7 @@
 #       endif
 #       include <windows.h>
 #endif
+#include <ScenePowerUp.h>
 
 namespace
 {
@@ -78,7 +79,6 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
@@ -381,6 +381,7 @@ bool SceneGame::Load(Core::Input& input)
     m_materialTuningSettings = composition->materialTuningSettings;
     Render::ModelCache::Instance().SetMaterialTuningSettings(m_materialTuningSettings);
     composer.Compose(*composition);
+    composer.ComposeEffect(*composition, m_manager->GetEffectRenderer(), m_manager->GetEffectManager());
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
     m_stagePlaneZ = std::nullopt;
@@ -398,14 +399,22 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
     m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
-    m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
-    m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
+    m_sweetsOutOfBoundsSettings = composition->sweetsOutOfBoundsSettings;
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->SetOutOfBoundsSettings(
+            m_sweetsOutOfBoundsSettings.outOfBoundsDespawn,
+            m_sweetsOutOfBoundsSettings.outOfBoundsRespawn,
+            m_sweetsOutOfBoundsSettings.outOfBoundsRespawnDelaySeconds);
+        m_sweetsManager->SetGrabRespawnDelaySeconds(
+            m_sweetsOutOfBoundsSettings.grabRespawnDelaySeconds);
+    }
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
     m_blobShadowRenderer = std::make_unique<BlobShadowRenderer>();
@@ -426,7 +435,10 @@ bool SceneGame::Load(Core::Input& input)
     guidelineConfig.centerX = composition->guidelineCenterX;
     guidelineConfig.widthWorld = composition->guidelineWidthWorld;
     guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
+    guidelineConfig.milestoneBonusSeconds = m_stageData.GetGuidelineMilestoneBonusSeconds();
+    guidelineConfig.milestoneInterval = m_stageData.GetGuidelineMilestoneInterval();
     m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
+    m_effectSystem = std::move(composition->effectSystem);
 
     GameplayRulesSystem::Config gameplayRulesConfig{};
     gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
@@ -472,14 +484,6 @@ bool SceneGame::Load(Core::Input& input)
     if (m_physicsBinder)
     {
         m_contactHandler.Bind(*m_physicsBinder, m_sweetsManager.get());
-    }
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
-        {
-            ForwardSweetsPhaseChange(newPhase);
-        });
     }
 
     m_playerColliderMismatchLogged = false;
@@ -573,6 +577,12 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
         return;
     }
     RootUpdate(timer, input);
+
+    if (m_pendingRetryReset)
+    {
+        m_pendingRetryReset = false;
+        SetStageState(StageState::Playing);
+    }
 }
 
 void SceneGame::Draw()
@@ -697,15 +707,21 @@ void SceneGame::OnEnter()
     oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 
-    // BGMを再生（ループあり、音量40%）
-    if (m_pManager)
+    if (SoundManagerEX::GetInstance())
     {
-        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // ループ有効
+        m_gameBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
+            "Assets/Audio/BGM_MainGame.wav", true, 0.4f);
     }
 }
 
 void SceneGame::OnExit()
 {
+    if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
+    {
+        SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
+        m_gameBGMHandle = -1;
+    }
+
     std::ostringstream oss;
     oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
@@ -717,7 +733,14 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     , m_playerController(DebugTrace, kLogPrefix)
     , m_manager(&a_manager)
 {
-    m_pManager = std::make_unique<SoundManagerEX>();
+    auto* soundMgr = SoundManagerEX::GetInstance();
+    if (soundMgr)
+    {
+        m_gameBGMHandle = soundMgr->PlaySoundEX("Assets/Sound/BGM_Game.wav",  
+            true,   // ループ
+            0.4f    // 音量
+        );
+    }
 }
 
 SceneGame::~SceneGame()
@@ -802,10 +825,11 @@ SceneGame::~SceneGame()
     {
         m_drawSystem->ClearRenderables();
     }
-        if (m_pManager)
-        {
-            m_pManager->StopAllSounds();
-        }
+    if (auto* soundMgr = SoundManagerEX::GetInstance())
+    {
+        soundMgr->StopAllSounds();
+    }
+
 }
 
 void SceneGame::ConfigureUpdates()
@@ -909,6 +933,11 @@ void SceneGame::ConfigureUpdates()
                                 DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable; pickup input may fail.\n");
                         }
                 }
+        }
+
+        if (m_effectSystem && !m_effectSystemRegistered)
+        {
+            m_effectSystemRegistered = Register(*m_effectSystem);
         }
 
         SetStageState(StageState::Playing);
@@ -1019,13 +1048,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
-            SetStageState(StageState::Playing);
+            m_pendingRetryReset = true;
         }
         fRads.z += 0.001f;
 
         const GuidelineSystem::UpdateInput guidelineInput{
             m_sweetsManager.get(),
-            kGuidelineTimeBonusSeconds,
+            m_stageData.GetGuidelineTimeBonusSeconds(),
             kGuidelineGlobalCooldownSeconds,
             DebugTrace,
             kLogPrefix
@@ -1035,7 +1064,32 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
         if (guidelineResult.guidelineAdvanced)
         {
+            const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
+            m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+            if (guidelineDelta != 0.0f)
+            {
+                if (m_sweetsManager)
+                {
+                    m_sweetsManager->OffsetSpawnOriginsY(guidelineDelta);
+                }
+
+                for (auto& obj : m_stageObjects)
+                {
+                    if (!IsOsara(obj))
+                    {
+                        continue;
+                    }
+
+                    obj.baseY += guidelineDelta;
+                    obj.transform.position.y += guidelineDelta;
+
+                    if (obj.physicsEntity)
+                    {
+                        obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+                    }
+                }
+            }
         }
         break;
     }
@@ -1063,7 +1117,16 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             : PlayerController::PostGameAction::None;
         if (action == PlayerController::PostGameAction::ConfirmRestart)
         {
-            SetStageState(StageState::Playing);
+            m_pendingRetryReset = true;
+            return;
+        }
+        else if (action == PlayerController::PostGameAction::GoToPowerUp)
+        {
+            if (m_manager)
+            {
+                m_manager->RequestSceneChange(
+                    std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
+            }
             return;
         }
     }
@@ -1139,6 +1202,7 @@ void SceneGame::ResetGuidelineHeight()
 {
     m_guidelineSystem.ResetHeight(m_stageData.GetGuidelineHeight(),
                                   m_stageData.GetGuidelineStep());
+    m_lastGuidelineHeight = m_stageData.GetGuidelineHeight();
 }
 
 
@@ -1163,6 +1227,53 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
                 oss << kLogPrefix << "[DebugDraw] r.DebugDrawEnabled="
                         << (g_DebugDrawEnabled ? 1 : 0) << " (F5).\n";
                 DebugTrace(oss.str());
+
+                const GuidelineSystem::UpdateInput guidelineInput{
+                        m_sweetsManager.get(),
+                        m_stageData.GetGuidelineTimeBonusSeconds(),
+                        kGuidelineGlobalCooldownSeconds,
+                        DebugTrace,
+                        kLogPrefix
+                };
+                const float triggerHeight = m_guidelineSystem.GetHeightMeters();
+                GuidelineSystem::UpdateResult guidelineResult =
+                        m_guidelineSystem.DebugForceAdvance(guidelineInput, {}, triggerHeight);
+                m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
+                if (guidelineResult.guidelineAdvanced)
+                {
+                        const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
+                        m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
+                        UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+                        if (guidelineDelta != 0.0f)
+                        {
+                                if (m_sweetsManager)
+                                {
+                                        m_sweetsManager->OffsetSpawnOriginsY(guidelineDelta);
+                                }
+
+                                for (auto& obj : m_stageObjects)
+                                {
+                                        if (!IsOsara(obj))
+                                        {
+                                                continue;
+                                        }
+
+                                        obj.baseY += guidelineDelta;
+                                        obj.transform.position.y += guidelineDelta;
+
+                                        if (obj.physicsEntity)
+                                        {
+                                                obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+                                        }
+                                }
+                        }
+                }
+                std::ostringstream cheatLog;
+                cheatLog << kLogPrefix << "[Cheat] forced guideline crossing (F5)"
+                        << " height=" << std::fixed << std::setprecision(2)
+                        << guidelineResult.guidelineHeightMeters << "m"
+                        << " phaseUpCount=" << m_gameplayRules.GetPhaseUpCount() << "\n";
+                DebugTrace(cheatLog.str());
         }
 
         if (input->IsTrigger(VK_F4))
@@ -1943,6 +2054,11 @@ void SceneGame::OnStageClear()
 {
     ToggleGameplaySystems(false);
 
+    if (auto* soundMgr = SoundManagerEX::GetInstance())
+    {
+        soundMgr->PlaySoundEX("Assets/Audio/SE_ResultPop.wav", false, 0.5f);
+    }
+
     std::ostringstream oss;
     const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
     const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
@@ -1970,36 +2086,21 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     oss << kLogPrefix << "Broadcasting phase " << newPhase
         << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
     ::DebugTrace(oss.str());
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->NotifyPhaseChanged(newPhase);
-    }
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
-}
-
-void SceneGame::ForwardSweetsPhaseChange(int newPhase)
-{
-    std::ostringstream oss;
-    oss << kLogPrefix << "[SweetsPhase] Forwarding phase " << newPhase
-        << " to spawn pacing system.\n";
-    ::DebugTrace(oss.str());
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->ForceSpawnRefresh();
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "[SweetsPhase] Spawn pacing refresh skipped; manager missing.\n");
-    }
 }
 void SceneGame::ResetPlaySession()
 {
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->Enable(false);
+        m_physicsBinder->ResetContactListenerCaches();
+    }
+
     if (m_sweetsManager)
     {
         m_sweetsManager->ClearAllSweets();
         m_sweetsManager->ForceSpawnRefresh();
+        m_sweetsManager->SeedInitialSpawns();
     }
     else
     {
@@ -2037,15 +2138,6 @@ void SceneGame::ResetPlaySession()
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "SweetsManager missing during ResetPlaySession; phase reset not broadcast.\n");
-    }
-
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";
     ::DebugTrace(oss.str());
@@ -2077,20 +2169,6 @@ int SceneGame::GetSweetsCount() const
 }
 
 
-
-void SceneGame::Initialize(const Stage::StageData& stageData)
-{
-    
-    //高さボーナス設定
-    m_heightBonusThresholdMeters = stageData.GetHeightBonusThreshold();
-    m_heightBonusSeconds = stageData.GetHeightBonusSeconds();
-
-    //デバッグ確認用
-    std::ostringstream oss;
-    oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
-        << " second=" << m_heightBonusSeconds << "\n";
-    ::DebugTrace(oss.str());
-}
 
 //Osara探す？やつ
 bool SceneGame::IsOsara(const StageObject& obj)

@@ -667,7 +667,7 @@ namespace Entities
         // ドロップ音を再生
         if (auto* sound = SoundManagerEX::GetInstance())
         {
-            sound->PlaySoundEX("Assets/Audio/SE_FruitFall.wav", false, 0.5f);
+            sound->PlaySoundEX("Assets/Audio/SE_FruitFall.wav", false, 0.2f);
         }
     }
 }

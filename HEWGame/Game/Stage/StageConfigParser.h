@@ -28,11 +28,9 @@ namespace Stage
         bool secondaryParseError = false;
 
         std::vector<float> thresholds;
-        std::vector<float> minithresholds;
         std::vector<float3> spawnPointsPrimary;
         std::vector<float3> spawnPointsSecondary;
         std::vector<float> rewardMultipliers;
-        std::vector<float> minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides;
 
         float planeZ = 0.0f;
@@ -81,10 +79,12 @@ namespace Stage
         bool guidelineModelPathSet = false;
         std::string guidelineMaterialKey;
         bool guidelineMaterialKeySet = false;
-        float heightBonusThreshold = 0.0f;
-        bool heightBonusThresholdSet = false;
-        float heightBonusSeconds = 0.0f;
-        bool heightBonusSecondsSet = false;
+        float guidelineTimeBonusSeconds = 0.0f;
+        bool guidelineTimeBonusSecondsSet = false;
+        float guidelineMilestoneBonusSeconds = 0.0f;
+        bool guidelineMilestoneBonusSecondsSet = false;
+        int guidelineMilestoneInterval = 0;
+        bool guidelineMilestoneIntervalSet = false;
         std::string backgroundTexturePath;
         bool backgroundTextureSet = false;
     };

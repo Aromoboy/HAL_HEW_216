@@ -6,6 +6,8 @@
 
 #include "SceneGameConfigTypes.h"
 
+#include <Effekseer.h>
+#include <EffekseerRendererDX11.h>
 #include <memory>
 
 namespace Core
@@ -66,8 +68,7 @@ namespace SceneSpace
     class SceneManager
     {
     public:
-        SceneManager(Core::StepTimer& timer, Core::Input& input);
-
+        SceneManager(Core::StepTimer& timer, Core::Input& input, ::EffekseerRendererDX11::RendererRef m_renderer, ::Effekseer::ManagerRef m_manager);
         void SetInitialScene(std::unique_ptr<IScene> scene);
         void RequestSceneChange(std::unique_ptr<IScene> scene);
         void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings);
@@ -78,6 +79,8 @@ namespace SceneSpace
         float GetFadeAlpha() const;
         SceneTransitionController::State GetTransitionState() const;
         bool IsTransitioning() const;
+        ::EffekseerRendererDX11::RendererRef GetEffectRenderer();
+        ::Effekseer::ManagerRef GetEffectManager();
 
     private:
         void AdvanceTransition();
@@ -87,6 +90,10 @@ namespace SceneSpace
 
         Core::StepTimer& m_timer;
         Core::Input& m_input;
+        ::EffekseerRendererDX11::RendererRef m_renderer;
+        ::Effekseer::ManagerRef m_manager;
+
+
         std::unique_ptr<IScene> m_activeScene;
         std::unique_ptr<IScene> m_pendingScene;
         bool m_sceneLoaded;

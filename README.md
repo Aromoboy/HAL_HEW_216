@@ -579,14 +579,13 @@ UI_Overlay o-- UI_UIManager
 %% Game flow / rules
 %% =========================
 class GF_PhaseManager["GameFlow::PhaseManager"] {
-  +Initialize(thresholds, rewardMultipliers, minithresholds, rewardMiniMultipliers)
+  +Initialize(thresholds, rewardMultipliers)
   +Reset()
   +UpdateHeight(currentMaxHeight) PhaseUpdateResult
   +UpdateTime(deltaSeconds) PhaseUpdateResult
   +AdvancePhase() bool
   +GetCurrentPhase() int
   +GetRewardMultiplier() float
-  +GetRewardMiniMultiplier() float
 }
 
 class Rules_GameplayRulesSystem["GameplayRulesSystem"] {

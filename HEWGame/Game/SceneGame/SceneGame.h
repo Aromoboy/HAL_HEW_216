@@ -35,6 +35,7 @@
 #include <string>
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
+#include "EffectSystem.h"
 
 namespace Systems
 {
@@ -75,6 +76,7 @@ public:
     using MaterialTuningSettings = SceneGameConfig::MaterialTuningSettings;
     using CameraRigSettings = SceneGameConfig::CameraRigSettings;
     using GameCameraConfig = SceneGameConfig::GameCameraConfig;
+    using SweetsOutOfBoundsSettings = SceneGameConfig::SweetsOutOfBoundsSettings;
 
     SceneGame(SceneSpace::SceneManager& a_manager);
     ~SceneGame();
@@ -110,6 +112,7 @@ private:
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
+    int m_gameBGMHandle = -1;
     void Initialize(const Stage::StageData& stageData);
 
 protected:
@@ -118,6 +121,7 @@ protected:
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::unique_ptr<SoundManagerEX> m_pManager;
+    std::unique_ptr<EffectSystem> m_effectSystem;
     Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
@@ -132,25 +136,25 @@ protected:
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     bool m_sweetsLateRegistered = false;
+    bool m_effectSystemRegistered = false;
     bool m_loadFailed = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
     GameplayRulesSystem m_gameplayRules;
     GuidelineSystem m_guidelineSystem;
+    float m_lastGuidelineHeight = 0.0f;
     void BroadcastPhaseAdvance(int newPhase);
-    void ForwardSweetsPhaseChange(int newPhase);
     StageState m_stageState = StageState::Intro;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
-    float m_heightBonusThresholdMeters = 0.0f;
-    float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
+    SweetsOutOfBoundsSettings m_sweetsOutOfBoundsSettings{};
     GameCameraConfig m_gameCameraConfig{};
     CameraRigSettings m_cameraRigSettings{};
     std::optional<float> m_stagePlaneZ = std::nullopt;
@@ -165,6 +169,7 @@ protected:
     float m_playerSpeedMultiplier = 1.0f;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
+    bool m_pendingRetryReset = false;
     std::shared_ptr<Render::Model> m_playerModel;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
@@ -173,6 +178,7 @@ protected:
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
     bool m_isComposed = false;
+    
 
 
     SceneSpace::SceneManager* m_manager = nullptr;

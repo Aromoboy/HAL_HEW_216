@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -2456,7 +2457,6 @@ namespace SceneGameConfig
                 << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
                 << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
-                << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
                 << ", ccdPlayer=" << settings.continuousCollisionForPlayer
                 << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
                 << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio
@@ -2576,20 +2576,6 @@ namespace SceneGameConfig
                 {
                     settings.smallDynamicContinuousThreshold = std::max(0.0f, std::stof(value));
                 }
-                else if (key == "ccdPlayerProjectiles")
-                {
-                    if (auto parsed = parseBool(value))
-                    {
-                        settings.continuousCollisionForPlayerProjectiles = *parsed;
-                    }
-                    else
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
-                            << lineNumber << "\n";
-                        ::DebugTrace(oss.str());
-                    }
-                }
                 else if (key == "ccdPlayer")
                 {
                     if (auto parsed = parseBool(value))
@@ -2708,7 +2694,6 @@ namespace SceneGameConfig
             << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
             << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
             << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
-            << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
             << ", ccdPlayer=" << settings.continuousCollisionForPlayer
             << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
             << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio
@@ -2869,5 +2854,175 @@ namespace SceneGameConfig
         }
 
         return config;
+    }
+
+    SweetsOutOfBoundsSettings LoadSweetsOutOfBoundsSettings()
+    {
+        SweetsOutOfBoundsSettings settings{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionSweetsLifecycle, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Sweets lifecycle config section '" << GameplayConfig::kSectionSweetsLifecycle
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return settings;
+        }
+
+        for (const auto& entry : lines)
+        {
+            std::string key = ToLowerCopy(TrimWhitespace(entry.key));
+            const std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+
+            if (key == "sweets.outofboundsdespawn" || key == "outofboundsdespawn")
+            {
+                if (!ParseBool(value, settings.outOfBoundsDespawn))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets outOfBoundsDespawn value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "sweets.outofboundsrespawn" || key == "outofboundsrespawn")
+            {
+                if (!ParseBool(value, settings.outOfBoundsRespawn))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets outOfBoundsRespawn value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "sweets.outofboundsrespawndelay" || key == "outofboundsrespawndelay")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    if (std::isfinite(*parsed))
+                    {
+                        settings.outOfBoundsRespawnDelaySeconds = std::max(0.0f, *parsed);
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Non-finite sweets outOfBoundsRespawnDelay value '" << value
+                            << "' on line=" << lineNumber << "; keeping default.\n";
+                        ::DebugTrace(oss.str());
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets outOfBoundsRespawnDelay value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+
+            if (key == "sweets.grabrespawndelay" || key == "grabrespawndelay")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    if (std::isfinite(*parsed))
+                    {
+                        settings.grabRespawnDelaySeconds = std::max(0.0f, *parsed);
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Non-finite sweets grabRespawnDelay value '" << value
+                            << "' on line=" << lineNumber << "; keeping default.\n";
+                        ::DebugTrace(oss.str());
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets grabRespawnDelay value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+        }
+
+        return settings;
+    }
+
+    SweetsSpawnLimitSettings LoadSweetsSpawnLimitSettings()
+    {
+        SweetsSpawnLimitSettings settings{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionSpawnLimits, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn limits config section '" << GameplayConfig::kSectionSpawnLimits
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return settings;
+        }
+        settings.hasSpawnLimits = true;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = ToLowerCopy(TrimWhitespace(entry.key));
+            const std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+
+            if (key == "spawnperpointcap" || key == "perpointcap")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.spawnPerPointCap = std::max(0, *parsed);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid spawnPerPointCap value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "spawnperpointinitial" || key == "perpointinitial")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.spawnPerPointInitial = std::max(0, *parsed);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid spawnPerPointInitial value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "spawntotalcap" || key == "totalcap")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.spawnTotalCap = std::max(0, *parsed);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid spawnTotalCap value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+        }
+
+        return settings;
     }
 }

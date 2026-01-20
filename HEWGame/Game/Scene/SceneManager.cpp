@@ -206,12 +206,14 @@ namespace SceneSpace
         return 1.0f;
     }
 
-    SceneManager::SceneManager(Core::StepTimer& timer, Core::Input& input)
+    SceneManager::SceneManager(Core::StepTimer& timer, Core::Input& input, ::EffekseerRendererDX11::RendererRef a_renderer, ::Effekseer::ManagerRef a_manager)
         : m_timer(timer)
         , m_input(input)
         , m_sceneLoaded(false)
         , m_sceneEntered(false)
         , m_lastTransitionState(SceneTransitionController::State::Idle)
+        , m_renderer(a_renderer)
+        , m_manager(a_manager)
     {
     }
 
@@ -345,6 +347,16 @@ namespace SceneSpace
     bool SceneManager::IsTransitioning() const
     {
         return m_transition.IsTransitioning();
+    }
+
+    ::EffekseerRendererDX11::RendererRef SceneManager::GetEffectRenderer()
+    {
+        return m_renderer;
+    }
+
+    ::Effekseer::ManagerRef SceneManager::GetEffectManager()
+    {
+        return m_manager;
     }
 
     void SceneManager::ActivatePendingScene()

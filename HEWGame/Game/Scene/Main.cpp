@@ -6,12 +6,15 @@
 #include <objbase.h>
 #include <sstream>
 #include <Windows.h>
+#include <Effekseer.h>
+#include <EffekseerRendererDX11.h>
 
 #include "DirectX.h"
 #include "Geometory.h"
 #include "Sprite.h"
 #include "SceneManager.h"
 #include "Scene.h"
+#include "SoundManagerEX.h" 
 #include "TitleScene.h"
 #include "Defines.h"
 #include "ShaderList.h"
@@ -36,6 +39,10 @@ namespace
         SceneGameConfig::RenderPostProcessSettings g_postProcessSettings{};
         SceneGameConfig::RenderFadeSettings g_renderFadeSettings{};
         std::unique_ptr<Texture> g_fadeTexture;
+        Effekseer::Backend::GraphicsDeviceRef g_effectDevice;
+        EffekseerRendererDX11::RendererRef g_effectRenderer;
+        Effekseer::ManagerRef g_effectManager;
+        std::unique_ptr<SoundManagerEX> g_soundManager;
 
         std::filesystem::path GetExecutableDirectory()
         {
@@ -117,6 +124,9 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
                 return g_comInitResult;
         }
 
+        g_soundManager = std::make_unique<SoundManagerEX>();
+        Diagnostics::LogInfo("[Sound] SoundManagerEX initialized");
+
         HRESULT hr = InitDirectX(hWnd, width, height, false);
         if (FAILED(hr))
         {
@@ -150,8 +160,12 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         g_postProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
         g_renderFadeSettings = SceneGameConfig::LoadRenderFadeSettings();
 
+        g_effectDevice = ::EffekseerRendererDX11::CreateGraphicsDevice(GetDevice(), GetContext());
+        g_effectRenderer = ::EffekseerRendererDX11::Renderer::Create(g_effectDevice, 8000);
+        g_effectManager = ::Effekseer::Manager::Create(8000);
+
         // シーン
-        g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input);
+        g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input, g_effectRenderer, g_effectManager);
         g_sceneManager->ConfigureRenderFade(g_renderFadeSettings);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
 
@@ -171,6 +185,12 @@ void Uninit()
 
         g_sceneManager.reset();
         g_fadeTexture.reset();
+
+        g_effectManager.Reset();
+        g_effectRenderer.Reset();
+        g_effectDevice.Reset();
+        g_soundManager.reset();
+        Diagnostics::LogInfo("[Sound] SoundManagerEX shutdown");
 
         ShaderList::Uninit();
         Sprite::Uninit();

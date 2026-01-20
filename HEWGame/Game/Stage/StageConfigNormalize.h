@@ -16,8 +16,6 @@ namespace Stage
         std::vector<PlatformDescriptor> platforms;
         std::vector<float> phaseThresholds;
         std::vector<float> phaseRewardMultipliers;
-        std::vector<float> phaseMiniThresholds;
-        std::vector<float> phaseRewardMiniMultipliers;
         std::vector<float3> spawnPointsPrimary;
         std::vector<float3> spawnPointsSecondary;
         float cellSizeWorld = 0.0f;
@@ -42,9 +40,10 @@ namespace Stage
         float guidelineSpinSpeedDegPerSec = 0.0f;
         std::string guidelineModelPath;
         std::string guidelineMaterialKey;
+        float guidelineTimeBonusSeconds = 0.0f;
+        float guidelineMilestoneBonusSeconds = 0.0f;
+        int guidelineMilestoneInterval = 0;
         std::string backgroundTexturePath;
-        float heightBonusThreshold = 0.0f;
-        float heightBonusSeconds = 0.0f;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;
@@ -79,8 +78,9 @@ namespace Stage
         static constexpr float kDefaultGuidelineThicknessWorld = 0.05f;
         static constexpr float kDefaultGuidelineZOffset = 0.1f;
         static constexpr float kDefaultGuidelineSpinSpeedDegPerSec = 0.0f;
-        static constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
-        static constexpr float kDefaultHeightBonusSeconds = 5.0f;
+        static constexpr float kDefaultGuidelineTimeBonusSeconds = 5.0f;
+        static constexpr float kDefaultGuidelineMilestoneBonusSeconds = 30.0f;
+        static constexpr int kDefaultGuidelineMilestoneInterval = 5;
 
         static float DefaultGuidelineWidthPaddingWorld();
         static float DefaultPlayerMoveSpeed();
@@ -94,8 +94,6 @@ namespace Stage
         static const std::string& DefaultGuidelineMaterialKey();
         static const std::vector<float>& DefaultThresholds();
         static const std::vector<float>& DefaultRewardMultipliers();
-        static const std::vector<float>& DefaultMiniThresholds();
-        static const std::vector<float>& DefaultMiniRewardMultipliers();
         static std::vector<float3> BuildDefaultSpawnPointsPrimary(float planeZ);
         static std::vector<float3> BuildDefaultSpawnPointsSecondary(float planeZ);
     };

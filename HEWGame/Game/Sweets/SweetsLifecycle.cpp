@@ -53,6 +53,8 @@ namespace
     constexpr float kPlatformWidth = 12.0f;
     constexpr float kHorizontalOutOfBoundsMargin = 3.5f;
     constexpr float kHorizontalBoundsEpsilon = 1e-4f;
+    constexpr float kOutOfBoundsRespawnDelaySeconds = 4.0f;
+    constexpr float kGrabRespawnDelaySeconds = 20.0f;
 
     float ComputeSpeedSq(const Entities::PhysicalEntity& entity)
     {
@@ -201,9 +203,10 @@ namespace
         return SweetsSpace::SweetsState::Active;
     }
 
-    bool IsHorizontallyOutOfBounds(
+    bool IsOutOfBounds(
         ::SweetsSpace::ActiveSweets& sweets,
         const std::optional<std::pair<float, float>>& worldBounds,
+        const std::optional<float>& minVerticalBound,
         float margin,
         float fallbackLimit,
         bool* usedFallback)
@@ -227,7 +230,12 @@ namespace
             allowedMax = worldBounds->second + sanitizedMargin;
         }
 
-        return minX < allowedMin || maxX > allowedMax;
+        const bool outOfHorizontalBounds = minX < allowedMin || maxX > allowedMax;
+        const bool outOfVerticalBounds = minVerticalBound
+            ? (bounds.max.y < *minVerticalBound)
+            : false;
+
+        return outOfHorizontalBounds || outOfVerticalBounds;
     }
 }
 
@@ -251,6 +259,10 @@ namespace SweetsSpace
         , m_warnedMissingDrawSystem(warnedMissingDrawSystem)
         , m_warnedMissingPhysicsMachine(warnedMissingPhysicsMachine)
         , m_warnedMissingScheduler(warnedMissingScheduler)
+        , m_outOfBoundsDespawnEnabled(true)
+        , m_outOfBoundsRespawnEnabled(true)
+        , m_outOfBoundsRespawnDelaySeconds(kOutOfBoundsRespawnDelaySeconds)
+        , m_grabRespawnDelaySeconds(kGrabRespawnDelaySeconds)
         , m_horizontalBoundsMargin(kHorizontalOutOfBoundsMargin)
     {
     }
@@ -263,9 +275,19 @@ namespace SweetsSpace
             SweetsState state;
         };
 
+        struct PendingRemoval
+        {
+            std::shared_ptr<ActiveSweets> sweets;
+            bool notifySpawner;
+        };
+
         std::vector<PendingStateChange> stateChanges;
-        std::vector<std::shared_ptr<ActiveSweets>> missedSweets;
+        std::vector<PendingRemoval> missedSweets;
+        const float deltaSeconds = std::max(0.0f, ctx.dt);
         const auto horizontalBounds = GetHorizontalBounds();
+        const std::optional<float> verticalBound = m_hasVerticalBound
+            ? std::optional<float>(m_minVerticalBound)
+            : std::nullopt;
         const float fallbackHorizontalLimit = ComputeFallbackHorizontalLimit(m_horizontalBoundsMargin);
 
         if (!m_registry)
@@ -297,6 +319,8 @@ namespace SweetsSpace
 
                 if (sweets->IsPendingDestroy())
                 {
+                    m_outOfBoundsTimers.erase(sweets);
+                    m_grabRespawnTimers.erase(sweets);
                     ++it;
                     continue;
                 }
@@ -309,6 +333,8 @@ namespace SweetsSpace
                         << " から sweets ptr=" << sweets.get() << " を片付けたよ \n";
                     DebugTrace(oss.str());
 #endif
+                    m_outOfBoundsTimers.erase(sweets);
+                    m_grabRespawnTimers.erase(sweets);
                     m_registry->Lookup().erase(sweets);
                     it = sweetsList.erase(it);
                     continue;
@@ -316,12 +342,36 @@ namespace SweetsSpace
 
                 const bool isCarried = (bucketState == SweetsState::Carried);
 
-                if (!isCarried)
+                if (isCarried)
+                {
+                    auto timerIt = m_grabRespawnTimers.find(sweets);
+                    if (timerIt != m_grabRespawnTimers.end())
+                    {
+                        timerIt->second += deltaSeconds;
+                        if (timerIt->second >= m_grabRespawnDelaySeconds)
+                        {
+                            const bool requested = (m_spawner != nullptr)
+                                ? m_spawner->RequestSupplementalSpawn(1, "GrabRespawn")
+                                : false;
+                            if (requested)
+                            {
+                                m_grabRespawnTimers.erase(timerIt);
+                            }
+                        }
+                    }
+                    m_outOfBoundsTimers.erase(sweets);
+                    ++it;
+                    continue;
+                }
+
+                m_grabRespawnTimers.erase(sweets);
+
                 {
                     bool usedFallbackBounds = false;
-                    const bool outOfBounds = IsHorizontallyOutOfBounds(
+                    const bool outOfBounds = IsOutOfBounds(
                         *sweets,
                         horizontalBounds,
+                        verticalBound,
                         m_horizontalBoundsMargin,
                         fallbackHorizontalLimit,
                         &usedFallbackBounds);
@@ -334,11 +384,26 @@ namespace SweetsSpace
                         m_warnedMissingHorizontalBounds = true;
                     }
 
-                    if (outOfBounds)
+                    if (outOfBounds && m_outOfBoundsDespawnEnabled)
                     {
-                        missedSweets.push_back(sweets);
+                        float& timer = m_outOfBoundsTimers[sweets];
+                        timer += deltaSeconds;
+                        if (timer >= m_outOfBoundsRespawnDelaySeconds)
+                        {
+                            m_outOfBoundsTimers.erase(sweets);
+                            missedSweets.push_back({ sweets, m_outOfBoundsRespawnEnabled });
+                        }
                         ++it;
                         continue;
+                    }
+
+                    if (m_outOfBoundsTimers.erase(sweets) > 0)
+                    {
+#if defined(_DEBUG)
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "画面外タイマーを解除 tag='" << sweets->GetTag() << "'\n";
+                        DebugTrace(oss.str());
+#endif
                     }
 
                     const SweetsState desiredState = EvaluateState(*sweets, bucketState, *m_contacts);
@@ -374,11 +439,23 @@ namespace SweetsSpace
 #endif
         }
 
+        const int respawnCount = static_cast<int>(std::count_if(
+            missedSweets.begin(),
+            missedSweets.end(),
+            [](const PendingRemoval& entry)
+            {
+                return entry.notifySpawner;
+            }));
+        if (respawnCount > 0 && m_spawner)
+        {
+            m_spawner->RequestSupplementalSpawn(respawnCount, "OutOfBoundsRespawn");
+        }
+
         DeleteBatchContext missBatch{};
         missBatch.usesRemaining = static_cast<int>(missedSweets.size());
-        for (const auto& sweets : missedSweets)
+        for (const auto& entry : missedSweets)
         {
-            RemoveSweetsEntry(sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch);
+            RemoveSweetsEntry(entry.sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch, entry.notifySpawner);
         }
     }
 
@@ -411,6 +488,8 @@ namespace SweetsSpace
 
                 if (sweets->IsPendingDestroy())
                 {
+                    m_outOfBoundsTimers.erase(sweets);
+                    m_grabRespawnTimers.erase(sweets);
                     auto watched = m_pendingLateDeletion.find(sweets);
                     if (watched == m_pendingLateDeletion.end())
                     {
@@ -430,6 +509,8 @@ namespace SweetsSpace
 
                     m_registry->Lookup().erase(sweets);
                     m_pendingLateDeletion.erase(watched);
+                    m_outOfBoundsTimers.erase(sweets);
+                    m_grabRespawnTimers.erase(sweets);
                     it = sweetsList.erase(it);
                     ++removed;
                     continue;
@@ -449,6 +530,24 @@ namespace SweetsSpace
             DebugTrace(oss.str());
         }
 #endif
+    }
+
+    void SweetsLifecycle::SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds)
+    {
+        m_outOfBoundsDespawnEnabled = despawnEnabled;
+        m_outOfBoundsRespawnEnabled = respawnEnabled;
+        if (std::isfinite(respawnDelaySeconds))
+        {
+            m_outOfBoundsRespawnDelaySeconds = std::max(0.0f, respawnDelaySeconds);
+        }
+    }
+
+    void SweetsLifecycle::SetGrabRespawnDelaySeconds(float respawnDelaySeconds)
+    {
+        if (std::isfinite(respawnDelaySeconds))
+        {
+            m_grabRespawnDelaySeconds = std::max(0.0f, respawnDelaySeconds);
+        }
     }
 
     void SweetsLifecycle::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
@@ -485,6 +584,32 @@ namespace SweetsSpace
         oss << kLogPrefix << "水平境界を更新したよ min=" << m_minHorizontalBound
             << " max=" << m_maxHorizontalBound
             << " margin=" << m_horizontalBoundsMargin << " (world units).\n";
+        DebugTrace(oss.str());
+    }
+
+    void SweetsLifecycle::SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin)
+    {
+        SetHorizontalBounds(minX, maxX, margin);
+
+        if (!std::isfinite(minY))
+        {
+            DebugTrace(std::string(kLogPrefix) + "有限値じゃない垂直境界の更新は無視したよ \n");
+            return;
+        }
+
+        const bool changed = !m_hasVerticalBound
+            || HasMeaningfulDifference(m_minVerticalBound, minY);
+
+        m_hasVerticalBound = true;
+        m_minVerticalBound = minY;
+
+        if (!changed)
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "垂直境界を更新したよ minY=" << m_minVerticalBound << " (world units).\n";
         DebugTrace(oss.str());
     }
 
@@ -539,6 +664,9 @@ namespace SweetsSpace
 
         std::size_t staged = 0;
         std::size_t alreadyPending = 0;
+
+        m_outOfBoundsTimers.clear();
+        m_grabRespawnTimers.clear();
 
         for (auto& entry : m_registry->MutableStateMap())
         {
@@ -607,6 +735,11 @@ namespace SweetsSpace
             m_contacts->OnStateChanged(sweets.get(), *previous, SweetsState::Carried);
         }
 
+        if (m_grabRespawnTimers.find(sweets) == m_grabRespawnTimers.end())
+        {
+            m_grabRespawnTimers.emplace(sweets, 0.0f);
+        }
+
         std::ostringstream oss;
         oss << kLogPrefix << "TryMarkAsCarried 成功 tag='" << sweets->GetTag() << "'\n";
         DebugTrace(oss.str());
@@ -644,6 +777,8 @@ namespace SweetsSpace
         {
             m_contacts->RemoveCreamWeldJointsForSweets(sweets.get(), "ReleaseCarriedSweets");
         }
+
+        m_grabRespawnTimers.erase(sweets);
 
         if (m_physicsMachine)
         {
@@ -774,7 +909,8 @@ namespace SweetsSpace
         DeleteReason reason,
         const char* context,
         bool logWarnings,
-        DeleteBatchContext* batchContext)
+        DeleteBatchContext* batchContext,
+        bool notifySpawner)
     {
         if (!sweets || !m_registry)
         {
@@ -792,6 +928,9 @@ namespace SweetsSpace
             return;
         }
 
+        m_outOfBoundsTimers.erase(sweets);
+        m_grabRespawnTimers.erase(sweets);
+
         const SweetsState previousState = found->second;
         if (m_contacts)
         {
@@ -808,11 +947,11 @@ namespace SweetsSpace
 
         UnregisterSweetsFromSystems(sweets, context, logWarnings);
 
-        if (m_spawner)
+        if (m_spawner && notifySpawner)
         {
             const int remainingToStack = std::max(0, m_spawner->GetBatchStackTarget() - m_spawner->GetStackedInBatch());
             const int liveAfterRemoval = m_spawner->CountLiveSweets();
-            m_spawner->OnSweetsRemoved(remainingToStack, liveAfterRemoval, context);
+            m_spawner->OnSweetsRemoved(sweets, remainingToStack, liveAfterRemoval, context);
         }
 
 #if defined(_DEBUG)
@@ -858,7 +997,7 @@ namespace SweetsSpace
             const bool tracked = m_registeredPhysicsBodies.erase(sweets.get()) > 0;
             if (tracked || b2Body_IsValid(m_physicsMachine->FindBody(*sweets)))
             {
-                m_physicsMachine->UnregisterBody(*sweets);
+                m_physicsMachine->RequestUnregisterBody(*sweets);
             }
         }
         else if (logWarnings && m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)

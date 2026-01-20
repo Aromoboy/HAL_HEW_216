@@ -49,24 +49,26 @@ public:
         float guidelineCenterX = 0.0f;
         float guidelineWidthWorld = 0.0f;
         float guidelineThicknessWorld = 0.0f;
-        float heightBonusThresholdMeters = 0.0f;
-        float heightBonusSeconds = 0.0f;
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
         SceneGameConfig::LightingSettings lightingSettings{};
         SceneGameConfig::BlobShadowSettings blobShadowSettings{};
         SceneGameConfig::MaterialTuningSettings materialTuningSettings{};
+        SceneGameConfig::SweetsOutOfBoundsSettings sweetsOutOfBoundsSettings{};
+        SceneGameConfig::SweetsSpawnLimitSettings sweetsSpawnLimitSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<GuidelineActor> guidelineActor;
         std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;
         std::unique_ptr<UIManager> uiManager;
         std::unique_ptr<BackgroundRenderer> backgroundRenderer;
+        std::unique_ptr<EffectSystem> effectSystem;
         std::vector<StageObject> stageObjects;
         std::vector<std::shared_ptr<Entities::PhysicalEntity>> stagePhysicsEntities;
     };
 
     explicit SceneComposer(Core::UpdateScheduler& scheduler);
     Composition ComposeBootstrap();
+    void ComposeEffect(Composition& result, ::EffekseerRendererDX11::RendererRef a_render, ::Effekseer::ManagerRef manager);
     void Compose(Composition& result);
 
 private:
@@ -75,6 +77,7 @@ private:
     void ComposePhysics(Composition& result);
     void ComposeLayout(Composition& result);
     void ComposeUI(Composition& result);
+
 
     Core::UpdateScheduler& m_scheduler;
 };

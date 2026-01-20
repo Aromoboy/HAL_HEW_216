@@ -36,9 +36,6 @@ namespace Stage
 
         const std::vector<float>& GetPhaseThresholds() const noexcept;
         const std::vector<float>& GetPhaseRewardMultipliers() const noexcept;
-        //ミニフェーズ
-        const std::vector<float>& GetPhaseMiniThresholds() const noexcept;
-        const std::vector<float>& GetPhaseRewardMiniMultipliers() const noexcept;
         const std::vector<float3>& GetSpawnPointsPrimary() const noexcept;
         const std::vector<float3>& GetSpawnPointsSecondary() const noexcept;
         // 旧来のプライマリ出現ポイント用エイリアス
@@ -63,9 +60,10 @@ namespace Stage
         float GetGuidelineSpinSpeedDegPerSec() const noexcept;
         const std::string& GetGuidelineModelPath() const noexcept;
         const std::string& GetGuidelineMaterialKey() const noexcept;
+        float GetGuidelineTimeBonusSeconds() const noexcept;
+        float GetGuidelineMilestoneBonusSeconds() const noexcept;
+        int GetGuidelineMilestoneInterval() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
-        float GetHeightBonusThreshold() const noexcept;
-        float GetHeightBonusSeconds() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -78,8 +76,6 @@ namespace Stage
         std::vector<PlatformDescriptor> m_platforms;
         std::vector<float> m_phaseThresholds;
         std::vector<float> m_phaseRewardMultipliers;
-        std::vector<float> m_phaseMiniThresholds;        //ミニフェーズ
-        std::vector<float> m_phaseRewardMiniMultipliers; //ミニフェーズ
         std::vector<float3> m_spawnPointsPrimary;
         std::vector<float3> m_spawnPointsSecondary;
         std::string m_sourcePath;
@@ -106,8 +102,9 @@ namespace Stage
         float m_guidelineSpinSpeedDegPerSec;
         std::string m_guidelineModelPath;
         std::string m_guidelineMaterialKey;
+        float m_guidelineTimeBonusSeconds;
+        float m_guidelineMilestoneBonusSeconds;
+        int m_guidelineMilestoneInterval;
         std::string m_backgroundTexturePath;
-        float m_heightBonusThreshold;
-        float m_heightBonusSeconds;
     };
 }

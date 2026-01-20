@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Entities
@@ -32,7 +33,6 @@ namespace Systems
         bool continuousCollisionForSweets = false;
         bool continuousCollisionForSmallDynamics = false;
         float smallDynamicContinuousThreshold = 0.0f;
-        bool continuousCollisionForPlayerProjectiles = false;
         bool continuousCollisionForPlayer = false;
         float creamGlueLinearHertz = 0.0f;
         float creamGlueLinearDampingRatio = 0.7f;
@@ -76,6 +76,7 @@ namespace Systems
 
         void SetGravity(float gravity);
         void RegisterBody(Entities::PhysicalEntity& body);
+        void RequestUnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData = false);
         void UnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData = false);
         void ClearBodies();
 
@@ -99,6 +100,13 @@ namespace Systems
 
         b2BodyId CreateBody(Entities::PhysicalEntity& body);
         void DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData);
+        void FlushPendingBodyRemovals();
+
+        struct PendingBodyRemoval
+        {
+            Entities::PhysicalEntity* body = nullptr;
+            bool preserveColliderData = false;
+        };
 
         std::shared_ptr<Box2DPhysicsSystem> m_box2dSystem;
         SystemPtr m_system;
@@ -106,6 +114,8 @@ namespace Systems
         std::unique_ptr<ContactDispatchNode> m_contactDispatchNode;
         std::vector<Entities::PhysicalEntity*> m_bodies;
         std::unordered_map<Entities::PhysicalEntity*, b2BodyId> m_bodyMap;
+        std::vector<PendingBodyRemoval> m_pendingBodyRemovals;
+        std::unordered_set<Entities::PhysicalEntity*> m_pendingRemovalSet;
         b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
         b2ShapeDef m_defaultShapeDef{ b2DefaultShapeDef() };
         PhysicsTuningParameters m_tuning{};
