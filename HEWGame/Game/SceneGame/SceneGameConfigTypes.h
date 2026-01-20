@@ -141,6 +141,7 @@ namespace SceneGameConfig
         bool outOfBoundsDespawn = true;
         bool outOfBoundsRespawn = true;
         float outOfBoundsRespawnDelaySeconds = 4.0f;
+        float grabRespawnDelaySeconds = 20.0f;
     };
 
     struct SweetsSpawnLimitSettings

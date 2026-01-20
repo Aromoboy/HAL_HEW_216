@@ -129,6 +129,7 @@ namespace SweetsSpace
         bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
         void SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds);
+        void SetGrabRespawnDelaySeconds(float respawnDelaySeconds);
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin = std::nullopt);
         void SetGeneratedColliderThicknessPadding(float factor);

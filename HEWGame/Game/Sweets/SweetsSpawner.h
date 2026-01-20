@@ -40,6 +40,7 @@ namespace SweetsSpace
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
         void NotifyPhaseChanged(int newPhase);
+        bool RequestSupplementalSpawn(int count, const char* context);
 
         int CountLiveSweets() const;
         int ComputeDesiredLiveTarget(int remainingToStack) const;
@@ -75,6 +76,7 @@ namespace SweetsSpace
         };
 
         int EnqueueSpawns(int count);
+        int EnqueueSupplementalSpawns(int count);
         void EmitSpawnRequests(float deltaSeconds);
         std::string ChooseKindFromActiveConfig();
         void OnPhaseConfigurationChanged(int newPhase);
