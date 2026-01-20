@@ -128,6 +128,5 @@ namespace SweetsSpace
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_spawnPausedDueToLiveSweets{ false };
         int m_lastLiveSweetsCount{ 0 };
-        bool m_allowDefaultPhaseConfigs{ true };
     };
 }
