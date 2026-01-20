@@ -2457,7 +2457,6 @@ namespace SceneGameConfig
                 << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
                 << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
                 << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
-                << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
                 << ", ccdPlayer=" << settings.continuousCollisionForPlayer
                 << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
                 << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio
@@ -2577,20 +2576,6 @@ namespace SceneGameConfig
                 {
                     settings.smallDynamicContinuousThreshold = std::max(0.0f, std::stof(value));
                 }
-                else if (key == "ccdPlayerProjectiles")
-                {
-                    if (auto parsed = parseBool(value))
-                    {
-                        settings.continuousCollisionForPlayerProjectiles = *parsed;
-                    }
-                    else
-                    {
-                        std::ostringstream oss;
-                        oss << kLogPrefix << "Invalid bool for key '" << key << "' on line "
-                            << lineNumber << "\n";
-                        ::DebugTrace(oss.str());
-                    }
-                }
                 else if (key == "ccdPlayer")
                 {
                     if (auto parsed = parseBool(value))
@@ -2709,7 +2694,6 @@ namespace SceneGameConfig
             << ", ccdSweets=" << std::boolalpha << settings.continuousCollisionForSweets
             << ", ccdSmallDynamics=" << settings.continuousCollisionForSmallDynamics
             << ", ccdSmallDynamicThreshold=" << settings.smallDynamicContinuousThreshold
-            << ", ccdPlayerProjectiles=" << settings.continuousCollisionForPlayerProjectiles
             << ", ccdPlayer=" << settings.continuousCollisionForPlayer
             << ", creamGlueLinearHertz=" << settings.creamGlueLinearHertz
             << ", creamGlueLinearDampingRatio=" << settings.creamGlueLinearDampingRatio

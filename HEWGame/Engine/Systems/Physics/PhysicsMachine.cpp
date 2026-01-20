@@ -174,7 +174,6 @@ namespace Systems
         m_tuning.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
         m_tuning.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
-        m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
         m_tuning.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
         m_tuning.creamGlueLinearHertz = std::max(0.0f, tuning.creamGlueLinearHertz);
         m_tuning.creamGlueAngularHertz = std::max(0.0f, tuning.creamGlueAngularHertz);
@@ -893,20 +892,6 @@ namespace Systems
         if (!enableContinuousCollision && enableSmallDynamicCcd)
         {
             enableContinuousCollision = true;
-        }
-
-        if (!enableContinuousCollision && m_tuning.continuousCollisionForPlayerProjectiles)
-        {
-            std::string lowerTag = tag;
-            std::transform(lowerTag.begin(), lowerTag.end(), lowerTag.begin(), [](unsigned char c)
-            {
-                return static_cast<char>(std::tolower(c));
-            });
-
-            if (lowerTag.find("projectile") != std::string::npos)
-            {
-                enableContinuousCollision = true;
-            }
         }
 
         if (!enableContinuousCollision && m_tuning.continuousCollisionForPlayer
