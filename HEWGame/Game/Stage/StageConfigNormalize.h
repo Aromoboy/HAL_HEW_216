@@ -42,9 +42,10 @@ namespace Stage
         float guidelineSpinSpeedDegPerSec = 0.0f;
         std::string guidelineModelPath;
         std::string guidelineMaterialKey;
+        float guidelineTimeBonusSeconds = 0.0f;
+        float guidelineMilestoneBonusSeconds = 0.0f;
+        int guidelineMilestoneInterval = 0;
         std::string backgroundTexturePath;
-        float heightBonusThreshold = 0.0f;
-        float heightBonusSeconds = 0.0f;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;
@@ -79,8 +80,9 @@ namespace Stage
         static constexpr float kDefaultGuidelineThicknessWorld = 0.05f;
         static constexpr float kDefaultGuidelineZOffset = 0.1f;
         static constexpr float kDefaultGuidelineSpinSpeedDegPerSec = 0.0f;
-        static constexpr float kDefaultHeightBonusThreshold = kDefaultGuidelineHeight;
-        static constexpr float kDefaultHeightBonusSeconds = 5.0f;
+        static constexpr float kDefaultGuidelineTimeBonusSeconds = 5.0f;
+        static constexpr float kDefaultGuidelineMilestoneBonusSeconds = 30.0f;
+        static constexpr int kDefaultGuidelineMilestoneInterval = 5;
 
         static float DefaultGuidelineWidthPaddingWorld();
         static float DefaultPlayerMoveSpeed();

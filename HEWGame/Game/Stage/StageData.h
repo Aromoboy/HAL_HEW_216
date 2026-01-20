@@ -63,9 +63,10 @@ namespace Stage
         float GetGuidelineSpinSpeedDegPerSec() const noexcept;
         const std::string& GetGuidelineModelPath() const noexcept;
         const std::string& GetGuidelineMaterialKey() const noexcept;
+        float GetGuidelineTimeBonusSeconds() const noexcept;
+        float GetGuidelineMilestoneBonusSeconds() const noexcept;
+        int GetGuidelineMilestoneInterval() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
-        float GetHeightBonusThreshold() const noexcept;
-        float GetHeightBonusSeconds() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -106,8 +107,9 @@ namespace Stage
         float m_guidelineSpinSpeedDegPerSec;
         std::string m_guidelineModelPath;
         std::string m_guidelineMaterialKey;
+        float m_guidelineTimeBonusSeconds;
+        float m_guidelineMilestoneBonusSeconds;
+        int m_guidelineMilestoneInterval;
         std::string m_backgroundTexturePath;
-        float m_heightBonusThreshold;
-        float m_heightBonusSeconds;
     };
 }

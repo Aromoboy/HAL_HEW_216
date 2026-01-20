@@ -111,7 +111,6 @@ private:
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
-    void Initialize(const Stage::StageData& stageData);
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -147,8 +146,6 @@ protected:
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
-    float m_heightBonusThresholdMeters = 0.0f;
-    float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
