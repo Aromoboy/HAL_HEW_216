@@ -718,6 +718,7 @@ namespace SweetsSpace
             m_spawnHeightOffset = *spawnHeightOffset;
         }
         m_warnedMissingSpawnOrigins = false;
+        ResetSpawnOriginTracking();
     }
 
     void SweetsSpawner::OffsetSpawnOriginsY(float deltaY)
@@ -784,6 +785,18 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsSpawner::SetSpawnPointCap(int cap)
+    {
+        const int sanitizedCap = std::max(0, cap);
+        m_spawnPerPointCap = sanitizedCap;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "スポーン地点ごとの上限は " << (sanitizedCap > 0 ? "設定" : "無効")
+            << " (cap=" << sanitizedCap << ", primary=" << m_spawnOriginsPrimary.size()
+            << ", secondary=" << m_spawnOriginsSecondary.size() << ") にしたよ\n";
+        DebugTrace(oss.str());
+    }
+
     void SweetsSpawner::NotifyPhaseChanged(int newPhase)
     {
         m_currentPhase = std::max(0, newPhase);
@@ -829,7 +842,12 @@ namespace SweetsSpace
             return 0;
         }
 
-        return std::max(1, std::min(m_simultaneousLiveTarget, remainingToStack));
+        int desired = std::max(1, std::min(m_simultaneousLiveTarget, remainingToStack));
+        if (m_liveSweetsCap > 0)
+        {
+            desired = std::min(desired, m_liveSweetsCap);
+        }
+        return desired;
     }
 
     int SweetsSpawner::GetBatchStackTarget() const
@@ -856,8 +874,10 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsSpawner::OnSweetsRemoved(int remainingToStack, int liveAfterRemoval, const char* context)
+    void SweetsSpawner::OnSweetsRemoved(const std::shared_ptr<ActiveSweets>& sweets, int remainingToStack,
+        int liveAfterRemoval, const char* context)
     {
+        UnregisterSpawnOrigin(sweets);
         const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
         if (!m_batchCoolingDown && desiredLiveTarget > 0 && liveAfterRemoval < desiredLiveTarget)
         {
@@ -937,10 +957,16 @@ namespace SweetsSpace
         m_burstTimer += deltaSeconds;
         while (!m_spawnQueue.empty() && m_burstTimer >= m_activeBurstInterval)
         {
-            m_burstTimer -= m_activeBurstInterval;
             const std::string requestedKind = m_spawnQueue.front();
             const std::string resolvedKind = m_factory ? m_factory->ResolveKindKey(requestedKind) : requestedKind;
             const std::string kind = NormalizeKey(resolvedKind);
+            const auto originSelection = NextSpawnOrigin();
+            if (!originSelection)
+            {
+                break;
+            }
+
+            m_burstTimer -= m_activeBurstInterval;
             m_spawnQueue.pop_front();
 
             if (m_currentBurstRemaining > 0)
@@ -948,9 +974,12 @@ namespace SweetsSpace
                 --m_currentBurstRemaining;
             }
 
-            const SpawnOriginSelection originSelection = NextSpawnOrigin();
-            Transform transform = BuildSpawnTransform(kind, originSelection);
-            m_spawnCallback(kind, transform);
+            Transform transform = BuildSpawnTransform(kind, *originSelection);
+            const auto spawned = m_spawnCallback(kind, transform);
+            if (spawned)
+            {
+                RegisterSpawnOrigin(spawned, *originSelection);
+            }
         }
 
         if (m_currentBurstRemaining < 0)
@@ -1319,7 +1348,7 @@ namespace SweetsSpace
         return weights;
     }
 
-    SweetsSpawner::SpawnOriginSelection SweetsSpawner::NextSpawnOrigin()
+    std::optional<SweetsSpawner::SpawnOriginSelection> SweetsSpawner::NextSpawnOrigin()
     {
         const bool hasPrimary = !m_spawnOriginsPrimary.empty();
         const bool hasSecondary = !m_spawnOriginsSecondary.empty();
@@ -1330,45 +1359,151 @@ namespace SweetsSpace
                 DebugTrace(std::string(kLogPrefix) + "スポーン元リストが空だから、ワールド原点を使うね \n");
                 m_warnedMissingSpawnOrigins = true;
             }
-            return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, "fallback" };
+            return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, "fallback", SpawnOriginLane::Fallback, 0 };
         }
 
-        auto selectFromLane = [](std::vector<float3>& origins, std::size_t& cursor, const char* label)
+        auto selectFromLane = [this](std::vector<float3>& origins, std::vector<int>& liveCounts,
+            std::size_t& cursor, const char* label, SpawnOriginLane lane)
         {
             if (origins.empty())
             {
-                return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, label };
+                return std::optional<SpawnOriginSelection>();
             }
 
-            cursor = cursor % origins.size();
-            const std::size_t chosenIndex = cursor;
-            cursor = (cursor + 1) % origins.size();
-            const float3 origin = origins[chosenIndex];
+            const std::size_t laneSize = origins.size();
+            if (liveCounts.size() != laneSize)
+            {
+                liveCounts.assign(laneSize, 0);
+            }
+
+            std::optional<std::size_t> chosenIndex;
+            if (m_spawnPerPointCap <= 0)
+            {
+                cursor = cursor % laneSize;
+                chosenIndex = cursor;
+            }
+            else
+            {
+                for (std::size_t offset = 0; offset < laneSize; ++offset)
+                {
+                    const std::size_t candidate = (cursor + offset) % laneSize;
+                    if (liveCounts[candidate] < m_spawnPerPointCap)
+                    {
+                        chosenIndex = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (!chosenIndex)
+            {
+                return std::optional<SpawnOriginSelection>();
+            }
+
+            cursor = (*chosenIndex + 1) % laneSize;
+            const float3 origin = origins[*chosenIndex];
 
             std::ostringstream oss;
             oss << kLogPrefix << "[SpawnOrigin] lane=" << label
-                << " index=" << chosenIndex << "/" << origins.size()
+                << " index=" << *chosenIndex << "/" << origins.size()
                 << " position=(" << origin.x << ',' << origin.y << ',' << origin.z << ")\n";
             DebugTrace(oss.str());
 
-            return SpawnOriginSelection{ origin, label };
+            return SpawnOriginSelection{ origin, label, lane, *chosenIndex };
         };
 
         if (hasPrimary && hasSecondary)
         {
-            SpawnOriginSelection selection = m_nextSpawnUsesPrimary
-                ? selectFromLane(m_spawnOriginsPrimary, m_spawnOriginCursorPrimary, "primary")
-                : selectFromLane(m_spawnOriginsSecondary, m_spawnOriginCursorSecondary, "secondary");
+            const bool preferPrimary = m_nextSpawnUsesPrimary;
             m_nextSpawnUsesPrimary = !m_nextSpawnUsesPrimary;
+            auto selection = preferPrimary
+                ? selectFromLane(m_spawnOriginsPrimary, m_spawnOriginLiveCountsPrimary, m_spawnOriginCursorPrimary,
+                    "primary", SpawnOriginLane::Primary)
+                : selectFromLane(m_spawnOriginsSecondary, m_spawnOriginLiveCountsSecondary, m_spawnOriginCursorSecondary,
+                    "secondary", SpawnOriginLane::Secondary);
+            if (!selection)
+            {
+                selection = preferPrimary
+                    ? selectFromLane(m_spawnOriginsSecondary, m_spawnOriginLiveCountsSecondary, m_spawnOriginCursorSecondary,
+                        "secondary", SpawnOriginLane::Secondary)
+                    : selectFromLane(m_spawnOriginsPrimary, m_spawnOriginLiveCountsPrimary, m_spawnOriginCursorPrimary,
+                        "primary", SpawnOriginLane::Primary);
+            }
             return selection;
         }
 
         if (hasPrimary)
         {
-            return selectFromLane(m_spawnOriginsPrimary, m_spawnOriginCursorPrimary, "primary");
+            return selectFromLane(m_spawnOriginsPrimary, m_spawnOriginLiveCountsPrimary, m_spawnOriginCursorPrimary,
+                "primary", SpawnOriginLane::Primary);
         }
 
-        return selectFromLane(m_spawnOriginsSecondary, m_spawnOriginCursorSecondary, "secondary");
+        return selectFromLane(m_spawnOriginsSecondary, m_spawnOriginLiveCountsSecondary, m_spawnOriginCursorSecondary,
+            "secondary", SpawnOriginLane::Secondary);
+    }
+
+    void SweetsSpawner::ResetSpawnOriginTracking()
+    {
+        m_spawnOriginLiveCountsPrimary.assign(m_spawnOriginsPrimary.size(), 0);
+        m_spawnOriginLiveCountsSecondary.assign(m_spawnOriginsSecondary.size(), 0);
+        m_spawnOriginAssignments.clear();
+    }
+
+    void SweetsSpawner::RegisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets, const SpawnOriginSelection& selection)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        if (selection.lane == SpawnOriginLane::Primary)
+        {
+            if (selection.index < m_spawnOriginLiveCountsPrimary.size())
+            {
+                ++m_spawnOriginLiveCountsPrimary[selection.index];
+                m_spawnOriginAssignments[sweets.get()] = { selection.lane, selection.index };
+            }
+        }
+        else if (selection.lane == SpawnOriginLane::Secondary)
+        {
+            if (selection.index < m_spawnOriginLiveCountsSecondary.size())
+            {
+                ++m_spawnOriginLiveCountsSecondary[selection.index];
+                m_spawnOriginAssignments[sweets.get()] = { selection.lane, selection.index };
+            }
+        }
+    }
+
+    void SweetsSpawner::UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        const auto it = m_spawnOriginAssignments.find(sweets.get());
+        if (it == m_spawnOriginAssignments.end())
+        {
+            return;
+        }
+
+        const SpawnOriginAssignment assignment = it->second;
+        if (assignment.lane == SpawnOriginLane::Primary)
+        {
+            if (assignment.index < m_spawnOriginLiveCountsPrimary.size())
+            {
+                m_spawnOriginLiveCountsPrimary[assignment.index] = std::max(0, m_spawnOriginLiveCountsPrimary[assignment.index] - 1);
+            }
+        }
+        else if (assignment.lane == SpawnOriginLane::Secondary)
+        {
+            if (assignment.index < m_spawnOriginLiveCountsSecondary.size())
+            {
+                m_spawnOriginLiveCountsSecondary[assignment.index] = std::max(0, m_spawnOriginLiveCountsSecondary[assignment.index] - 1);
+            }
+        }
+
+        m_spawnOriginAssignments.erase(it);
     }
 
     Transform SweetsSpawner::BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection)

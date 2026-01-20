@@ -114,6 +114,7 @@ void SceneComposer::ComposeConfig(Composition& result)
     result.blobShadowSettings = SceneGameConfig::LoadBlobShadowSettings();
     result.materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
     result.sweetsOutOfBoundsSettings = SceneGameConfig::LoadSweetsOutOfBoundsSettings();
+    result.sweetsSpawnLimitSettings = SceneGameConfig::LoadSweetsSpawnLimitSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
@@ -478,6 +479,8 @@ void SceneComposer::ComposePhysics(Composition& result)
         result.sweetsManager->SetSpawnOrigins(
             result.stageData.GetSpawnPointsPrimary(),
             result.stageData.GetSpawnPointsSecondary());
+        result.sweetsManager->SetLiveSweetsCap(result.sweetsSpawnLimitSettings.spawnTotalCap);
+        result.sweetsManager->SetSpawnPointCap(result.sweetsSpawnLimitSettings.spawnPerPointCap);
         const bool spawnConfigLoaded = result.sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;

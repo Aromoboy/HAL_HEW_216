@@ -143,6 +143,12 @@ namespace SceneGameConfig
         float outOfBoundsRespawnDelaySeconds = 4.0f;
     };
 
+    struct SweetsSpawnLimitSettings
+    {
+        int spawnPerPointCap = 6;
+        int spawnTotalCap = 12;
+    };
+
     using MaterialTuningProfile = ::MaterialTuningProfile;
     using MaterialTuningSettings = ::MaterialTuningSettings;
 }

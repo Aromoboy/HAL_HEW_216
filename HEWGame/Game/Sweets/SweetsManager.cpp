@@ -375,6 +375,11 @@ namespace SweetsSpace
         m_spawner.SetLiveSweetsCap(cap);
     }
 
+    void SweetsManager::SetSpawnPointCap(int cap)
+    {
+        m_spawner.SetSpawnPointCap(cap);
+    }
+
     void SweetsManager::SetForceGeneratedColliders(bool force)
     {
         m_factory.SetForceGeneratedColliders(force);

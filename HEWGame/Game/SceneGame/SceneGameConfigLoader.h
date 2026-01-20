@@ -48,6 +48,7 @@ namespace SceneGameConfig
     CameraRigSettings LoadCameraRigSettings();
     GameCameraConfig LoadGameCameraConfig();
     SweetsOutOfBoundsSettings LoadSweetsOutOfBoundsSettings();
+    SweetsSpawnLimitSettings LoadSweetsSpawnLimitSettings();
 }
 
 #endif
