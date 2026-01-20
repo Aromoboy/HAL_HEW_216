@@ -40,6 +40,7 @@ namespace SweetsSpace
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
         void SetSpawnPerPointInitial(int count);
+        void SetSpawnLimitsConfigured(bool configured);
         void NotifyPhaseChanged(int newPhase);
         bool RequestSupplementalSpawn(int count, const char* context);
 
@@ -141,5 +142,6 @@ namespace SweetsSpace
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_spawnPausedDueToLiveSweets{ false };
         int m_lastLiveSweetsCount{ 0 };
+        bool m_allowDefaultPhaseConfigs{ true };
     };
 }
