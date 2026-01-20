@@ -1452,33 +1452,52 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
                 drawCross(anchor, 0.15f, stagePlaneZ);
             }
 
-            for (const auto& link : glueSnapshot.fruitLinks)
-            {
-                float z = stagePlaneZ;
-                if (link.cream)
-                {
-                    const float3 creamPos = link.cream->GetTransform().position;
-                    z = creamPos.z;
-                    DebugColliderRenderer::DrawCircle(float2{ creamPos.x, creamPos.y }, 0.35f, creamPos.z, creamColor);
-                }
-                if (link.fruit)
-                {
-                    const float3 fruitPos = link.fruit->GetTransform().position;
-                    z = fruitPos.z;
-                    DebugColliderRenderer::DrawCircle(float2{ fruitPos.x, fruitPos.y }, 0.28f, fruitPos.z,
-                        link.fruitFrozen ? fruitColor : MakeColor(1.0f, 0.5f, 0.5f, 0.9f));
-                }
-                if (link.cream && link.fruit)
-                {
-                    const float3 creamPos = link.cream->GetTransform().position;
-                    const float3 fruitPos = link.fruit->GetTransform().position;
-                    Geometory::AddLine(
-                        DirectX::XMFLOAT3(creamPos.x, creamPos.y, creamPos.z),
-                        DirectX::XMFLOAT3(fruitPos.x, fruitPos.y, fruitPos.z),
-                        linkColor);
-                }
-                drawCross(link.anchorWorld, 0.12f, z);
-            }
+        drawState(SweetsSpace::SweetsState::Active);
+        drawState(SweetsSpace::SweetsState::Stacked);
+        drawState(SweetsSpace::SweetsState::Carried);
+    }
+
+    if (player)
+    {
+        //プレイヤーの描画用トランスフォームを取得
+        const Transform tf = player->GetRenderTransform();
+        const float3 basePos = tf.position;
+
+        //掴み判定のボックスの半分サイズ
+        const float halfW = m_playerPickupBoxWidth  * 0.5f;
+        const float halfH = m_playerPickupBoxHeight * 0.5f;
+
+        //プレイヤーの向き
+        const float facingSign =
+            player->GetFacingSign();
+
+        //掴み判定ボックスの中心座標を計算
+        //X方向のみ向きに応じて反転
+        float3 center = {
+            basePos.x + m_playerPickupOffset.localOffset.x * facingSign,
+            basePos.y + m_playerPickupOffset.localOffset.y,
+            basePos.z
+        };
+
+       DirectX::XMFLOAT3 p0 = { center.x - halfW, center.y - halfH, center.z };
+       DirectX::XMFLOAT3 p1 = { center.x + halfW, center.y - halfH, center.z };
+       DirectX::XMFLOAT3 p2 = { center.x + halfW, center.y + halfH, center.z };
+       DirectX::XMFLOAT3 p3 = { center.x - halfW, center.y + halfH, center.z };
+
+        //赤い線
+        DirectX::XMFLOAT4 pickupColor(1.0f, 0.0f, 0.0f, 1.0f);
+
+        Geometory::AddLine(p0, p1, pickupColor);
+        Geometory::AddLine(p1, p2, pickupColor);
+        Geometory::AddLine(p2, p3, pickupColor);
+        Geometory::AddLine(p3, p0, pickupColor);
+    }
+
+    if (g_RegisterOsaraColliders)
+    {
+        for (const auto& entity : m_stagePhysicsEntities)
+        {
+            drawEntity(entity.get());
         }
     }
 
@@ -2106,6 +2125,13 @@ void SceneGame::ResetPlaySession()
             player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
             player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
+
+        //掴み判定
+        m_playerPickupBoxWidth  = 1.0f;
+        m_playerPickupBoxHeight = 1.3f;
+
+        m_playerPickupOffset.mode = Stage::PickupOffsetMode::FacingDirection;
+        m_playerPickupOffset.localOffset = {0.5f,0.0f,0.0f};
 
         player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
         player->SetPickupMaxDistance(m_playerPickupMaxDistance);
