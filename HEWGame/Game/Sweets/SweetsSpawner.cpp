@@ -1,4 +1,4 @@
-#include "Sweets/SweetsSpawner.h"
+﻿#include "Sweets/SweetsSpawner.h"
 
 #include <algorithm>
 #include <array>
@@ -613,45 +613,6 @@ namespace SweetsSpace
         }
         m_warnedMissingSpawnOrigins = false;
         ResetSpawnOriginTracking();
-    }
-
-    void SweetsSpawner::OffsetSpawnOriginsY(float deltaY)
-    {
-        if (deltaY == 0.0f)
-        {
-            return;
-        }
-
-        for (auto& origin : m_spawnOriginsPrimary)
-        {
-            origin.y += deltaY;
-        }
-
-        for (auto& origin : m_spawnOriginsSecondary)
-        {
-            origin.y += deltaY;
-        }
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "[SpawnOrigin] guideline advanced offsetY=" << deltaY;
-        if (!m_spawnOriginsPrimary.empty())
-        {
-            oss << " primaryY=" << m_spawnOriginsPrimary.front().y;
-        }
-        else
-        {
-            oss << " primaryY=none";
-        }
-        if (!m_spawnOriginsSecondary.empty())
-        {
-            oss << " secondaryY=" << m_spawnOriginsSecondary.front().y;
-        }
-        else
-        {
-            oss << " secondaryY=none";
-        }
-        oss << "\n";
-        DebugTrace(oss.str());
     }
 
     void SweetsSpawner::OffsetSpawnOriginsY(float deltaY)
