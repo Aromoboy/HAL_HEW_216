@@ -90,6 +90,7 @@ namespace Core
                 PendingRegistration* FindPendingRegistration(const IUpdatable* node);
 
                 void UnregisterById(NodeId nodeId);
+                void UnregisterByIdDeferred(NodeId nodeId);
                 void UnregisterByIdNoDeref(NodeId nodeId);
 
                 std::vector<IUpdatable*> m_nodes;          // 登録済みノード
