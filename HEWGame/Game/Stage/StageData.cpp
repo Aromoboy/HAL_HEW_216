@@ -74,8 +74,6 @@ namespace Stage
             << " primaryParseError=" << normalized.primaryParseError
             << " secondaryParseError=" << normalized.secondaryParseError
             << " fallbackAnchors=" << normalized.insertedFallbackAnchor
-            << " minithresholds=" << m_phaseMiniThresholds.size()
-            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size()
             << " platformCount=" << m_platforms.size();
         LogSummary("Loaded", detail.str());
 
@@ -91,17 +89,6 @@ namespace Stage
     {
         return m_phaseRewardMultipliers;
     }
-    //ミニフェーズ
-    const std::vector<float>& StageData::GetPhaseMiniThresholds() const noexcept
-    {
-        return m_phaseMiniThresholds;
-    }
-    //ミニフェーズ
-    const std::vector<float>& StageData::GetPhaseRewardMiniMultipliers() const noexcept
-    {
-        return m_phaseRewardMiniMultipliers;
-    }
-
     const std::vector<float3>& StageData::GetSpawnPointsPrimary() const noexcept
     {
         return m_spawnPointsPrimary;
@@ -260,8 +247,6 @@ namespace Stage
         m_planeZ = normalized.planeZ;
         m_phaseThresholds = normalized.phaseThresholds;
         m_phaseRewardMultipliers = normalized.phaseRewardMultipliers;
-        m_phaseMiniThresholds = normalized.phaseMiniThresholds;
-        m_phaseRewardMiniMultipliers = normalized.phaseRewardMiniMultipliers;
         m_spawnPointsPrimary = normalized.spawnPointsPrimary;
         m_spawnPointsSecondary = normalized.spawnPointsSecondary;
         m_platforms = normalized.platforms;
@@ -301,8 +286,6 @@ namespace Stage
         oss << kLogPrefix << prefix << " planeZ=" << m_planeZ
             << " thresholds=" << m_phaseThresholds.size()
             << " multipliers=" << m_phaseRewardMultipliers.size()
-            << " minithreshold=" << m_phaseMiniThresholds.size()          //ミニフェーズ
-            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size() //ミニフェーズ
             << " spawnPointsPrimary=" << m_spawnPointsPrimary.size()
             << " spawnPointsSecondary=" << m_spawnPointsSecondary.size()
             << " platforms=" << m_platforms.size()
