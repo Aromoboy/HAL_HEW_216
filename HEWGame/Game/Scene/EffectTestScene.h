@@ -18,7 +18,6 @@ public:
         explicit EffectTestScene(SceneSpace::SceneManager& manager);
         ~EffectTestScene() override = default;
 
-
         void Update(Core::StepTimer& timer, Core::Input& input) override;
         void Update(const Core::UpdateContext& ctx) override;
         void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;

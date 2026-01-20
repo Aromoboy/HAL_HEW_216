@@ -62,12 +62,14 @@ public:
         std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;
         std::unique_ptr<UIManager> uiManager;
         std::unique_ptr<BackgroundRenderer> backgroundRenderer;
+        std::unique_ptr<EffectSystem> effectSystem;
         std::vector<StageObject> stageObjects;
         std::vector<std::shared_ptr<Entities::PhysicalEntity>> stagePhysicsEntities;
     };
 
     explicit SceneComposer(Core::UpdateScheduler& scheduler);
     Composition ComposeBootstrap();
+    void ComposeEffect(Composition& result, ::EffekseerRendererDX11::RendererRef a_render, ::Effekseer::ManagerRef manager);
     void Compose(Composition& result);
 
 private:
@@ -76,6 +78,7 @@ private:
     void ComposePhysics(Composition& result);
     void ComposeLayout(Composition& result);
     void ComposeUI(Composition& result);
+
 
     Core::UpdateScheduler& m_scheduler;
 };

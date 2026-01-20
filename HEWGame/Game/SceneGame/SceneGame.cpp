@@ -382,6 +382,7 @@ bool SceneGame::Load(Core::Input& input)
     m_materialTuningSettings = composition->materialTuningSettings;
     Render::ModelCache::Instance().SetMaterialTuningSettings(m_materialTuningSettings);
     composer.Compose(*composition);
+    composer.ComposeEffect(*composition, m_manager->GetEffectRenderer(), m_manager->GetEffectManager());
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
     m_stagePlaneZ = std::nullopt;
@@ -436,6 +437,7 @@ bool SceneGame::Load(Core::Input& input)
     guidelineConfig.widthWorld = composition->guidelineWidthWorld;
     guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
     m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
+    m_effectSystem = std::move(composition->effectSystem);
 
     GameplayRulesSystem::Config gameplayRulesConfig{};
     gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
@@ -918,6 +920,11 @@ void SceneGame::ConfigureUpdates()
                                 DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable; pickup input may fail.\n");
                         }
                 }
+        }
+
+        if (m_effectSystem && !m_effectSystemRegistered)
+        {
+            m_effectSystemRegistered = Register(*m_effectSystem);
         }
 
         SetStageState(StageState::Playing);

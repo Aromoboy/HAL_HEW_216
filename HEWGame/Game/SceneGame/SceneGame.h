@@ -35,6 +35,7 @@
 #include <string>
 #include"SettingScene.h"
 #include "ThirdParty/Effekseer/Effekseer.h"
+#include "EffectSystem.h"
 
 namespace Systems
 {
@@ -119,6 +120,7 @@ protected:
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::unique_ptr<SoundManagerEX> m_pManager;
+    std::unique_ptr<EffectSystem> m_effectSystem;
     Render::ModelRenderer* m_renderer = nullptr;
     std::unique_ptr<Entities::Player> player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
@@ -133,6 +135,7 @@ protected:
     bool m_drawRegistered = false;
     bool m_sweetsRegistered = false;
     bool m_sweetsLateRegistered = false;
+    bool m_effectSystemRegistered = false;
     bool m_loadFailed = false;
     Stage::StageData m_stageData;
     GameFlow::PhaseManager m_phaseManager;
@@ -176,6 +179,7 @@ protected:
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
     bool m_isComposed = false;
+    
 
 
     SceneSpace::SceneManager* m_manager = nullptr;

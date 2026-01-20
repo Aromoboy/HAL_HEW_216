@@ -221,7 +221,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         return;
     }
 
-    if (input->IsTrigger(VK_F1))
+    if (input->IsTrigger(VK_F2))
     {
         if (m_manager)
         {

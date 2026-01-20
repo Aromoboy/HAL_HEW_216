@@ -14,6 +14,10 @@
 EffectTestScene::EffectTestScene(SceneSpace::SceneManager& manager)
         : m_manager(&manager)
 {
+    m_effectMap.clear();
+    m_effectMap.try_emplace("fly", EffectCreateData(u"Assets/Effect/fly_effect_test01.efkefc", 1.0f));
+
+    m_effectSystem = std::make_unique<EffectSystem>(manager.GetEffectRenderer(), manager.GetEffectManager(), m_effectMap);
 }
 
 
@@ -61,13 +65,11 @@ bool EffectTestScene::Load(Core::Input& input)
 {
         (void)input;
 
-        m_effectMap.clear();
-        m_effectMap.try_emplace("fly", EffectCreateData(u"Assets/Effect/fly_effect_test01.efkefc", 1.0f));
-
         if (!m_camera)
         {
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>();
         }
+        
         return true;
 }
 

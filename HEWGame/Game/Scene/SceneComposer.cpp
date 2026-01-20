@@ -581,3 +581,14 @@ void SceneComposer::ComposeUI(Composition& result)
         result.uiManager.reset();
     }
 }
+
+
+void SceneComposer::ComposeEffect(Composition& result,
+    ::EffekseerRendererDX11::RendererRef a_render,
+    ::Effekseer::ManagerRef a_manager)
+{
+    std::unordered_map<std::string, EffectCreateData> effectPathMap;
+    effectPathMap.insert({ "Catch",EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 1.0f) });
+
+    result.effectSystem = std::make_unique<EffectSystem>(a_render, a_manager, effectPathMap);
+}
