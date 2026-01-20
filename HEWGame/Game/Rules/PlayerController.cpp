@@ -1,4 +1,4 @@
-#include "PlayerController.h"
+﻿#include "PlayerController.h"
 
 #include "Core/Input.h"
 #include "Entities/Player.h"
@@ -14,9 +14,9 @@
 
 namespace
 {
-    constexpr float kPlayerSpeedBoostStep = 1.2f;
-    constexpr float kMaxPlayerSpeedMultiplier = 2.0f;
-    constexpr float kPlayerMinimumYMargin = 1.0f;
+    constexpr float kPlayerSpeedBoostStep = 1.2f;           //増し分
+    constexpr float kMaxPlayerSpeedMultiplier = 2.0f;       //最高倍率
+    constexpr float kPlayerMinimumYMargin = 1.0f;           
     constexpr float kPlayerBoundsLogIntervalSeconds = 2.0f;
     constexpr float kCameraStateEpsilon = 1e-4f;
     constexpr bool kEnablePlayerBoundsLogging = false;

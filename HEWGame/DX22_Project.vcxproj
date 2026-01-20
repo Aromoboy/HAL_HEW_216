@@ -298,6 +298,7 @@
     <ClCompile Include="Game\UI\TitleRenderer.cpp" />
     <ClCompile Include="Game\UI\UIManager.cpp" />
     <ClCompile Include="HighScore.cpp" />
+    <ClCompile Include="PlayerData.cpp" />
     <ClInclude Include="Engine\Camera\BaseCamera.h" />
     <ClInclude Include="Engine\Camera\CameraManager.h" />
     <ClInclude Include="Engine\Camera\CameraRig.h" />
@@ -439,6 +440,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HighScore.h" />
+    <ClInclude Include="PlayerData.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" />

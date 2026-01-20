@@ -865,8 +865,10 @@
       <Filter>_Unsorted</Filter>
     </None>
     <ClCompile Include="HighScore.cpp" />
+    <ClCompile Include="PlayerData.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HighScore.h" />
+    <ClInclude Include="PlayerData.h" />
   </ItemGroup>
 </Project>
