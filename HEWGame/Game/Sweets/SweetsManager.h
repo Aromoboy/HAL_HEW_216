@@ -107,6 +107,7 @@ namespace SweetsSpace
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
         void SetSpawnPerPointInitial(int count);
+        void SetSpawnLimitsConfigured(bool configured);
         void SetForceGeneratedColliders(bool force);
         void SetForceConfigColliders(bool force, const std::vector<std::string>& kinds = {});
         void SetColliderConfigOverridesEnabled(bool enabled);

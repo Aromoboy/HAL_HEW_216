@@ -149,6 +149,7 @@ namespace SceneGameConfig
         int spawnPerPointCap = 6;
         int spawnPerPointInitial = 0;
         int spawnTotalCap = 12;
+        bool hasSpawnLimits = false;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;
