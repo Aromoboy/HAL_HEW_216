@@ -483,14 +483,6 @@ bool SceneGame::Load(Core::Input& input)
         m_contactHandler.Bind(*m_physicsBinder, m_sweetsManager.get());
     }
 
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
-        {
-            ForwardSweetsPhaseChange(newPhase);
-        });
-    }
-
     m_playerColliderMismatchLogged = false;
     SceneGameLoader loader(DebugTrace, kLogPrefix);
     m_renderer = &App::Game::Instance().GetModelRenderer();
@@ -2052,29 +2044,7 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     oss << kLogPrefix << "Broadcasting phase " << newPhase
         << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
     ::DebugTrace(oss.str());
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->NotifyPhaseChanged(newPhase);
-    }
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
-}
-
-void SceneGame::ForwardSweetsPhaseChange(int newPhase)
-{
-    std::ostringstream oss;
-    oss << kLogPrefix << "[SweetsPhase] Forwarding phase " << newPhase
-        << " to spawn pacing system.\n";
-    ::DebugTrace(oss.str());
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->ForceSpawnRefresh();
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "[SweetsPhase] Spawn pacing refresh skipped; manager missing.\n");
-    }
 }
 void SceneGame::ResetPlaySession()
 {
@@ -2082,6 +2052,7 @@ void SceneGame::ResetPlaySession()
     {
         m_sweetsManager->ClearAllSweets();
         m_sweetsManager->ForceSpawnRefresh();
+        m_sweetsManager->SeedInitialSpawns();
     }
     else
     {
@@ -2118,15 +2089,6 @@ void SceneGame::ResetPlaySession()
     ResetGuidelineHeight();
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "SweetsManager missing during ResetPlaySession; phase reset not broadcast.\n");
-    }
 
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";

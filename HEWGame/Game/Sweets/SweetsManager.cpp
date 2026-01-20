@@ -1,36 +1,10 @@
 #include "SweetsManager.h"
 
-#include <sstream>
-
 #include <box2d/box2d.h>
-
-#if defined(_WIN32)
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <windows.h>
-#endif
 
 #include "Core/UpdateScheduler.h"
 #include "Sweets/BaseSweets.h"
 #include "Systems/Physics/PhysicsMachine.h"
-
-namespace
-{
-#if defined(_WIN32) && defined(_DEBUG)
-    void DebugTrace(const std::string& message)
-    {
-        ::OutputDebugStringA(message.c_str());
-    }
-#else
-    void DebugTrace(const std::string& message)
-    {
-        (void)message;
-    }
-#endif
-
-    constexpr const char* kLogPrefix = "[SweetsManager] ";
-}
 
 namespace SweetsSpace
 {
@@ -59,12 +33,9 @@ namespace SweetsSpace
         , m_physicsMachine(&physicsMachine)
         , m_scheduler(&scheduler)
         , m_lateUpdateNode(std::make_unique<LateUpdateNode>(*this))
-        , m_phaseChangeCallback()
-        , m_currentPhase(0)
         , m_warnedMissingDrawSystem(false)
         , m_warnedMissingPhysicsMachine(false)
         , m_warnedMissingScheduler(false)
-        , m_warnedMissingPhaseCallback(false)
         , m_registry()
         , m_factory(physicsMachine)
         , m_spawner(m_factory, m_registry, [this](const std::string& kind, const Transform& transform)
@@ -156,47 +127,9 @@ namespace SweetsSpace
     {
         m_lifecycle.ClearAllSweets();
     }
-
-    void SweetsManager::SetPhaseChangeCallback(PhaseChangeCallback callback)
+    void SweetsManager::SeedInitialSpawns()
     {
-        m_phaseChangeCallback = std::move(callback);
-        m_warnedMissingPhaseCallback = false;
-    }
-
-    void SweetsManager::NotifyPhaseChanged(int newPhase)
-    {
-        if (newPhase < 0)
-        {
-            newPhase = 0;
-        }
-
-        if (newPhase == m_currentPhase)
-        {
-            return;
-        }
-
-        m_currentPhase = newPhase;
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "フェーズが " << m_currentPhase << " に変わったよ\n";
-        DebugTrace(oss.str());
-
-        m_spawner.NotifyPhaseChanged(m_currentPhase);
-
-        if (m_phaseChangeCallback)
-        {
-            m_phaseChangeCallback(m_currentPhase);
-        }
-        else if (!m_warnedMissingPhaseCallback)
-        {
-            DebugTrace(std::string(kLogPrefix) + "フェーズ変更のコールバックがないので、スポーン配置はそのままにしとくね \n");
-            m_warnedMissingPhaseCallback = true;
-        }
-    }
-
-    int SweetsManager::GetCurrentPhase() const noexcept
-    {
-        return m_currentPhase;
+        m_spawner.SeedInitialSpawns();
     }
 
     std::vector<std::pair<std::string, SweetsManager::FactoryPreset>> SweetsManager::EnumerateFactoryPresets() const
@@ -352,9 +285,9 @@ namespace SweetsSpace
         return true;
     }
 
-    bool SweetsManager::LoadPhaseSpawnConfig(const std::string& path)
+    bool SweetsManager::LoadSpawnTuningConfig(const std::string& path)
     {
-        return m_spawner.LoadPhaseSpawnConfig(path);
+        return m_spawner.LoadSpawnTuningConfig(path);
     }
 
     void SweetsManager::SetSpawnOrigins(

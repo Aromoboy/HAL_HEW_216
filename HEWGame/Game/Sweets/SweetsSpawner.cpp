@@ -11,7 +11,9 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "Config/ConfigSectionReader.h"
 #include "Diagnostics/Logger.h"
+#include "SceneGame/GameplayConfig.h"
 #include "Sweets/BaseSweets.h"
 #include "Sweets/SweetsFactory.h"
 #include "Sweets/SweetsRegistry.h"
@@ -48,34 +50,6 @@ namespace
     constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
-    constexpr float kAutoSpawnIntervalFactor = 0.9f;
-    constexpr float kAutoBurstIntervalFactor = 0.9f;
-    constexpr int kAutoSimultaneousIncrement = 1;
-    constexpr int kAutoSimultaneousCap = 6;
-    constexpr float kMinimumAutoGrowthFactor = 0.01f;
-    constexpr float kDefaultAutoGrowthFactor = 0.9f;
-    constexpr int kDefaultAutoSimultaneousIncrement = 1;
-    constexpr int kDefaultAutoSimultaneousCap = 6;
-
-    float SanitizeGrowthFactor(float value, float fallback = kDefaultAutoGrowthFactor)
-    {
-        if (!(value > 0.0f))
-        {
-            return fallback;
-        }
-        return std::max(kMinimumAutoGrowthFactor, value);
-    }
-
-    int SanitizeSimultaneousIncrement(int value, int fallback = kDefaultAutoSimultaneousIncrement)
-    {
-        return (value >= 0) ? value : fallback;
-    }
-
-    int SanitizeSimultaneousCap(int value, int fallback = kDefaultAutoSimultaneousCap)
-    {
-        return (value > 0) ? value : fallback;
-    }
-
     std::string TrimToken(const std::string& value)
     {
         auto begin = value.begin();
@@ -234,6 +208,17 @@ namespace
         outValue = float3{ components[0], components[1], components[2] };
         return true;
     }
+
+    std::string NormalizeConfigKey(const std::string& value)
+    {
+        std::string normalized = SweetsSpace::NormalizeKey(value);
+        normalized.erase(std::remove_if(normalized.begin(), normalized.end(), [](char ch)
+            {
+                return ch == '_' || ch == '.';
+            }),
+            normalized.end());
+        return normalized;
+    }
 }
 
 namespace SweetsSpace
@@ -247,13 +232,10 @@ namespace SweetsSpace
         , m_activeBurstInterval(kDefaultBurstIntervalSeconds)
         , m_simultaneousLiveTarget(kDefaultSimultaneousLiveTarget)
         , m_batchStackTarget(kDefaultSimultaneousSpawnCount)
-        , m_autoSpawnIntervalFactor(kAutoSpawnIntervalFactor)
-        , m_autoBurstIntervalFactor(kAutoBurstIntervalFactor)
-        , m_autoSimultaneousIncrement(kAutoSimultaneousIncrement)
-        , m_autoSimultaneousCap(kAutoSimultaneousCap)
         , m_random(std::random_device{}())
         , m_liveSweetsCap(kDefaultLiveSweetsCap)
     {
+        ApplyDefaultSpawnConfig();
     }
 
     void SweetsSpawner::RunSpawnScheduler(float deltaSeconds)
@@ -265,7 +247,7 @@ namespace SweetsSpace
         m_spawnPausedDueToLiveSweets = spawnBlockedByCap;
         m_lastLiveSweetsCount = liveSweets;
 
-        if (m_phaseConfigs.empty())
+        if (m_spawnTuningConfig.weights.empty())
         {
             if (m_allowDefaultPhaseConfigs)
             {
@@ -278,20 +260,11 @@ namespace SweetsSpace
             }
         }
 
-        if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
-        {
-            OnPhaseConfigurationChanged(m_currentPhase);
-            if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
-            {
-                return;
-            }
-        }
-
         if (!(deltaSeconds > 0.0f))
         {
             return;
         }
-        const auto& config = m_phaseConfigs[m_activePhaseConfigIndex];
+        const auto& config = m_spawnTuningConfig;
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
         m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
@@ -409,20 +382,164 @@ namespace SweetsSpace
         m_lastLiveSweetsCount = CountLiveSweets();
     }
 
-    bool SweetsSpawner::LoadPhaseSpawnConfig(const std::string& path)
+    bool SweetsSpawner::LoadSpawnTuningConfig(const std::string& path)
     {
-        std::ifstream file(path);
-        if (!file.is_open())
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(path, GameplayConfig::kSectionSpawnTuning, lines))
         {
+            ApplyDefaultSpawnConfig();
             std::ostringstream oss;
-            oss << kLogPrefix << "スポーン設定 '" << path << "' を開けなかったよ\n";
+            oss << kLogPrefix << "スポーン調整の設定 '" << GameplayConfig::kSectionSpawnTuning
+                << "' が見つからないから、デフォルトに戻すね ('" << path << "')\n";
             DebugTrace(oss.str());
             return false;
         }
 
-        m_phaseConfigs.clear();
+        SpawnTuningConfig config{};
         bool parseError = false;
-        std::string line;
+        bool hasWeights = false;
+        bool hasSpawnInterval = false;
+        bool hasBurstInterval = false;
+        bool hasSimultaneous = false;
+        bool hasLiveTarget = false;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = NormalizeConfigKey(entry.key);
+            const std::string value = TrimToken(entry.value);
+            if (key.empty())
+            {
+                continue;
+            }
+
+            if (key == "spawnintervalseconds" || key == "spawninterval")
+            {
+                float parsed = 0.0f;
+                if (TryParseFloat(value, &parsed))
+                {
+                    config.spawnIntervalSeconds = parsed;
+                    hasSpawnInterval = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (key == "burstintervalseconds" || key == "burstinterval")
+            {
+                float parsed = 0.0f;
+                if (TryParseFloat(value, &parsed))
+                {
+                    config.burstIntervalSeconds = parsed;
+                    hasBurstInterval = true;
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+            else if (key == "simultaneousspawncount" || key == "simultaneous")
+            {
+                try
+                {
+                    config.simultaneousSpawnCount = std::stoi(value);
+                    hasSimultaneous = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (key == "simultaneouslivetarget" || key == "livetarget")
+            {
+                try
+                {
+                    config.simultaneousLiveTarget = std::stoi(value);
+                    hasLiveTarget = true;
+                }
+                catch (const std::exception&)
+                {
+                    parseError = true;
+                }
+            }
+            else if (key == "weights")
+            {
+                bool weightError = false;
+                config.weights = ParseWeights(value, &weightError);
+                if (weightError)
+                {
+                    parseError = true;
+                }
+                else
+                {
+                    hasWeights = true;
+                }
+            }
+            else if (key == "spawnoriginoffset")
+            {
+                float3 offset{};
+                if (ParseFloat3Value(value, offset))
+                {
+                    if (!m_spawnOriginsPrimary.empty())
+                    {
+                        for (auto& origin : m_spawnOriginsPrimary)
+                        {
+                            origin.x += offset.x;
+                            origin.y += offset.y;
+                            origin.z += offset.z;
+                        }
+                    }
+                    if (!m_spawnOriginsSecondary.empty())
+                    {
+                        for (auto& origin : m_spawnOriginsSecondary)
+                        {
+                            origin.x += offset.x;
+                            origin.y += offset.y;
+                            origin.z += offset.z;
+                        }
+                    }
+                }
+                else
+                {
+                    parseError = true;
+                }
+            }
+        }
+
+        if (!hasWeights)
+        {
+            std::ostringstream warn;
+            warn << kLogPrefix << "spawn.tuning に weight がないのでデフォルトを入れるね\n";
+            DebugTrace(warn.str());
+            config.weights = BuildDefaultWeights();
+        }
+        else
+        {
+            config.weights = NormalizeWeights(config.weights);
+        }
+
+        if (!hasSpawnInterval)
+        {
+            config.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
+        }
+        if (!hasBurstInterval)
+        {
+            config.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
+        }
+        if (!hasSimultaneous)
+        {
+            config.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
+        }
+        if (!hasLiveTarget)
+        {
+            config.simultaneousLiveTarget = config.simultaneousSpawnCount;
+        }
+
+        config.spawnIntervalSeconds = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        config.burstIntervalSeconds = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+        config.simultaneousSpawnCount = std::max(1, config.simultaneousSpawnCount);
+        config.simultaneousLiveTarget = std::max(1, config.simultaneousLiveTarget);
+
         std::unordered_set<std::string> registeredKindsNormalized;
         if (m_factory)
         {
@@ -438,245 +555,16 @@ namespace SweetsSpace
             defaultWeightLookup[entry.kind] = entry.weight;
         }
 
-        int phaseIndex = 0;
-        while (std::getline(file, line))
-        {
-            if (line.empty())
-            {
-                continue;
-            }
-
-            std::istringstream stream(line);
-            std::string token;
-            PhaseSpawnConfig config{};
-            bool hasWeights = false;
-            bool hasSpawnInterval = false;
-            bool hasBurstInterval = false;
-            bool hasSimultaneous = false;
-            bool hasLiveTarget = false;
-            bool hasPhaseStartBonus = false;
-
-            while (std::getline(stream, token, ','))
-            {
-                token = TrimToken(token);
-                if (token.empty())
-                {
-                    continue;
-                }
-
-                const auto separator = token.find('=');
-                if (separator == std::string::npos)
-                {
-                    continue;
-                }
-
-                const std::string key = TrimToken(token.substr(0, separator));
-                const std::string value = TrimToken(token.substr(separator + 1));
-                if (key.empty())
-                {
-                    continue;
-                }
-
-                const std::string normalizedKey = NormalizeKey(key);
-                if (normalizedKey == "spawn_interval")
-                {
-                    try
-                    {
-                        config.spawnIntervalSeconds = std::stof(value);
-                        hasSpawnInterval = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "burst_interval")
-                {
-                    try
-                    {
-                        config.burstIntervalSeconds = std::stof(value);
-                        hasBurstInterval = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "simultaneous")
-                {
-                    try
-                    {
-                        config.simultaneousSpawnCount = std::stoi(value);
-                        hasSimultaneous = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "live_target")
-                {
-                    try
-                    {
-                        config.simultaneousLiveTarget = std::stoi(value);
-                        hasLiveTarget = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "phase_start_bonus_per_lane" || normalizedKey == "phasestartbonusperlane")
-                {
-                    try
-                    {
-                        config.phaseStartBonusPerLane = std::stoi(value);
-                        hasPhaseStartBonus = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "weights")
-                {
-                    bool weightError = false;
-                    config.weights = ParseWeights(value, &weightError);
-                    if (weightError)
-                    {
-                        parseError = true;
-                    }
-                    else
-                    {
-                        hasWeights = true;
-                    }
-                }
-                else if (normalizedKey == "auto_spawn_interval_factor")
-                {
-                    float factor = 0.0f;
-                    if (TryParseFloat(value, &factor))
-                    {
-                        m_autoSpawnIntervalFactor = factor;
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "auto_burst_interval_factor")
-                {
-                    float factor = 0.0f;
-                    if (TryParseFloat(value, &factor))
-                    {
-                        m_autoBurstIntervalFactor = factor;
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "auto_simultaneous_increment")
-                {
-                    try
-                    {
-                        m_autoSimultaneousIncrement = std::stoi(value);
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "auto_simultaneous_cap")
-                {
-                    try
-                    {
-                        m_autoSimultaneousCap = std::stoi(value);
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "spawn_origin_offset")
-                {
-                    float3 offset{};
-                    if (ParseFloat3Value(value, offset))
-                    {
-                        if (!m_spawnOriginsPrimary.empty())
-                        {
-                            for (auto& origin : m_spawnOriginsPrimary)
-                            {
-                                origin.x += offset.x;
-                                origin.y += offset.y;
-                                origin.z += offset.z;
-                            }
-                        }
-                        if (!m_spawnOriginsSecondary.empty())
-                        {
-                            for (auto& origin : m_spawnOriginsSecondary)
-                            {
-                                origin.x += offset.x;
-                                origin.y += offset.y;
-                                origin.z += offset.z;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        parseError = true;
-                    }
-                }
-            }
-
-            if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
-                && !hasPhaseStartBonus)
-            {
-                continue;
-            }
-
-            if (!hasWeights)
-            {
-                std::ostringstream warn;
-                warn << kLogPrefix << "phase " << phaseIndex << " に weight がないのでデフォルトを入れるね\n";
-                DebugTrace(warn.str());
-                config.weights = BuildDefaultWeights();
-            }
-            else
-            {
-                config.weights = NormalizeWeights(config.weights);
-            }
-
-            if (!hasLiveTarget)
-            {
-                config.simultaneousLiveTarget = config.simultaneousSpawnCount;
-            }
-
-            EnsureRegisteredWeights(config, phaseIndex, registeredKindsNormalized, defaultWeightLookup);
-            m_phaseConfigs.push_back(config);
-            LogActiveSpawnParameters(m_phaseConfigs.back(), phaseIndex);
-            ++phaseIndex;
-        }
-
-        const float loadedAutoSpawnFactor = m_autoSpawnIntervalFactor;
-        const float loadedAutoBurstFactor = m_autoBurstIntervalFactor;
-        const int loadedAutoSimultaneousIncrement = m_autoSimultaneousIncrement;
-        const int loadedAutoSimultaneousCap = m_autoSimultaneousCap;
-        if (parseError)
-        {
-            std::ostringstream autoOss;
-            autoOss << kLogPrefix << "スポーンの auto 設定に失敗したかもしれないよ"
-                << " intervalFactor=" << loadedAutoSpawnFactor
-                << " burstFactor=" << loadedAutoBurstFactor
-                << " simultaneousIncrement=" << loadedAutoSimultaneousIncrement
-                << " simultaneousCap=" << loadedAutoSimultaneousCap << "\n";
-            DebugTrace(autoOss.str());
-        }
-        LogAutoGenerationPolicy("config-load");
+        EnsureRegisteredWeights(config, registeredKindsNormalized, defaultWeightLookup);
+        m_spawnTuningConfig = config;
+        ForceSpawnRefresh();
 
         std::ostringstream oss;
-        oss << kLogPrefix << "'" << path << "' から " << m_phaseConfigs.size()
-            << " 個のスポーンフェーズを読んだよ (parseError=" << std::boolalpha << parseError << ")\n";
+        oss << kLogPrefix << "'" << path << "' からスポーン調整を読んだよ (parseError="
+            << std::boolalpha << parseError << ")\n";
         DebugTrace(oss.str());
+        LogSpawnParameters(m_spawnTuningConfig);
+
         return !parseError;
     }
 
@@ -685,12 +573,12 @@ namespace SweetsSpace
         m_spawnTimer = 0.0f;
         m_burstTimer = 0.0f;
         m_activeBurstPlanned = 0;
-        m_activeBurstInterval = kDefaultBurstIntervalSeconds;
         m_stackedInBatch = 0;
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
-        m_batchStackTarget = std::max(1, m_batchStackTarget);
-        m_simultaneousLiveTarget = std::max(1, m_simultaneousLiveTarget);
+        m_activeBurstInterval = std::max(m_spawnTuningConfig.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
+        m_batchStackTarget = std::max(1, m_spawnTuningConfig.simultaneousSpawnCount);
+        m_simultaneousLiveTarget = std::max(1, m_spawnTuningConfig.simultaneousLiveTarget);
         m_pendingTopUpCount = 0;
         if (!m_spawnQueue.empty())
         {
@@ -700,6 +588,20 @@ namespace SweetsSpace
         }
         m_spawnQueue.clear();
         m_currentBurstRemaining = 0;
+    }
+
+    void SweetsSpawner::SeedInitialSpawns()
+    {
+        if (m_spawnPerPointInitial <= 0)
+        {
+            return;
+        }
+
+        const int spawned = SpawnInitialPerPoint(m_spawnPerPointInitial);
+        if (spawned > 0)
+        {
+            m_burstTimer = m_activeBurstInterval;
+        }
     }
 
     void SweetsSpawner::SetSpawnOrigins(
@@ -805,17 +707,6 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
-    void SweetsSpawner::SetSpawnLimitsConfigured(bool configured)
-    {
-        m_allowDefaultPhaseConfigs = !configured;
-    }
-
-    void SweetsSpawner::NotifyPhaseChanged(int newPhase)
-    {
-        m_currentPhase = std::max(0, newPhase);
-        OnPhaseConfigurationChanged(m_currentPhase);
-    }
-
     bool SweetsSpawner::RequestSupplementalSpawn(int count, const char* context)
     {
         if (count <= 0)
@@ -823,18 +714,9 @@ namespace SweetsSpace
             return false;
         }
 
-        if (m_phaseConfigs.empty())
+        if (m_spawnTuningConfig.weights.empty())
         {
             return false;
-        }
-
-        if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
-        {
-            OnPhaseConfigurationChanged(m_currentPhase);
-            if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
-            {
-                return false;
-            }
         }
 
         const int liveSweets = CountLiveSweets();
@@ -961,16 +843,6 @@ namespace SweetsSpace
                 << " burstInterval=" << std::fixed << std::setprecision(2) << m_activeBurstInterval << "\n";
             DebugTrace(oss.str());
         }
-    }
-
-    const std::vector<PhaseSpawnConfig>& SweetsSpawner::GetPhaseConfigs() const
-    {
-        return m_phaseConfigs;
-    }
-
-    int SweetsSpawner::GetActivePhaseConfigIndex() const
-    {
-        return m_activePhaseConfigIndex;
     }
 
     int SweetsSpawner::EnqueueSpawns(int count)
@@ -1107,17 +979,7 @@ namespace SweetsSpace
 
     std::string SweetsSpawner::ChooseKindFromActiveConfig()
     {
-        if (m_phaseConfigs.empty())
-        {
-            return {};
-        }
-
-        if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
-        {
-            return {};
-        }
-
-        const auto& config = m_phaseConfigs[m_activePhaseConfigIndex];
+        const auto& config = m_spawnTuningConfig;
         if (config.weights.empty())
         {
             return {};
@@ -1165,132 +1027,13 @@ namespace SweetsSpace
         return NormalizeKey(descriptor->key);
     }
 
-    void SweetsSpawner::OnPhaseConfigurationChanged(int newPhase)
-    {
-        const int sanitizedPhase = std::max(0, newPhase);
-        const int maxExistingIndex = std::max(0, static_cast<int>(m_phaseConfigs.size()) - 1);
-        EnsurePhaseConfigAvailable(std::min(sanitizedPhase, maxExistingIndex));
-        if (m_phaseConfigs.empty())
-        {
-            return;
-        }
-
-        const int loopModulo = static_cast<int>(m_phaseConfigs.size());
-        int target = sanitizedPhase;
-        if (loopModulo > 0 && target >= loopModulo)
-        {
-            const int loopIndex = target % loopModulo;
-            std::ostringstream loopLog;
-            loopLog << kLogPrefix << "[Spawn] phase=" << sanitizedPhase << " -> reused config index=" << loopIndex
-                << " (loopModulo=" << loopModulo << ")\n";
-            DebugTrace(loopLog.str());
-            target = loopIndex;
-        }
-
-        if (target >= static_cast<int>(m_phaseConfigs.size()))
-        {
-            return;
-        }
-
-        if (m_activePhaseConfigIndex == target)
-        {
-            return;
-        }
-
-        const auto& activeConfig = m_phaseConfigs[target];
-        m_activePhaseConfigIndex = target;
-        ForceSpawnRefresh();
-        const float interval = std::max(activeConfig.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
-        m_spawnTimer = std::max(m_spawnTimer, interval);
-        m_activeBurstInterval = std::max(activeConfig.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
-        m_batchStackTarget = std::max(1, activeConfig.simultaneousSpawnCount);
-        m_simultaneousLiveTarget = std::max(1, activeConfig.simultaneousLiveTarget);
-        m_batchInitialSpawnDone = false;
-        m_batchCoolingDown = false;
-        m_stackedInBatch = 0;
-        const int activeLaneCount = (m_spawnOriginsPrimary.empty() ? 0 : 1) + (m_spawnOriginsSecondary.empty() ? 0 : 1);
-        const int phaseStartBonusPerLane = std::max(0, activeConfig.phaseStartBonusPerLane);
-        const int phaseStartBonusCount = (phaseStartBonusPerLane > 0 && activeLaneCount > 0)
-            ? phaseStartBonusPerLane * activeLaneCount
-            : 0;
-        const int phaseStartTotal = phaseStartBonusCount;
-        if (phaseStartTotal > 0)
-        {
-            m_activeBurstPlanned = std::max(m_activeBurstPlanned, phaseStartTotal);
-            if (phaseStartBonusCount > 0)
-            {
-                EnqueueSpawns(phaseStartBonusCount);
-            }
-            m_burstTimer = m_activeBurstInterval;
-        }
-
-        if (sanitizedPhase == 0)
-        {
-            SpawnInitialPerPoint(m_spawnPerPointInitial);
-        }
-
-        std::ostringstream oss;
-        oss << kLogPrefix << "フェーズ変更で次のバッチを仕込んだよ interval="
-            << std::fixed << std::setprecision(2) << interval << " burstInterval=" << m_activeBurstInterval
-            << " plannedSimultaneous=" << activeConfig.simultaneousSpawnCount
-            << " liveTarget=" << m_simultaneousLiveTarget << ".\n";
-        DebugTrace(oss.str());
-        LogActiveSpawnParameters(activeConfig, target);
-    }
-
-    void SweetsSpawner::EnsurePhaseConfigAvailable(int phaseIndex)
-    {
-        if (phaseIndex < 0)
-        {
-            phaseIndex = 0;
-        }
-
-        if (m_phaseConfigs.empty() && m_allowDefaultPhaseConfigs)
-        {
-            ApplyDefaultPhaseConfigs();
-        }
-
-        if (m_phaseConfigs.empty())
-        {
-            return;
-        }
-
-        while (static_cast<int>(m_phaseConfigs.size()) <= phaseIndex)
-        {
-            const int previousIndex = static_cast<int>(m_phaseConfigs.size()) - 1;
-            PhaseSpawnConfig generated = GenerateAutoPhaseConfig(m_phaseConfigs.back(), previousIndex);
-            const int generatedIndex = static_cast<int>(m_phaseConfigs.size());
-            m_phaseConfigs.push_back(generated);
-            std::ostringstream oss;
-            oss << kLogPrefix << "[Spawn] phase=" << generatedIndex << " (auto-generated from " << previousIndex << ") interval="
-                << std::fixed << std::setprecision(2) << generated.spawnIntervalSeconds
-                << " burstInterval=" << generated.burstIntervalSeconds
-                << " simultaneous=" << generated.simultaneousSpawnCount
-                << " liveTarget=" << generated.simultaneousLiveTarget << "\n";
-            DebugTrace(oss.str());
-            LogActiveSpawnParameters(generated, generatedIndex);
-        }
-    }
-
-    void SweetsSpawner::LogActiveSpawnParameters(const PhaseSpawnConfig& config, int phaseIndex) const
+    void SweetsSpawner::LogSpawnParameters(const SpawnTuningConfig& config) const
     {
         std::ostringstream oss;
-        oss << kLogPrefix << "[Spawn] phase=" << phaseIndex;
-        if (config.autoGenerated)
-        {
-            oss << " (auto-generated";
-            if (config.generatedFromPhase >= 0)
-            {
-                oss << " from " << config.generatedFromPhase;
-            }
-            oss << ")";
-        }
-        oss
-            << " interval=" << std::fixed << std::setprecision(2) << config.spawnIntervalSeconds
+        oss << kLogPrefix << "[Spawn] interval=" << std::fixed << std::setprecision(2) << config.spawnIntervalSeconds
             << " burstInterval=" << std::fixed << std::setprecision(2) << config.burstIntervalSeconds
             << " simultaneous=" << config.simultaneousSpawnCount
             << " liveTarget=" << config.simultaneousLiveTarget
-            << " phaseStartBonusPerLane=" << config.phaseStartBonusPerLane
             << " weights=";
 
         if (config.weights.empty())
@@ -1310,35 +1053,6 @@ namespace SweetsSpace
 
         oss << "\n";
         DebugTrace(oss.str());
-    }
-
-    PhaseSpawnConfig SweetsSpawner::GenerateAutoPhaseConfig(const PhaseSpawnConfig& previous, int previousIndex) const
-    {
-        PhaseSpawnConfig generated = previous;
-        generated.autoGenerated = true;
-        generated.generatedFromPhase = previousIndex;
-        const float sanitizedIntervalFactor = SanitizeGrowthFactor(m_autoSpawnIntervalFactor);
-        const float sanitizedBurstFactor = SanitizeGrowthFactor(m_autoBurstIntervalFactor);
-        generated.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds,
-            previous.spawnIntervalSeconds * sanitizedIntervalFactor);
-        generated.burstIntervalSeconds = std::max(kMinimumBurstIntervalSeconds,
-            previous.burstIntervalSeconds * sanitizedBurstFactor);
-
-        const int sanitizedIncrement = SanitizeSimultaneousIncrement(m_autoSimultaneousIncrement);
-        const int sanitizedCap = SanitizeSimultaneousCap(m_autoSimultaneousCap);
-        const int nextSimultaneous = std::min(sanitizedCap,
-            previous.simultaneousSpawnCount + sanitizedIncrement);
-        const int nextLiveTarget = std::min(sanitizedCap,
-            previous.simultaneousLiveTarget + sanitizedIncrement);
-        generated.simultaneousSpawnCount = std::max(1, nextSimultaneous);
-        generated.simultaneousLiveTarget = std::max(1, nextLiveTarget);
-        generated.weights = NormalizeWeights(previous.weights);
-        if (generated.weights.empty())
-        {
-            DebugTrace(std::string(kLogPrefix) + "[Spawn] auto-generationに使える weight が無かったからデフォルトで補うね\n");
-            generated.weights = NormalizeWeights(BuildDefaultWeights());
-        }
-        return generated;
     }
 
     std::vector<WeightedSweetsType> SweetsSpawner::NormalizeWeights(const std::vector<WeightedSweetsType>& weights) const
@@ -1363,19 +1077,8 @@ namespace SweetsSpace
         return normalized;
     }
 
-    void SweetsSpawner::LogAutoGenerationPolicy(const char* context) const
+    void SweetsSpawner::ApplyDefaultSpawnConfig()
     {
-        std::ostringstream oss;
-        oss << kLogPrefix << "[Spawn] auto-generation policy (" << context << ") intervalFactor=" << m_autoSpawnIntervalFactor
-            << " burstFactor=" << m_autoBurstIntervalFactor
-            << " simultaneousIncrement=" << m_autoSimultaneousIncrement
-            << " simultaneousCap=" << m_autoSimultaneousCap << "\n";
-        DebugTrace(oss.str());
-    }
-
-    void SweetsSpawner::ApplyDefaultPhaseConfigs()
-    {
-        m_phaseConfigs.clear();
         std::vector<WeightedSweetsType> baseWeights = BuildDefaultWeights();
         if (baseWeights.empty())
         {
@@ -1383,36 +1086,19 @@ namespace SweetsSpace
             return;
         }
 
-        PhaseSpawnConfig phase0;
-        phase0.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
-        phase0.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
-        phase0.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
-        phase0.simultaneousLiveTarget = kDefaultSimultaneousLiveTarget;
-        phase0.weights = baseWeights;
-
-        PhaseSpawnConfig phase1 = phase0;
-        phase1.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds, kDefaultSpawnIntervalSeconds * 0.75f);
-
-        PhaseSpawnConfig phase2 = phase0;
-        phase2.spawnIntervalSeconds = std::max(kMinimumSpawnIntervalSeconds, kDefaultSpawnIntervalSeconds * 0.5f);
-        phase2.simultaneousSpawnCount = 2;
-        phase2.simultaneousLiveTarget = 2;
-
-        m_phaseConfigs.push_back(phase0);
-        m_phaseConfigs.push_back(phase1);
-        m_phaseConfigs.push_back(phase2);
-
-        m_autoSpawnIntervalFactor = SanitizeGrowthFactor(kDefaultAutoGrowthFactor);
-        m_autoBurstIntervalFactor = SanitizeGrowthFactor(kDefaultAutoGrowthFactor);
-        m_autoSimultaneousIncrement = SanitizeSimultaneousIncrement(kDefaultAutoSimultaneousIncrement);
-        m_autoSimultaneousCap = SanitizeSimultaneousCap(kDefaultAutoSimultaneousCap);
-        m_activePhaseConfigIndex = -1;
+        SpawnTuningConfig config{};
+        config.spawnIntervalSeconds = kDefaultSpawnIntervalSeconds;
+        config.burstIntervalSeconds = kDefaultBurstIntervalSeconds;
+        config.simultaneousSpawnCount = kDefaultSimultaneousSpawnCount;
+        config.simultaneousLiveTarget = kDefaultSimultaneousLiveTarget;
+        config.weights = baseWeights;
+        m_spawnTuningConfig = config;
         ForceSpawnRefresh();
 
         std::ostringstream oss;
-        oss << kLogPrefix << "デフォルトのスポーン設定を適用したよ (" << m_phaseConfigs.size() << " phases) \n";
+        oss << kLogPrefix << "デフォルトのスポーン設定を適用したよ\n";
         DebugTrace(oss.str());
-        LogAutoGenerationPolicy("defaults");
+        LogSpawnParameters(m_spawnTuningConfig);
     }
 
     std::vector<WeightedSweetsType> SweetsSpawner::BuildDefaultWeights() const
@@ -1774,7 +1460,7 @@ namespace SweetsSpace
         {
             m_lastLiveSweetsCount = CountLiveSweets();
             std::ostringstream oss;
-            oss << kLogPrefix << "フェーズ0の初期スポーンを実行したよ perPoint=" << perPointCount
+            oss << kLogPrefix << "初期スポーンを実行したよ perPoint=" << perPointCount
                 << " spawned=" << spawnedCount << " points=" << totalPoints
                 << " live=" << m_lastLiveSweetsCount << "\n";
             DebugTrace(oss.str());
@@ -1783,7 +1469,7 @@ namespace SweetsSpace
         return spawnedCount;
     }
 
-    void SweetsSpawner::EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
+    void SweetsSpawner::EnsureRegisteredWeights(SpawnTuningConfig& config,
         const std::unordered_set<std::string>& registeredKindsNormalized,
         const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const
     {
@@ -1828,8 +1514,7 @@ namespace SweetsSpace
         });
 
         std::ostringstream warn;
-        warn << kLogPrefix << "[Spawn] フェーズ " << phaseIndex
-            << " で登録済みの種類に weight が足りないよ:";
+        warn << kLogPrefix << "[Spawn] 登録済みの種類に weight が足りないよ:";
         for (auto missing : missingTypes)
         {
             warn << ' ' << ToString(missing);
@@ -1856,8 +1541,7 @@ namespace SweetsSpace
             presentNormalized.insert(NormalizeKey(ToString(missing)));
 
             std::ostringstream added;
-            added << kLogPrefix << "[Spawn] フェーズ " << phaseIndex
-                << " に不足してた種類 '" << ToString(missing)
+            added << kLogPrefix << "[Spawn] 不足してた種類 '" << ToString(missing)
                 << "' をフォールバック weight=" << std::fixed << std::setprecision(2) << fallbackWeight
                 << " で自動追加したよ (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
             DebugTrace(added.str());

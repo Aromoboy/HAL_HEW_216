@@ -454,12 +454,11 @@ void SceneComposer::ComposePhysics(Composition& result)
         result.sweetsManager->SetLiveSweetsCap(result.sweetsSpawnLimitSettings.spawnTotalCap);
         result.sweetsManager->SetSpawnPointCap(result.sweetsSpawnLimitSettings.spawnPerPointCap);
         result.sweetsManager->SetSpawnPerPointInitial(result.sweetsSpawnLimitSettings.spawnPerPointInitial);
-        result.sweetsManager->SetSpawnLimitsConfigured(result.sweetsSpawnLimitSettings.hasSpawnLimits);
-        const bool spawnConfigLoaded = result.sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
+        const bool spawnConfigLoaded = result.sweetsManager->LoadSpawnTuningConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
-                << " from '" << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionSpawnPhases << "'.\n";
+                << " from '" << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionSpawnTuning << "'.\n";
             DebugTrace(oss.str());
         }
         {
