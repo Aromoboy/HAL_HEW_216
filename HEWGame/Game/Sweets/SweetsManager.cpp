@@ -269,9 +269,19 @@ namespace SweetsSpace
         return m_lifecycle.ReleaseCarriedSweets(sweets);
     }
 
+    void SweetsManager::SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds)
+    {
+        m_lifecycle.SetOutOfBoundsSettings(despawnEnabled, respawnEnabled, respawnDelaySeconds);
+    }
+
     void SweetsManager::SetHorizontalBounds(float minX, float maxX, std::optional<float> margin)
     {
         m_lifecycle.SetHorizontalBounds(minX, maxX, margin);
+    }
+
+    void SweetsManager::SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin)
+    {
+        m_lifecycle.SetWorldBounds(minX, maxX, minY, margin);
     }
 
     void SweetsManager::SetGeneratedColliderThicknessPadding(float factor)
@@ -348,6 +358,11 @@ namespace SweetsSpace
         std::optional<float> spawnHeightOffset)
     {
         m_spawner.SetSpawnOrigins(primary, secondary, spawnHeightOffset);
+    }
+
+    void SweetsManager::OffsetSpawnOriginsY(float deltaY)
+    {
+        m_spawner.OffsetSpawnOriginsY(deltaY);
     }
 
     void SweetsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)

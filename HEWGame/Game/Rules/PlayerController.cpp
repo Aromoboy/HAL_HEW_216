@@ -227,7 +227,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
 
     if (input.sweetsManager)
     {
-        input.sweetsManager->SetHorizontalBounds(minX, maxX);
+        input.sweetsManager->SetWorldBounds(minX, maxX, minY);
     }
 
     m_cachedPlayerMinX = minX;

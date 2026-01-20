@@ -41,6 +41,7 @@ void GuidelineSystem::ResetSession()
     m_triggeredThisHeight.clear();
     m_cooldownRemainingSeconds = 0.0f;
     m_triggerCooldownSeconds = 0.0f;
+    m_guidelineCrossCount = 0;
 }
 
 void GuidelineSystem::TickCooldowns(float deltaSeconds)
@@ -61,6 +62,21 @@ void GuidelineSystem::TickCooldowns(float deltaSeconds)
     }
 }
 
+float GuidelineSystem::ResolveGuidelineBonusSeconds(int crossCount, float baseBonusSeconds)
+{
+    if (!(baseBonusSeconds > 0.0f))
+    {
+        return baseBonusSeconds;
+    }
+
+    if (crossCount % 5 == 0)
+    {
+        return 30.0f;
+    }
+
+    return baseBonusSeconds;
+}
+
 GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
                                                       std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses)
 {
@@ -78,7 +94,7 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
         input.sweetsManager,
         m_guidelineActor.get(),
         m_centerX,
-        input.timeBonusSeconds,
+        0.0f,
         input.globalCooldownSeconds,
         input.log,
         input.logPrefix
@@ -91,14 +107,27 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
         guidelineState = std::move(guidelineCheck.state);
         if (guidelineCheck.crossed)
         {
+            const int nextCrossCount = m_guidelineCrossCount + 1;
+            const float resolvedBonusSeconds =
+                ResolveGuidelineBonusSeconds(nextCrossCount, input.timeBonusSeconds);
+            const GameplayProgression::GuidelineInput advanceInput{
+                guidelineInput.sweetsManager,
+                guidelineInput.guidelineActor,
+                guidelineInput.guidelineCenterX,
+                resolvedBonusSeconds,
+                guidelineInput.globalCooldownSeconds,
+                guidelineInput.log,
+                guidelineInput.logPrefix
+            };
             GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
-                GameplayProgression::HandleGuidelineAdvance(guidelineInput,
+                GameplayProgression::HandleGuidelineAdvance(advanceInput,
                                                             std::move(guidelineState),
                                                             std::move(pendingBonuses),
                                                             guidelineCheck.triggerHeight);
             guidelineState = std::move(guidelineAdvance.state);
             pendingBonuses = std::move(guidelineAdvance.pendingBonuses);
             guidelineAdvanced = true;
+            m_guidelineCrossCount = nextCrossCount;
         }
     }
 
@@ -115,6 +144,71 @@ GuidelineSystem::UpdateResult GuidelineSystem::Update(const UpdateInput& input,
     result.guidelineHeightMeters = guidelineAdvanced ? m_heightMeters : 0.0f;
     return result;
 }
+
+#if defined(_DEBUG)
+GuidelineSystem::UpdateResult GuidelineSystem::DebugForceAdvance(const UpdateInput& input,
+                                                                 std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses,
+                                                                 float triggerHeight)
+{
+    GameplayProgression::GuidelineState guidelineState{
+        m_heightMeters,
+        m_stepMeters,
+        m_cooldownRemainingSeconds,
+        m_cooldownDurationSeconds,
+        m_triggerCooldownSeconds,
+        m_triggeredThisHeight
+    };
+
+    const GameplayProgression::GuidelineInput guidelineInput{
+        input.sweetsManager,
+        m_guidelineActor.get(),
+        m_centerX,
+        0.0f,
+        input.globalCooldownSeconds,
+        input.log,
+        input.logPrefix
+    };
+
+    float resolvedTriggerHeight = std::max(triggerHeight, m_heightMeters);
+    if (!(resolvedTriggerHeight > 0.0f))
+    {
+        resolvedTriggerHeight = m_stepMeters;
+    }
+
+    const int nextCrossCount = m_guidelineCrossCount + 1;
+    const float resolvedBonusSeconds =
+        ResolveGuidelineBonusSeconds(nextCrossCount, input.timeBonusSeconds);
+    const GameplayProgression::GuidelineInput advanceInput{
+        guidelineInput.sweetsManager,
+        guidelineInput.guidelineActor,
+        guidelineInput.guidelineCenterX,
+        resolvedBonusSeconds,
+        guidelineInput.globalCooldownSeconds,
+        guidelineInput.log,
+        guidelineInput.logPrefix
+    };
+    GameplayProgression::GuidelineAdvanceResult guidelineAdvance =
+        GameplayProgression::HandleGuidelineAdvance(advanceInput,
+                                                    std::move(guidelineState),
+                                                    std::move(pendingBonuses),
+                                                    resolvedTriggerHeight);
+    guidelineState = std::move(guidelineAdvance.state);
+
+    m_heightMeters = guidelineState.heightMeters;
+    m_stepMeters = guidelineState.stepMeters;
+    m_cooldownRemainingSeconds = guidelineState.cooldownRemainingSeconds;
+    m_cooldownDurationSeconds = guidelineState.cooldownDurationSeconds;
+    m_triggerCooldownSeconds = guidelineState.triggerCooldownSeconds;
+    m_guidelineCrossCount = nextCrossCount;
+    m_triggeredThisHeight = std::move(guidelineState.triggeredThisHeight);
+
+    UpdateResult result{};
+    result.pendingBonuses = std::move(guidelineAdvance.pendingBonuses);
+    result.guidelineAdvanced = true;
+    result.guidelineHeightMeters = m_heightMeters;
+    return result;
+}
+#endif
 
 float GuidelineSystem::GetHeightMeters() const
 {

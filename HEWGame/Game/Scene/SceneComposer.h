@@ -55,6 +55,7 @@ public:
         SceneGameConfig::LightingSettings lightingSettings{};
         SceneGameConfig::BlobShadowSettings blobShadowSettings{};
         SceneGameConfig::MaterialTuningSettings materialTuningSettings{};
+        SceneGameConfig::SweetsOutOfBoundsSettings sweetsOutOfBoundsSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<GuidelineActor> guidelineActor;

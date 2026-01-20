@@ -34,6 +34,7 @@ namespace SweetsSpace
             const std::vector<float3>& primary,
             const std::vector<float3>& secondary,
             std::optional<float> spawnHeightOffset = std::nullopt);
+        void OffsetSpawnOriginsY(float deltaY);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void NotifyPhaseChanged(int newPhase);
@@ -56,7 +57,7 @@ namespace SweetsSpace
             const char* laneLabel = "primary";
         };
 
-        void EnqueueSpawns(int count);
+        int EnqueueSpawns(int count);
         void EmitSpawnRequests(float deltaSeconds);
         std::string ChooseKindFromActiveConfig();
         void OnPhaseConfigurationChanged(int newPhase);
@@ -102,7 +103,7 @@ namespace SweetsSpace
         int m_autoSimultaneousIncrement{ 0 };
         int m_autoSimultaneousCap{ 0 };
         std::mt19937 m_random;
-        bool m_pendingTopUpAfterDrop{ false };
+        int m_pendingTopUpCount{ 0 };
 
         float3 m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f };
         float3 m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f };

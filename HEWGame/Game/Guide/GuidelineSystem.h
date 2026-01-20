@@ -56,6 +56,11 @@ public:
     void TickCooldowns(float deltaSeconds);
     UpdateResult Update(const UpdateInput& input,
                         std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses);
+#if defined(_DEBUG)
+    UpdateResult DebugForceAdvance(const UpdateInput& input,
+                                   std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses,
+                                   float triggerHeight);
+#endif
 
     float GetHeightMeters() const;
     float GetStepMeters() const;
@@ -67,6 +72,8 @@ public:
     GuidelineActor* GetActor() const;
 
 private:
+    static float ResolveGuidelineBonusSeconds(int crossCount, float baseBonusSeconds);
+
     float m_heightMeters = 0.0f;
     float m_stepMeters = 0.0f;
     float m_thicknessPixels = 0.0f;
@@ -78,6 +85,7 @@ private:
     float m_cooldownDurationSeconds = 0.0f;
     float m_cooldownRemainingSeconds = 0.0f;
     float m_triggerCooldownSeconds = 0.0f;
+    int m_guidelineCrossCount = 0;
     std::unordered_set<SweetsSpace::ActiveSweets*> m_triggeredThisHeight;
     std::unique_ptr<GuidelineActor> m_guidelineActor;
 };

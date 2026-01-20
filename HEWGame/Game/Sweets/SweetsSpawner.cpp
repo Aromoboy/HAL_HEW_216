@@ -300,7 +300,7 @@ namespace SweetsSpace
             m_batchInitialSpawnDone = false;
             m_activeBurstPlanned = 0;
             m_currentBurstRemaining = 0;
-            m_pendingTopUpAfterDrop = false;
+            m_pendingTopUpCount = 0;
             m_spawnQueue.clear();
         }
 
@@ -346,9 +346,9 @@ namespace SweetsSpace
                 m_batchInitialSpawnDone = true;
             }
 
-            if (m_pendingTopUpAfterDrop)
+            if (m_pendingTopUpCount > 0)
             {
-                m_pendingTopUpAfterDrop = false;
+                m_pendingTopUpCount = 0;
             }
 
             EmitSpawnRequests(deltaSeconds);
@@ -358,9 +358,9 @@ namespace SweetsSpace
 
         if (liveAtTarget && forceSeedNewBatch)
         {
-            if (m_pendingTopUpAfterDrop)
+            if (m_pendingTopUpCount > 0)
             {
-                m_pendingTopUpAfterDrop = false;
+                m_pendingTopUpCount = 0;
             }
         }
 
@@ -373,18 +373,28 @@ namespace SweetsSpace
 
             EmitSpawnRequests(deltaSeconds);
             m_lastLiveSweetsCount = CountLiveSweets();
-            m_pendingTopUpAfterDrop = false;
+            m_pendingTopUpCount = 0;
             return;
         }
 
-        const bool delayBurst = m_pendingTopUpAfterDrop;
+        const bool delayBurst = (m_pendingTopUpCount > 0);
         const int deficit = desiredLiveTarget - projectedLive;
-        const int requestedCount = forceSeedNewBatch ? desiredLiveTarget : (delayBurst ? 1 : deficit);
-        m_activeBurstPlanned = std::max(desiredLiveTarget, requestedCount);
+        const int pendingTopUpCount = delayBurst ? std::min(m_pendingTopUpCount, deficit) : 0;
+        const int requestedCount = forceSeedNewBatch ? desiredLiveTarget : (delayBurst ? std::max(1, pendingTopUpCount) : deficit);
+        const int availableQueueSlots = static_cast<int>(kMaxSpawnQueueEntries - m_spawnQueue.size());
+        const int clampedRequestedCount = std::max(0, std::min(requestedCount, availableQueueSlots));
+        m_activeBurstPlanned = std::max(desiredLiveTarget, clampedRequestedCount);
 
-        EnqueueSpawns(requestedCount);
+        const int enqueued = EnqueueSpawns(clampedRequestedCount);
         m_burstTimer = delayBurst ? 0.0f : m_activeBurstInterval;
-        m_pendingTopUpAfterDrop = false;
+        if (forceSeedNewBatch)
+        {
+            m_pendingTopUpCount = 0;
+        }
+        else if (delayBurst && enqueued > 0)
+        {
+            m_pendingTopUpCount = std::max(0, m_pendingTopUpCount - enqueued);
+        }
         m_batchInitialSpawnDone = true;
 
         EmitSpawnRequests(deltaSeconds);
@@ -685,7 +695,7 @@ namespace SweetsSpace
         m_batchCoolingDown = false;
         m_batchStackTarget = std::max(1, m_batchStackTarget);
         m_simultaneousLiveTarget = std::max(1, m_simultaneousLiveTarget);
-        m_pendingTopUpAfterDrop = false;
+        m_pendingTopUpCount = 0;
         if (!m_spawnQueue.empty())
         {
             std::ostringstream oss;
@@ -708,6 +718,45 @@ namespace SweetsSpace
             m_spawnHeightOffset = *spawnHeightOffset;
         }
         m_warnedMissingSpawnOrigins = false;
+    }
+
+    void SweetsSpawner::OffsetSpawnOriginsY(float deltaY)
+    {
+        if (deltaY == 0.0f)
+        {
+            return;
+        }
+
+        for (auto& origin : m_spawnOriginsPrimary)
+        {
+            origin.y += deltaY;
+        }
+
+        for (auto& origin : m_spawnOriginsSecondary)
+        {
+            origin.y += deltaY;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SpawnOrigin] guideline advanced offsetY=" << deltaY;
+        if (!m_spawnOriginsPrimary.empty())
+        {
+            oss << " primaryY=" << m_spawnOriginsPrimary.front().y;
+        }
+        else
+        {
+            oss << " primaryY=none";
+        }
+        if (!m_spawnOriginsSecondary.empty())
+        {
+            oss << " secondaryY=" << m_spawnOriginsSecondary.front().y;
+        }
+        else
+        {
+            oss << " secondaryY=none";
+        }
+        oss << "\n";
+        DebugTrace(oss.str());
     }
 
     void SweetsSpawner::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
@@ -812,12 +861,13 @@ namespace SweetsSpace
         const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
         if (!m_batchCoolingDown && desiredLiveTarget > 0 && liveAfterRemoval < desiredLiveTarget)
         {
-            m_pendingTopUpAfterDrop = true;
+            m_pendingTopUpCount = std::max(m_pendingTopUpCount, desiredLiveTarget - liveAfterRemoval);
 
             std::ostringstream oss;
             oss << kLogPrefix << context << " で目標より生存スイーツが減ったから、あとで補充するね  live="
                 << liveAfterRemoval << " target=" << desiredLiveTarget << " remainingToStack=" << remainingToStack
                 << " stacked=" << m_stackedInBatch << '/' << m_batchStackTarget
+                << " pendingTopUp=" << m_pendingTopUpCount
                 << " queue=" << m_spawnQueue.size()
                 << " burstInterval=" << std::fixed << std::setprecision(2) << m_activeBurstInterval << "\n";
             DebugTrace(oss.str());
@@ -834,11 +884,11 @@ namespace SweetsSpace
         return m_activePhaseConfigIndex;
     }
 
-    void SweetsSpawner::EnqueueSpawns(int count)
+    int SweetsSpawner::EnqueueSpawns(int count)
     {
         if (count <= 0)
         {
-            return;
+            return 0;
         }
 
         const int burstTarget = (m_activeBurstPlanned > 0) ? m_activeBurstPlanned : count;
@@ -874,6 +924,7 @@ namespace SweetsSpace
         }
 
         m_currentBurstRemaining = enqueued;
+        return enqueued;
     }
 
     void SweetsSpawner::EmitSpawnRequests(float deltaSeconds)

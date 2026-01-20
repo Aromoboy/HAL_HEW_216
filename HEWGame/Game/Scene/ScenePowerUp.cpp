@@ -29,7 +29,7 @@ namespace SceneSpace
                 (void)input;
 
                 TextureCache& cache = App::Game::Instance().GetTextureCache();
-                cache.Load("Star", GetDevice(), L"Assets/Texture/Star.png");
+                cache.Load("Star", GetDevice(), L"Assets/Texture/UI_Cakeblock_backeffect.png");
                 cache.Load("Cost", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
                 cache.Load("SpeedUp", GetDevice(), L"Assets/Texture/upgrade_UI_MoveSpeed_icon.png");
                 cache.Load("CakeSize", GetDevice(), L"Assets/Texture/upgrade_UI_cakesizeUpai_icon.png");
@@ -164,8 +164,8 @@ namespace SceneSpace
                 }
                 m_powerUpRenderer->DrawBackground(*activeCamera);
                 m_powerUpRenderer->DrawHud(*activeCamera);
-                m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
+                m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
         }
 
         bool ScenePowerUp::LoadPowerUpFile()
