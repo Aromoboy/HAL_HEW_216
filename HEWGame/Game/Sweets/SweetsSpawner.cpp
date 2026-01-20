@@ -249,12 +249,8 @@ namespace SweetsSpace
 
         if (m_spawnTuningConfig.weights.empty())
         {
-            if (m_allowDefaultPhaseConfigs)
-            {
-                ApplyDefaultPhaseConfigs();
-            }
-
-            if (m_phaseConfigs.empty())
+            ApplyDefaultSpawnConfig();
+            if (m_spawnTuningConfig.weights.empty())
             {
                 return;
             }
