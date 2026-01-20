@@ -78,7 +78,6 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
@@ -398,8 +397,6 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
     m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
-    m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
-    m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
@@ -436,6 +433,8 @@ bool SceneGame::Load(Core::Input& input)
     guidelineConfig.centerX = composition->guidelineCenterX;
     guidelineConfig.widthWorld = composition->guidelineWidthWorld;
     guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
+    guidelineConfig.milestoneBonusSeconds = m_stageData.GetGuidelineMilestoneBonusSeconds();
+    guidelineConfig.milestoneInterval = m_stageData.GetGuidelineMilestoneInterval();
     m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
 
     GameplayRulesSystem::Config gameplayRulesConfig{};
@@ -1035,7 +1034,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
         const GuidelineSystem::UpdateInput guidelineInput{
             m_sweetsManager.get(),
-            kGuidelineTimeBonusSeconds,
+            m_stageData.GetGuidelineTimeBonusSeconds(),
             kGuidelineGlobalCooldownSeconds,
             DebugTrace,
             kLogPrefix
@@ -1202,7 +1201,7 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
 
                 const GuidelineSystem::UpdateInput guidelineInput{
                         m_sweetsManager.get(),
-                        kGuidelineTimeBonusSeconds,
+                        m_stageData.GetGuidelineTimeBonusSeconds(),
                         kGuidelineGlobalCooldownSeconds,
                         DebugTrace,
                         kLogPrefix
@@ -2160,20 +2159,6 @@ int SceneGame::GetSweetsCount() const
 }
 
 
-
-void SceneGame::Initialize(const Stage::StageData& stageData)
-{
-    
-    //高さボーナス設定
-    m_heightBonusThresholdMeters = stageData.GetHeightBonusThreshold();
-    m_heightBonusSeconds = stageData.GetHeightBonusSeconds();
-
-    //デバッグ確認用
-    std::ostringstream oss;
-    oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
-        << " second=" << m_heightBonusSeconds << "\n";
-    ::DebugTrace(oss.str());
-}
 
 //Osara探す？やつ
 bool SceneGame::IsOsara(const StageObject& obj)

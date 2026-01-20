@@ -230,8 +230,9 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " guidelineSpinSpeedDegPerSec=" << result.stageData.GetGuidelineSpinSpeedDegPerSec()
             << " guidelineModelPath='" << result.stageData.GetGuidelineModelPath() << "'"
             << " guidelineMaterialKey='" << result.stageData.GetGuidelineMaterialKey() << "'"
-            << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
-            << " heightBonusSeconds=" << result.stageData.GetHeightBonusSeconds()
+            << " guidelineTimeBonusSeconds=" << result.stageData.GetGuidelineTimeBonusSeconds()
+            << " guidelineMilestoneBonusSeconds=" << result.stageData.GetGuidelineMilestoneBonusSeconds()
+            << " guidelineMilestoneInterval=" << result.stageData.GetGuidelineMilestoneInterval()
             << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
         for (std::size_t i = 0; i < result.stageData.GetPlatformCount(); ++i)
         {
@@ -340,32 +341,6 @@ void SceneComposer::ComposeRules(Composition& result)
         result.guidelineWidthWorld = paddedWidth;
     }
 
-    result.heightBonusThresholdMeters = result.stageData.GetHeightBonusThreshold();
-    if (!std::isfinite(result.heightBonusThresholdMeters) || result.heightBonusThresholdMeters <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus threshold " << result.heightBonusThresholdMeters
-            << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusThresholdMeters = 0.0f;
-    }
-
-    result.heightBonusSeconds = result.stageData.GetHeightBonusSeconds();
-    if (!std::isfinite(result.heightBonusSeconds))
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds " << result.heightBonusSeconds
-            << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusSeconds = 0.0f;
-    }
-    else if (result.heightBonusSeconds <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds <= 0; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusSeconds = 0.0f;
-    }
 }
 
 void SceneComposer::ComposePhysics(Composition& result)

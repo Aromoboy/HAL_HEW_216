@@ -209,8 +209,9 @@ namespace Stage
         result.guidelineSpinSpeedDegPerSec = StageConfigDefaults::kDefaultGuidelineSpinSpeedDegPerSec;
         result.guidelineModelPath = StageConfigDefaults::DefaultGuidelineModelPath();
         result.guidelineMaterialKey = StageConfigDefaults::DefaultGuidelineMaterialKey();
-        result.heightBonusThreshold = StageConfigDefaults::kDefaultHeightBonusThreshold;
-        result.heightBonusSeconds = StageConfigDefaults::kDefaultHeightBonusSeconds;
+        result.guidelineTimeBonusSeconds = StageConfigDefaults::kDefaultGuidelineTimeBonusSeconds;
+        result.guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
+        result.guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
 
         for (const auto& entry : lines)
@@ -852,32 +853,47 @@ namespace Stage
                     result.guidelineMaterialKeySet = true;
                 }
             }
-            else if (key == "heightBonusThreshold")
+            else if (key == "guidelineTimeBonusSeconds")
             {
                 try
                 {
-                    result.heightBonusThreshold = std::stof(rawValue);
-                    result.heightBonusThresholdSet = true;
+                    result.guidelineTimeBonusSeconds = std::stof(rawValue);
+                    result.guidelineTimeBonusSecondsSet = true;
                 }
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse heightBonusThreshold on line " << lineNumber
+                    oss << kLogPrefix << "Failed to parse guidelineTimeBonusSeconds on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }
             }
-            else if (key == "heightBonusSeconds")
+            else if (key == "guidelineMilestoneBonusSeconds")
             {
                 try
                 {
-                    result.heightBonusSeconds = std::stof(rawValue);
-                    result.heightBonusSecondsSet = true;
+                    result.guidelineMilestoneBonusSeconds = std::stof(rawValue);
+                    result.guidelineMilestoneBonusSecondsSet = true;
                 }
                 catch (const std::exception& ex)
                 {
                     std::ostringstream oss;
-                    oss << kLogPrefix << "Failed to parse heightBonusSeconds on line " << lineNumber
+                    oss << kLogPrefix << "Failed to parse guidelineMilestoneBonusSeconds on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "guidelineMilestoneInterval")
+            {
+                try
+                {
+                    result.guidelineMilestoneInterval = std::stoi(rawValue);
+                    result.guidelineMilestoneIntervalSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelineMilestoneInterval on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }

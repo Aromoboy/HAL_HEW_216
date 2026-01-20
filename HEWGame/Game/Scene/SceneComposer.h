@@ -49,8 +49,6 @@ public:
         float guidelineCenterX = 0.0f;
         float guidelineWidthWorld = 0.0f;
         float guidelineThicknessWorld = 0.0f;
-        float heightBonusThresholdMeters = 0.0f;
-        float heightBonusSeconds = 0.0f;
         SceneGameConfig::RenderPostProcessSettings renderPostProcessSettings{};
         SceneGameConfig::LightingSettings lightingSettings{};
         SceneGameConfig::BlobShadowSettings blobShadowSettings{};
