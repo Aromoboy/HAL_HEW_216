@@ -2990,6 +2990,22 @@ namespace SceneGameConfig
                 continue;
             }
 
+            if (key == "spawnperpointinitial" || key == "perpointinitial")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.spawnPerPointInitial = std::max(0, *parsed);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid spawnPerPointInitial value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
             if (key == "spawntotalcap" || key == "totalcap")
             {
                 if (auto parsed = TryParseIntToken(value))

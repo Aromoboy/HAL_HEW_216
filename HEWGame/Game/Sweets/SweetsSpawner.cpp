@@ -6,6 +6,7 @@
 #include <cctype>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <map>
 #include <sstream>
 #include <unordered_map>
@@ -798,6 +799,18 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
+    void SweetsSpawner::SetSpawnPerPointInitial(int count)
+    {
+        const int sanitizedCount = std::max(0, count);
+        m_spawnPerPointInitial = sanitizedCount;
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "初期スポーン数(1地点あたり)は "
+            << (sanitizedCount > 0 ? "設定" : "無効")
+            << " (initial=" << sanitizedCount << ") にしたよ\n";
+        DebugTrace(oss.str());
+    }
+
     void SweetsSpawner::NotifyPhaseChanged(int newPhase)
     {
         m_currentPhase = std::max(0, newPhase);
@@ -1218,6 +1231,11 @@ namespace SweetsSpace
                 EnqueueSpawns(initialSpawnCount);
             }
             m_burstTimer = m_activeBurstInterval;
+        }
+
+        if (sanitizedPhase == 0)
+        {
+            SpawnInitialPerPoint(m_spawnPerPointInitial);
         }
 
         std::ostringstream oss;
@@ -1669,6 +1687,110 @@ namespace SweetsSpace
         DebugTrace(oss.str());
 
         return transform;
+    }
+
+    int SweetsSpawner::SpawnInitialPerPoint(int perPoint)
+    {
+        if (perPoint <= 0)
+        {
+            return 0;
+        }
+
+        const std::size_t primaryCount = m_spawnOriginsPrimary.size();
+        const std::size_t secondaryCount = m_spawnOriginsSecondary.size();
+        const int totalPoints = static_cast<int>(primaryCount + secondaryCount);
+        if (totalPoints <= 0)
+        {
+            return 0;
+        }
+
+        int perPointCount = perPoint;
+        if (m_spawnPerPointCap > 0)
+        {
+            perPointCount = std::min(perPointCount, m_spawnPerPointCap);
+        }
+
+        int allowedTotal = std::numeric_limits<int>::max();
+        if (m_liveSweetsCap > 0)
+        {
+            allowedTotal = std::max(0, m_liveSweetsCap - CountLiveSweets());
+        }
+        if (allowedTotal <= 0 || perPointCount <= 0)
+        {
+            return 0;
+        }
+
+        const auto spawnAt = [this](const float3& origin, const char* label, SpawnOriginLane lane, std::size_t index) -> bool
+        {
+            const std::string chosenKind = ChooseKindFromActiveConfig();
+            const std::string resolvedKind = m_factory ? m_factory->ResolveKindKey(chosenKind) : chosenKind;
+            const std::string kind = NormalizeKey(resolvedKind);
+            if (kind.empty())
+            {
+                return false;
+            }
+
+            const SpawnOriginSelection selection{ origin, label, lane, index };
+            Transform transform = BuildSpawnTransform(kind, selection);
+            const auto spawned = m_spawnCallback ? m_spawnCallback(kind, transform) : nullptr;
+            if (spawned)
+            {
+                RegisterSpawnOrigin(spawned, selection);
+                return true;
+            }
+
+            return false;
+        };
+
+        int spawnedCount = 0;
+        for (int iteration = 0; iteration < perPointCount && allowedTotal > 0; ++iteration)
+        {
+            for (std::size_t index = 0; index < primaryCount && allowedTotal > 0; ++index)
+            {
+                if (m_spawnPerPointCap > 0 && index < m_spawnOriginLiveCountsPrimary.size())
+                {
+                    if (m_spawnOriginLiveCountsPrimary[index] >= m_spawnPerPointCap)
+                    {
+                        continue;
+                    }
+                }
+
+                if (spawnAt(m_spawnOriginsPrimary[index], "primary", SpawnOriginLane::Primary, index))
+                {
+                    ++spawnedCount;
+                    --allowedTotal;
+                }
+            }
+
+            for (std::size_t index = 0; index < secondaryCount && allowedTotal > 0; ++index)
+            {
+                if (m_spawnPerPointCap > 0 && index < m_spawnOriginLiveCountsSecondary.size())
+                {
+                    if (m_spawnOriginLiveCountsSecondary[index] >= m_spawnPerPointCap)
+                    {
+                        continue;
+                    }
+                }
+
+                if (spawnAt(m_spawnOriginsSecondary[index], "secondary", SpawnOriginLane::Secondary, index))
+                {
+                    ++spawnedCount;
+                    --allowedTotal;
+                }
+            }
+        }
+
+        if (spawnedCount > 0)
+        {
+            m_lastLiveSweetsCount = CountLiveSweets();
+            std::ostringstream oss;
+            oss << kLogPrefix << "フェーズ0の初期スポーンを実行したよ perPoint=" << perPointCount
+                << " spawned=" << spawnedCount << " points=" << totalPoints
+                << " live=" << m_lastLiveSweetsCount << "\n";
+            DebugTrace(oss.str());
+        }
+
+        return spawnedCount;
     }
 
     void SweetsSpawner::EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
