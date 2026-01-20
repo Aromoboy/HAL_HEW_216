@@ -254,7 +254,6 @@ namespace SweetsSpace
         , m_random(std::random_device{}())
         , m_liveSweetsCap(kDefaultLiveSweetsCap)
     {
-        ApplyDefaultPhaseConfigs();
     }
 
     void SweetsSpawner::RunSpawnScheduler(float deltaSeconds)
@@ -268,7 +267,15 @@ namespace SweetsSpace
 
         if (m_phaseConfigs.empty())
         {
-            return;
+            if (m_allowDefaultPhaseConfigs)
+            {
+                ApplyDefaultPhaseConfigs();
+            }
+
+            if (m_phaseConfigs.empty())
+            {
+                return;
+            }
         }
 
         if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
@@ -447,7 +454,6 @@ namespace SweetsSpace
             bool hasBurstInterval = false;
             bool hasSimultaneous = false;
             bool hasLiveTarget = false;
-            bool hasInitialPerLane = false;
             bool hasPhaseStartBonus = false;
 
             while (std::getline(stream, token, ','))
@@ -514,18 +520,6 @@ namespace SweetsSpace
                     {
                         config.simultaneousLiveTarget = std::stoi(value);
                         hasLiveTarget = true;
-                    }
-                    catch (const std::exception&)
-                    {
-                        parseError = true;
-                    }
-                }
-                else if (normalizedKey == "initial_per_lane" || normalizedKey == "initialperlane")
-                {
-                    try
-                    {
-                        config.initialSpawnPerLane = std::stoi(value);
-                        hasInitialPerLane = true;
                     }
                     catch (const std::exception&)
                     {
@@ -635,7 +629,7 @@ namespace SweetsSpace
             }
 
             if (!hasSpawnInterval && !hasBurstInterval && !hasSimultaneous && !hasWeights && !hasLiveTarget
-                && !hasInitialPerLane && !hasPhaseStartBonus)
+                && !hasPhaseStartBonus)
             {
                 continue;
             }
@@ -809,6 +803,11 @@ namespace SweetsSpace
             << (sanitizedCount > 0 ? "設定" : "無効")
             << " (initial=" << sanitizedCount << ") にしたよ\n";
         DebugTrace(oss.str());
+    }
+
+    void SweetsSpawner::SetSpawnLimitsConfigured(bool configured)
+    {
+        m_allowDefaultPhaseConfigs = !configured;
     }
 
     void SweetsSpawner::NotifyPhaseChanged(int newPhase)
@@ -1211,24 +1210,16 @@ namespace SweetsSpace
         m_stackedInBatch = 0;
         const int activeLaneCount = (m_spawnOriginsPrimary.empty() ? 0 : 1) + (m_spawnOriginsSecondary.empty() ? 0 : 1);
         const int phaseStartBonusPerLane = std::max(0, activeConfig.phaseStartBonusPerLane);
-        const int initialPerLane = std::max(0, activeConfig.initialSpawnPerLane);
         const int phaseStartBonusCount = (phaseStartBonusPerLane > 0 && activeLaneCount > 0)
             ? phaseStartBonusPerLane * activeLaneCount
             : 0;
-        const int initialSpawnCount = (initialPerLane > 0 && activeLaneCount > 0)
-            ? initialPerLane * activeLaneCount
-            : 0;
-        const int phaseStartTotal = phaseStartBonusCount + initialSpawnCount;
+        const int phaseStartTotal = phaseStartBonusCount;
         if (phaseStartTotal > 0)
         {
             m_activeBurstPlanned = std::max(m_activeBurstPlanned, phaseStartTotal);
             if (phaseStartBonusCount > 0)
             {
                 EnqueueSpawns(phaseStartBonusCount);
-            }
-            if (initialSpawnCount > 0)
-            {
-                EnqueueSpawns(initialSpawnCount);
             }
             m_burstTimer = m_activeBurstInterval;
         }
@@ -1254,7 +1245,7 @@ namespace SweetsSpace
             phaseIndex = 0;
         }
 
-        if (m_phaseConfigs.empty())
+        if (m_phaseConfigs.empty() && m_allowDefaultPhaseConfigs)
         {
             ApplyDefaultPhaseConfigs();
         }
@@ -1299,7 +1290,6 @@ namespace SweetsSpace
             << " burstInterval=" << std::fixed << std::setprecision(2) << config.burstIntervalSeconds
             << " simultaneous=" << config.simultaneousSpawnCount
             << " liveTarget=" << config.simultaneousLiveTarget
-            << " initialPerLane=" << config.initialSpawnPerLane
             << " phaseStartBonusPerLane=" << config.phaseStartBonusPerLane
             << " weights=";
 

@@ -2967,6 +2967,7 @@ namespace SceneGameConfig
             ::DebugTrace(oss.str());
             return settings;
         }
+        settings.hasSpawnLimits = true;
 
         for (const auto& entry : lines)
         {
