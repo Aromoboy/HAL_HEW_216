@@ -1363,11 +1363,11 @@ namespace SweetsSpace
         }
 
         auto selectFromLane = [this](std::vector<float3>& origins, std::vector<int>& liveCounts,
-            std::size_t& cursor, const char* label, SpawnOriginLane lane)
+            std::size_t& cursor, const char* label, SpawnOriginLane lane) -> std::optional<SpawnOriginSelection>
         {
             if (origins.empty())
             {
-                return std::optional<SpawnOriginSelection>();
+                return std::nullopt;
             }
 
             const std::size_t laneSize = origins.size();
@@ -1397,7 +1397,7 @@ namespace SweetsSpace
 
             if (!chosenIndex)
             {
-                return std::optional<SpawnOriginSelection>();
+                return std::nullopt;
             }
 
             cursor = (*chosenIndex + 1) % laneSize;
@@ -1409,7 +1409,7 @@ namespace SweetsSpace
                 << " position=(" << origin.x << ',' << origin.y << ',' << origin.z << ")\n";
             DebugTrace(oss.str());
 
-            return SpawnOriginSelection{ origin, label, lane, *chosenIndex };
+            return std::optional<SpawnOriginSelection>{ SpawnOriginSelection{ origin, label, lane, *chosenIndex } };
         };
 
         if (hasPrimary && hasSecondary)
