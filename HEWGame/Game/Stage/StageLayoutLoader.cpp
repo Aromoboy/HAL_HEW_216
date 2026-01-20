@@ -237,6 +237,25 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             obj.materialKey = kFallbackStageMaterialKey;
         }
 
+        const std::string modelKey = BuildModelKey(obj.modelPath);
+        const std::string colliderKey = obj.colliderPresetId.empty() ? modelKey : obj.colliderPresetId;
+        if (obj.IsOsara)
+        {
+            const auto registryDefinition = Physics::ColliderRegistry::Instance().Find(colliderKey);
+            if (registryDefinition)
+            {
+                obj.OsaraSwayingpower = registryDefinition->OsaraSwayingpower;
+            }
+            else
+            {
+                std::ostringstream oss;
+                oss << logPrefix << "[StageColliders] registryId='" << colliderKey
+                    << "' missing for Osara; using default OsaraSwayingpower ("
+                    << obj.OsaraSwayingpower.x << ", " << obj.OsaraSwayingpower.y << ").\n";
+                DebugTrace(oss.str());
+            }
+        }
+
         if (kEnableStageModelVerboseLogging)
         {
             DebugTrace(logPrefix + "Stage model loading: " + obj.modelPath + "\n");
@@ -260,8 +279,6 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
 
         if (request.enablePhysics)
         {
-            const std::string modelKey = BuildModelKey(obj.modelPath);
-            const std::string colliderKey = obj.colliderPresetId.empty() ? modelKey : obj.colliderPresetId;
             if (!Physics::ColliderRegistry::Instance().Find(colliderKey))
             {
                 std::ostringstream oss;

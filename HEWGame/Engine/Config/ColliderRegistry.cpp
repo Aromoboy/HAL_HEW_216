@@ -194,6 +194,7 @@ namespace Physics
             ColliderRegistryDefinition def{};
             def.shapeDef = shapeDef;
             def.linearDamping = linearDamping;
+            def.OsaraSwayingpower = OsaraSwayingpower;
 
             switch (*currentKind)
             {
