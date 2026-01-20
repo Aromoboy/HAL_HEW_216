@@ -439,6 +439,18 @@ namespace SweetsSpace
 #endif
         }
 
+        const int respawnCount = static_cast<int>(std::count_if(
+            missedSweets.begin(),
+            missedSweets.end(),
+            [](const PendingRemoval& entry)
+            {
+                return entry.notifySpawner;
+            }));
+        if (respawnCount > 0 && m_spawner)
+        {
+            m_spawner->RequestSupplementalSpawn(respawnCount, "OutOfBoundsRespawn");
+        }
+
         DeleteBatchContext missBatch{};
         missBatch.usesRemaining = static_cast<int>(missedSweets.size());
         for (const auto& entry : missedSweets)
