@@ -46,18 +46,6 @@ PlayerController::SpeedResult PlayerController::HandleSpeedInput(const SpeedInpu
         return result;
     }
 
-    const float horizontalInput =
-        input.input.GetAxis(Core::ActionId::MoveX);
-
-    if (horizontalInput > 0.01f)
-    {
-        input.player->SetFacingSign(1.0f);
-    }
-    else if (horizontalInput < -0.01f)
-    {
-        input.player->SetFacingSign(-1.0f);
-    }
-
     const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
     {
         if (!(input.baseHorizontalSpeed > 0.0f) && !(input.baseVerticalSpeed > 0.0f))

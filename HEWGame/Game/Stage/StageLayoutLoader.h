@@ -24,12 +24,13 @@ struct StageObject
     std::shared_ptr<ModelDX> model;
     float currentRotation = 0.0f;
     std::string colliderPresetId;
+    std::string materialKey;
 
     bool IsOsara = false;
     float swaiTime = 0.0f;
-    //‚¨M‚Ì—h‚ê‹ï‡
+    //ï¿½ï¿½ï¿½Mï¿½Ì—hï¿½ï¿½ï‡
     b2Vec2 OsaraSwayingpower{0.0f, 0.75f};
-    //—h‚ê‚é‘O‚ÌŒ³‚ÌÀ•W
+    //ï¿½hï¿½ï¿½ï¿½Oï¿½ÌŒï¿½ï¿½Ìï¿½ï¿½W
     float baseY = 0.0f;
     std::shared_ptr<Entities::PhysicalEntity> physicsEntity;
 };
