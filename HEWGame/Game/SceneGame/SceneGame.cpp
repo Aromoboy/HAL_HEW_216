@@ -574,6 +574,12 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
         return;
     }
     RootUpdate(timer, input);
+
+    if (m_pendingRetryReset)
+    {
+        m_pendingRetryReset = false;
+        SetStageState(StageState::Playing);
+    }
 }
 
 void SceneGame::Draw()
@@ -1020,7 +1026,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
-            SetStageState(StageState::Playing);
+            m_pendingRetryReset = true;
         }
         fRads.z += 0.001f;
 
@@ -1089,7 +1095,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             : PlayerController::PostGameAction::None;
         if (action == PlayerController::PostGameAction::ConfirmRestart)
         {
-            SetStageState(StageState::Playing);
+            m_pendingRetryReset = true;
             return;
         }
     }

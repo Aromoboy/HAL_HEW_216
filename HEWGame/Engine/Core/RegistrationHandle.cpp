@@ -48,7 +48,7 @@ namespace Core
         {
             if (m_scheduler->IsTicking())
             {
-                m_scheduler->UnregisterByIdNoDeref(m_nodeId);
+                m_scheduler->UnregisterByIdDeferred(m_nodeId);
             }
             else
             {

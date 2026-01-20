@@ -164,6 +164,7 @@ protected:
     float m_playerSpeedMultiplier = 1.0f;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
+    bool m_pendingRetryReset = false;
     std::shared_ptr<Render::Model> m_playerModel;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;

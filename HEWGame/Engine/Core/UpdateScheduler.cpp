@@ -250,6 +250,34 @@ namespace Core
                 Unregister(*node);
         }
 
+        void UpdateScheduler::UnregisterByIdDeferred(NodeId nodeId)
+        {
+                if (nodeId == 0)
+                {
+                        return;
+                }
+
+                auto idIt = m_nodesById.find(nodeId);
+                if (idIt == m_nodesById.end())
+                {
+                        return;
+                }
+
+                IUpdatable* node = idIt->second;
+                if (!node)
+                {
+                        m_nodesById.erase(idIt);
+                        return;
+                }
+
+                if (!IsRegistered(node) && !IsPendingRegistration(node))
+                {
+                        return;
+                }
+
+                Unregister(*node);
+        }
+
         void UpdateScheduler::UnregisterByIdNoDeref(NodeId nodeId)
         {
                 if (nodeId == 0)
