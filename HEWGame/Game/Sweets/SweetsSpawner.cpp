@@ -519,7 +519,7 @@ namespace SweetsSpace
                         parseError = true;
                     }
                 }
-                else if (normalizedKey == "initial_per_lane")
+                else if (normalizedKey == "initial_per_lane" || normalizedKey == "initialperlane")
                 {
                     try
                     {
@@ -531,7 +531,7 @@ namespace SweetsSpace
                         parseError = true;
                     }
                 }
-                else if (normalizedKey == "phase_start_bonus_per_lane")
+                else if (normalizedKey == "phase_start_bonus_per_lane" || normalizedKey == "phasestartbonusperlane")
                 {
                     try
                     {
@@ -658,6 +658,7 @@ namespace SweetsSpace
 
             EnsureRegisteredWeights(config, phaseIndex, registeredKindsNormalized, defaultWeightLookup);
             m_phaseConfigs.push_back(config);
+            LogActiveSpawnParameters(m_phaseConfigs.back(), phaseIndex);
             ++phaseIndex;
         }
 
