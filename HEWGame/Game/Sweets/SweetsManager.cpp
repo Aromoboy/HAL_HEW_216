@@ -323,6 +323,11 @@ namespace SweetsSpace
         m_spawner.SetSpawnPerPointInitial(count);
     }
 
+    void SweetsManager::SetSpawnLimitsConfigured(bool configured)
+    {
+        m_spawner.SetSpawnLimitsConfigured(configured);
+    }
+
     void SweetsManager::SetForceGeneratedColliders(bool force)
     {
         m_factory.SetForceGeneratedColliders(force);

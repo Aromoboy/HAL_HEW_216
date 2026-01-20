@@ -249,7 +249,15 @@ namespace SweetsSpace
 
         if (m_spawnTuningConfig.weights.empty())
         {
-            return;
+            if (m_allowDefaultPhaseConfigs)
+            {
+                ApplyDefaultPhaseConfigs();
+            }
+
+            if (m_phaseConfigs.empty())
+            {
+                return;
+            }
         }
 
         if (!(deltaSeconds > 0.0f))

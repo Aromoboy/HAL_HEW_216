@@ -1,4 +1,4 @@
-#include "ResultRenderer.h"
+﻿#include "ResultRenderer.h"
 
 #include "DirectX.h"
 #include "Sprite.h"
