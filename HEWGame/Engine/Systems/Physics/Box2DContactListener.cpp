@@ -379,6 +379,12 @@ namespace Systems
                 }
         }
 
+        void Box2DContactListener::ClearDestroyedCaches()
+        {
+                m_destroyedBodyIds.clear();
+                m_destroyedShapeIds.clear();
+        }
+
         void Box2DContactListener::BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB,
             const ContactEventInfo& info)
         {

@@ -144,15 +144,12 @@ protected:
     GuidelineSystem m_guidelineSystem;
     float m_lastGuidelineHeight = 0.0f;
     void BroadcastPhaseAdvance(int newPhase);
-    void ForwardSweetsPhaseChange(int newPhase);
     StageState m_stageState = StageState::Intro;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
-    float m_heightBonusThresholdMeters = 0.0f;
-    float m_heightBonusSeconds = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
@@ -172,6 +169,7 @@ protected:
     float m_playerSpeedMultiplier = 1.0f;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
+    bool m_pendingRetryReset = false;
     std::shared_ptr<Render::Model> m_playerModel;
     // クリアできたかどうかの判定
     bool m_isGameClear = false;

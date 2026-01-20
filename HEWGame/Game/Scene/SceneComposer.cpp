@@ -114,6 +114,7 @@ void SceneComposer::ComposeConfig(Composition& result)
     result.blobShadowSettings = SceneGameConfig::LoadBlobShadowSettings();
     result.materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
     result.sweetsOutOfBoundsSettings = SceneGameConfig::LoadSweetsOutOfBoundsSettings();
+    result.sweetsSpawnLimitSettings = SceneGameConfig::LoadSweetsSpawnLimitSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
@@ -137,9 +138,7 @@ void SceneComposer::ComposeConfig(Composition& result)
     }
     result.phaseManager.Initialize(
         result.stageData.GetPhaseThresholds(),
-        result.stageData.GetPhaseRewardMultipliers(),
-        result.stageData.GetPhaseMiniThresholds(),
-        result.stageData.GetPhaseRewardMiniMultipliers());
+        result.stageData.GetPhaseRewardMultipliers());
     result.playerBaseHorizontalSpeed = result.stageData.GetPlayerHorizontalSpeedWorld();
     result.playerBaseVerticalSpeed = result.stageData.GetPlayerVerticalSpeedWorld();
     result.playerPickupBoxWidth = result.stageData.GetPickupBoxWidthWorld();
@@ -229,8 +228,9 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " guidelineSpinSpeedDegPerSec=" << result.stageData.GetGuidelineSpinSpeedDegPerSec()
             << " guidelineModelPath='" << result.stageData.GetGuidelineModelPath() << "'"
             << " guidelineMaterialKey='" << result.stageData.GetGuidelineMaterialKey() << "'"
-            << " heightBonusThreshold=" << result.stageData.GetHeightBonusThreshold()
-            << " heightBonusSeconds=" << result.stageData.GetHeightBonusSeconds()
+            << " guidelineTimeBonusSeconds=" << result.stageData.GetGuidelineTimeBonusSeconds()
+            << " guidelineMilestoneBonusSeconds=" << result.stageData.GetGuidelineMilestoneBonusSeconds()
+            << " guidelineMilestoneInterval=" << result.stageData.GetGuidelineMilestoneInterval()
             << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
         for (std::size_t i = 0; i < result.stageData.GetPlatformCount(); ++i)
         {
@@ -339,32 +339,6 @@ void SceneComposer::ComposeRules(Composition& result)
         result.guidelineWidthWorld = paddedWidth;
     }
 
-    result.heightBonusThresholdMeters = result.stageData.GetHeightBonusThreshold();
-    if (!std::isfinite(result.heightBonusThresholdMeters) || result.heightBonusThresholdMeters <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus threshold " << result.heightBonusThresholdMeters
-            << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusThresholdMeters = 0.0f;
-    }
-
-    result.heightBonusSeconds = result.stageData.GetHeightBonusSeconds();
-    if (!std::isfinite(result.heightBonusSeconds))
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds " << result.heightBonusSeconds
-            << " invalid; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusSeconds = 0.0f;
-    }
-    else if (result.heightBonusSeconds <= 0.0f)
-    {
-        std::ostringstream oss;
-        oss << kLogPrefix << "Height bonus seconds <= 0; timer bonus disabled.\n";
-        DebugTrace(oss.str());
-        result.heightBonusSeconds = 0.0f;
-    }
 }
 
 void SceneComposer::ComposePhysics(Composition& result)
@@ -384,7 +358,6 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
     physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
-    physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
     physicsParameters.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
     physicsParameters.creamGlueLinearHertz = tuning.creamGlueLinearHertz;
     physicsParameters.creamGlueLinearDampingRatio = tuning.creamGlueLinearDampingRatio;
@@ -478,11 +451,14 @@ void SceneComposer::ComposePhysics(Composition& result)
         result.sweetsManager->SetSpawnOrigins(
             result.stageData.GetSpawnPointsPrimary(),
             result.stageData.GetSpawnPointsSecondary());
-        const bool spawnConfigLoaded = result.sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
+        result.sweetsManager->SetLiveSweetsCap(result.sweetsSpawnLimitSettings.spawnTotalCap);
+        result.sweetsManager->SetSpawnPointCap(result.sweetsSpawnLimitSettings.spawnPerPointCap);
+        result.sweetsManager->SetSpawnPerPointInitial(result.sweetsSpawnLimitSettings.spawnPerPointInitial);
+        const bool spawnConfigLoaded = result.sweetsManager->LoadSpawnTuningConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Sweets spawn config " << (spawnConfigLoaded ? "loaded" : "defaulted")
-                << " from '" << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionSpawnPhases << "'.\n";
+                << " from '" << kGameplayConfigPath << "' section='" << GameplayConfig::kSectionSpawnTuning << "'.\n";
             DebugTrace(oss.str());
         }
         {

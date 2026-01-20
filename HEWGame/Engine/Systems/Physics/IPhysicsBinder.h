@@ -28,5 +28,6 @@ namespace Systems
         virtual void UnregisterAllPhysicsBodies() = 0;
         virtual void ValidatePlayerPhysicsRegistration() = 0;
         virtual void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd) = 0;
+        virtual void ResetContactListenerCaches() = 0;
     };
 }

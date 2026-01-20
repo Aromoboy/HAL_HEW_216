@@ -102,4 +102,12 @@ namespace Systems
             m_registration->AddContactHandler(std::move(onBegin), std::move(onEnd));
         }
     }
+
+    void PhysicsBinder::ResetContactListenerCaches()
+    {
+        if (m_registration)
+        {
+            m_registration->ResetContactListenerCaches();
+        }
+    }
 }

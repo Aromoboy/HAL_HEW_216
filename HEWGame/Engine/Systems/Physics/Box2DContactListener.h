@@ -34,6 +34,7 @@ namespace Systems
                 void EnableMeshContactLogging(bool enabled);
                 void EnableDroppedEventLogging(bool enabled);
                 void NotifyDestroyedBody(b2BodyId bodyId, std::span<const b2ShapeId> shapes = {});
+                void ClearDestroyedCaches();
 
         private:
                 void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB, const ContactEventInfo& info);

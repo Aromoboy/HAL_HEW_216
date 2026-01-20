@@ -16,6 +16,7 @@ namespace Physics
         std::vector<ColliderShapeDescriptor> shapes;
         b2ShapeDef shapeDef{ b2DefaultShapeDef() };
         float linearDamping{ 0.0f };
+        b2Vec2 OsaraSwayingpower{ 0.0f, 0.0f };
     };
 
     class ColliderRegistry

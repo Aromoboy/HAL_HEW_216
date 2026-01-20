@@ -135,6 +135,7 @@ namespace Systems
             {
                 m_owner.m_contactListener->ProcessContacts();
             }
+            m_owner.FlushPendingBodyRemovals();
         }
 
     private:
@@ -174,7 +175,6 @@ namespace Systems
         m_tuning.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
         m_tuning.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
         m_tuning.smallDynamicContinuousThreshold = std::max(0.0f, tuning.smallDynamicContinuousThreshold);
-        m_tuning.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
         m_tuning.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
         m_tuning.creamGlueLinearHertz = std::max(0.0f, tuning.creamGlueLinearHertz);
         m_tuning.creamGlueAngularHertz = std::max(0.0f, tuning.creamGlueAngularHertz);
@@ -423,6 +423,17 @@ namespace Systems
     {
         if (m_bodies.empty()) return;
         auto* bodyPtr = &body;
+        if (m_pendingRemovalSet.erase(bodyPtr) > 0)
+        {
+            auto pendingIt = std::remove_if(
+                m_pendingBodyRemovals.begin(),
+                m_pendingBodyRemovals.end(),
+                [bodyPtr](const PendingBodyRemoval& pending)
+                {
+                    return pending.body == bodyPtr;
+                });
+            m_pendingBodyRemovals.erase(pendingIt, m_pendingBodyRemovals.end());
+        }
         auto it = std::remove(m_bodies.begin(), m_bodies.end(), bodyPtr);
         if (it == m_bodies.end())
         {
@@ -442,8 +453,27 @@ namespace Systems
         DestroyBody(body, preserveColliderData);
     }
 
+    void PhysicsMachine::RequestUnregisterBody(Entities::PhysicalEntity& body, bool preserveColliderData)
+    {
+        auto* bodyPtr = &body;
+        if (!bodyPtr)
+        {
+            return;
+        }
+
+        if (m_pendingRemovalSet.contains(bodyPtr))
+        {
+            return;
+        }
+
+        m_pendingRemovalSet.insert(bodyPtr);
+        m_pendingBodyRemovals.push_back(PendingBodyRemoval{ bodyPtr, preserveColliderData });
+    }
+
     void PhysicsMachine::ClearBodies()
     {
+        m_pendingBodyRemovals.clear();
+        m_pendingRemovalSet.clear();
         for (Entities::PhysicalEntity* body : m_bodies)
         {
             if (body)
@@ -453,6 +483,28 @@ namespace Systems
         }
         m_bodyMap.clear();
         m_bodies.clear();
+    }
+
+    void PhysicsMachine::FlushPendingBodyRemovals()
+    {
+        if (m_pendingBodyRemovals.empty())
+        {
+            return;
+        }
+
+        std::vector<PendingBodyRemoval> pendingRemovals = std::move(m_pendingBodyRemovals);
+        m_pendingBodyRemovals.clear();
+        m_pendingRemovalSet.clear();
+
+        for (const PendingBodyRemoval& pending : pendingRemovals)
+        {
+            if (!pending.body)
+            {
+                continue;
+            }
+
+            UnregisterBody(*pending.body, pending.preserveColliderData);
+        }
     }
 
     void PhysicsMachine::SyncBodies(float dt)
@@ -893,20 +945,6 @@ namespace Systems
         if (!enableContinuousCollision && enableSmallDynamicCcd)
         {
             enableContinuousCollision = true;
-        }
-
-        if (!enableContinuousCollision && m_tuning.continuousCollisionForPlayerProjectiles)
-        {
-            std::string lowerTag = tag;
-            std::transform(lowerTag.begin(), lowerTag.end(), lowerTag.begin(), [](unsigned char c)
-            {
-                return static_cast<char>(std::tolower(c));
-            });
-
-            if (lowerTag.find("projectile") != std::string::npos)
-            {
-                enableContinuousCollision = true;
-            }
         }
 
         if (!enableContinuousCollision && m_tuning.continuousCollisionForPlayer

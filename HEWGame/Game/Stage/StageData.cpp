@@ -74,8 +74,6 @@ namespace Stage
             << " primaryParseError=" << normalized.primaryParseError
             << " secondaryParseError=" << normalized.secondaryParseError
             << " fallbackAnchors=" << normalized.insertedFallbackAnchor
-            << " minithresholds=" << m_phaseMiniThresholds.size()
-            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size()
             << " platformCount=" << m_platforms.size();
         LogSummary("Loaded", detail.str());
 
@@ -91,17 +89,6 @@ namespace Stage
     {
         return m_phaseRewardMultipliers;
     }
-    //ミニフェーズ
-    const std::vector<float>& StageData::GetPhaseMiniThresholds() const noexcept
-    {
-        return m_phaseMiniThresholds;
-    }
-    //ミニフェーズ
-    const std::vector<float>& StageData::GetPhaseRewardMiniMultipliers() const noexcept
-    {
-        return m_phaseRewardMiniMultipliers;
-    }
-
     const std::vector<float3>& StageData::GetSpawnPointsPrimary() const noexcept
     {
         return m_spawnPointsPrimary;
@@ -228,19 +215,24 @@ namespace Stage
         return m_guidelineMaterialKey;
     }
 
+    float StageData::GetGuidelineTimeBonusSeconds() const noexcept
+    {
+        return m_guidelineTimeBonusSeconds;
+    }
+
+    float StageData::GetGuidelineMilestoneBonusSeconds() const noexcept
+    {
+        return m_guidelineMilestoneBonusSeconds;
+    }
+
+    int StageData::GetGuidelineMilestoneInterval() const noexcept
+    {
+        return m_guidelineMilestoneInterval;
+    }
+
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
-    }
-
-    float StageData::GetHeightBonusThreshold() const noexcept
-    {
-        return m_heightBonusThreshold;
-    }
-
-    float StageData::GetHeightBonusSeconds() const noexcept
-    {
-        return m_heightBonusSeconds;
     }
 
     void StageData::ApplyDefaults()
@@ -255,8 +247,6 @@ namespace Stage
         m_planeZ = normalized.planeZ;
         m_phaseThresholds = normalized.phaseThresholds;
         m_phaseRewardMultipliers = normalized.phaseRewardMultipliers;
-        m_phaseMiniThresholds = normalized.phaseMiniThresholds;
-        m_phaseRewardMiniMultipliers = normalized.phaseRewardMiniMultipliers;
         m_spawnPointsPrimary = normalized.spawnPointsPrimary;
         m_spawnPointsSecondary = normalized.spawnPointsSecondary;
         m_platforms = normalized.platforms;
@@ -282,8 +272,9 @@ namespace Stage
         m_guidelineSpinSpeedDegPerSec = normalized.guidelineSpinSpeedDegPerSec;
         m_guidelineModelPath = normalized.guidelineModelPath;
         m_guidelineMaterialKey = normalized.guidelineMaterialKey;
-        m_heightBonusThreshold = normalized.heightBonusThreshold;
-        m_heightBonusSeconds = normalized.heightBonusSeconds;
+        m_guidelineTimeBonusSeconds = normalized.guidelineTimeBonusSeconds;
+        m_guidelineMilestoneBonusSeconds = normalized.guidelineMilestoneBonusSeconds;
+        m_guidelineMilestoneInterval = normalized.guidelineMilestoneInterval;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
@@ -295,8 +286,6 @@ namespace Stage
         oss << kLogPrefix << prefix << " planeZ=" << m_planeZ
             << " thresholds=" << m_phaseThresholds.size()
             << " multipliers=" << m_phaseRewardMultipliers.size()
-            << " minithreshold=" << m_phaseMiniThresholds.size()          //ミニフェーズ
-            << " minimultipliers=" << m_phaseRewardMiniMultipliers.size() //ミニフェーズ
             << " spawnPointsPrimary=" << m_spawnPointsPrimary.size()
             << " spawnPointsSecondary=" << m_spawnPointsSecondary.size()
             << " platforms=" << m_platforms.size()
@@ -321,8 +310,9 @@ namespace Stage
             << " guidelineSpinSpeedDegPerSec=" << m_guidelineSpinSpeedDegPerSec
             << " guidelineModelPath='" << m_guidelineModelPath << "'"
             << " guidelineMaterialKey='" << m_guidelineMaterialKey << "'"
-            << " heightBonusThreshold=" << m_heightBonusThreshold
-            << " heightBonusSeconds=" << m_heightBonusSeconds
+            << " guidelineTimeBonusSeconds=" << m_guidelineTimeBonusSeconds
+            << " guidelineMilestoneBonusSeconds=" << m_guidelineMilestoneBonusSeconds
+            << " guidelineMilestoneInterval=" << m_guidelineMilestoneInterval
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
 

@@ -17,6 +17,8 @@ void GuidelineSystem::Configure(const Config& config, std::unique_ptr<GuidelineA
     m_centerX = config.centerX;
     m_widthWorld = config.widthWorld;
     m_thicknessWorld = config.thicknessWorld;
+    m_milestoneBonusSeconds = config.milestoneBonusSeconds;
+    m_milestoneInterval = config.milestoneInterval;
     m_guidelineActor = std::move(actor);
     if (m_guidelineActor)
     {
@@ -62,16 +64,18 @@ void GuidelineSystem::TickCooldowns(float deltaSeconds)
     }
 }
 
-float GuidelineSystem::ResolveGuidelineBonusSeconds(int crossCount, float baseBonusSeconds)
+float GuidelineSystem::ResolveGuidelineBonusSeconds(int crossCount, float baseBonusSeconds) const
 {
     if (!(baseBonusSeconds > 0.0f))
     {
         return baseBonusSeconds;
     }
 
-    if (crossCount % 5 == 0)
+    if (m_milestoneInterval > 0
+        && m_milestoneBonusSeconds > 0.0f
+        && (crossCount % m_milestoneInterval) == 0)
     {
-        return 30.0f;
+        return m_milestoneBonusSeconds;
     }
 
     return baseBonusSeconds;

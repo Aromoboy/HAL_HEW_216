@@ -79,7 +79,6 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
-        constexpr float kGuidelineTimeBonusSeconds = 5.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
@@ -400,8 +399,6 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
     m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
-    m_heightBonusThresholdMeters = composition->heightBonusThresholdMeters;
-    m_heightBonusSeconds = composition->heightBonusSeconds;
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
@@ -415,6 +412,8 @@ bool SceneGame::Load(Core::Input& input)
             m_sweetsOutOfBoundsSettings.outOfBoundsDespawn,
             m_sweetsOutOfBoundsSettings.outOfBoundsRespawn,
             m_sweetsOutOfBoundsSettings.outOfBoundsRespawnDelaySeconds);
+        m_sweetsManager->SetGrabRespawnDelaySeconds(
+            m_sweetsOutOfBoundsSettings.grabRespawnDelaySeconds);
     }
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
@@ -436,6 +435,8 @@ bool SceneGame::Load(Core::Input& input)
     guidelineConfig.centerX = composition->guidelineCenterX;
     guidelineConfig.widthWorld = composition->guidelineWidthWorld;
     guidelineConfig.thicknessWorld = composition->guidelineThicknessWorld;
+    guidelineConfig.milestoneBonusSeconds = m_stageData.GetGuidelineMilestoneBonusSeconds();
+    guidelineConfig.milestoneInterval = m_stageData.GetGuidelineMilestoneInterval();
     m_guidelineSystem.Configure(guidelineConfig, std::move(composition->guidelineActor));
     m_effectSystem = std::move(composition->effectSystem);
 
@@ -483,14 +484,6 @@ bool SceneGame::Load(Core::Input& input)
     if (m_physicsBinder)
     {
         m_contactHandler.Bind(*m_physicsBinder, m_sweetsManager.get());
-    }
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->SetPhaseChangeCallback([this](int newPhase)
-        {
-            ForwardSweetsPhaseChange(newPhase);
-        });
     }
 
     m_playerColliderMismatchLogged = false;
@@ -584,6 +577,12 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
         return;
     }
     RootUpdate(timer, input);
+
+    if (m_pendingRetryReset)
+    {
+        m_pendingRetryReset = false;
+        SetStageState(StageState::Playing);
+    }
 }
 
 void SceneGame::Draw()
@@ -1049,13 +1048,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
-            SetStageState(StageState::Playing);
+            m_pendingRetryReset = true;
         }
         fRads.z += 0.001f;
 
         const GuidelineSystem::UpdateInput guidelineInput{
             m_sweetsManager.get(),
-            kGuidelineTimeBonusSeconds,
+            m_stageData.GetGuidelineTimeBonusSeconds(),
             kGuidelineGlobalCooldownSeconds,
             DebugTrace,
             kLogPrefix
@@ -1118,7 +1117,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             : PlayerController::PostGameAction::None;
         if (action == PlayerController::PostGameAction::ConfirmRestart)
         {
-            SetStageState(StageState::Playing);
+            m_pendingRetryReset = true;
             return;
         }
         else if (action == PlayerController::PostGameAction::GoToPowerUp)
@@ -1231,7 +1230,7 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
 
                 const GuidelineSystem::UpdateInput guidelineInput{
                         m_sweetsManager.get(),
-                        kGuidelineTimeBonusSeconds,
+                        m_stageData.GetGuidelineTimeBonusSeconds(),
                         kGuidelineGlobalCooldownSeconds,
                         DebugTrace,
                         kLogPrefix
@@ -2087,36 +2086,21 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     oss << kLogPrefix << "Broadcasting phase " << newPhase
         << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
     ::DebugTrace(oss.str());
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->NotifyPhaseChanged(newPhase);
-    }
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
-}
-
-void SceneGame::ForwardSweetsPhaseChange(int newPhase)
-{
-    std::ostringstream oss;
-    oss << kLogPrefix << "[SweetsPhase] Forwarding phase " << newPhase
-        << " to spawn pacing system.\n";
-    ::DebugTrace(oss.str());
-
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->ForceSpawnRefresh();
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "[SweetsPhase] Spawn pacing refresh skipped; manager missing.\n");
-    }
 }
 void SceneGame::ResetPlaySession()
 {
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->Enable(false);
+        m_physicsBinder->ResetContactListenerCaches();
+    }
+
     if (m_sweetsManager)
     {
         m_sweetsManager->ClearAllSweets();
         m_sweetsManager->ForceSpawnRefresh();
+        m_sweetsManager->SeedInitialSpawns();
     }
     else
     {
@@ -2154,15 +2138,6 @@ void SceneGame::ResetPlaySession()
     ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
-    if (m_sweetsManager)
-    {
-        m_sweetsManager->NotifyPhaseChanged(m_phaseManager.GetCurrentPhase());
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "SweetsManager missing during ResetPlaySession; phase reset not broadcast.\n");
-    }
-
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";
     ::DebugTrace(oss.str());
@@ -2194,20 +2169,6 @@ int SceneGame::GetSweetsCount() const
 }
 
 
-
-void SceneGame::Initialize(const Stage::StageData& stageData)
-{
-    
-    //高さボーナス設定
-    m_heightBonusThresholdMeters = stageData.GetHeightBonusThreshold();
-    m_heightBonusSeconds = stageData.GetHeightBonusSeconds();
-
-    //デバッグ確認用
-    std::ostringstream oss;
-    oss << "[DEBUG] HeightBonus initialized=" << m_heightBonusThresholdMeters
-        << " second=" << m_heightBonusSeconds << "\n";
-    ::DebugTrace(oss.str());
-}
 
 //Osara探す？やつ
 bool SceneGame::IsOsara(const StageObject& obj)
