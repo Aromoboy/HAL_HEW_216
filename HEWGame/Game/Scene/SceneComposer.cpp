@@ -385,7 +385,6 @@ void SceneComposer::ComposePhysics(Composition& result)
     physicsParameters.continuousCollisionForSweets = tuning.continuousCollisionForSweets;
     physicsParameters.continuousCollisionForSmallDynamics = tuning.continuousCollisionForSmallDynamics;
     physicsParameters.smallDynamicContinuousThreshold = tuning.smallDynamicContinuousThreshold;
-    physicsParameters.continuousCollisionForPlayerProjectiles = tuning.continuousCollisionForPlayerProjectiles;
     physicsParameters.continuousCollisionForPlayer = tuning.continuousCollisionForPlayer;
     physicsParameters.creamGlueLinearHertz = tuning.creamGlueLinearHertz;
     physicsParameters.creamGlueLinearDampingRatio = tuning.creamGlueLinearDampingRatio;

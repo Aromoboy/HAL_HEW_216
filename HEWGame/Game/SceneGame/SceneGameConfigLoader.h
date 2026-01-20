@@ -22,7 +22,6 @@ namespace SceneGameConfig
         bool continuousCollisionForSweets = true;
         bool continuousCollisionForSmallDynamics = false;
         float smallDynamicContinuousThreshold = 0.6f;
-        bool continuousCollisionForPlayerProjectiles = true;
         bool continuousCollisionForPlayer = false;
         float creamGlueLinearHertz = 0.0f;
         float creamGlueLinearDampingRatio = 0.7f;
