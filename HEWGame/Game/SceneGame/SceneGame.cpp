@@ -413,6 +413,8 @@ bool SceneGame::Load(Core::Input& input)
             m_sweetsOutOfBoundsSettings.outOfBoundsDespawn,
             m_sweetsOutOfBoundsSettings.outOfBoundsRespawn,
             m_sweetsOutOfBoundsSettings.outOfBoundsRespawnDelaySeconds);
+        m_sweetsManager->SetGrabRespawnDelaySeconds(
+            m_sweetsOutOfBoundsSettings.grabRespawnDelaySeconds);
     }
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);

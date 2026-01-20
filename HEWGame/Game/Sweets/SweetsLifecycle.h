@@ -42,6 +42,7 @@ namespace SweetsSpace
         void OnLateUpdate(const Core::UpdateContext& ctx);
 
         void SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds);
+        void SetGrabRespawnDelaySeconds(float respawnDelaySeconds);
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin = std::nullopt);
         std::optional<std::pair<float, float>> GetHorizontalBounds() const;
@@ -76,8 +77,10 @@ namespace SweetsSpace
         bool m_outOfBoundsDespawnEnabled;
         bool m_outOfBoundsRespawnEnabled;
         float m_outOfBoundsRespawnDelaySeconds;
+        float m_grabRespawnDelaySeconds;
         std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingLateDeletion;
         std::unordered_map<std::shared_ptr<ActiveSweets>, float> m_outOfBoundsTimers;
+        std::unordered_map<std::shared_ptr<ActiveSweets>, float> m_grabRespawnTimers;
         bool m_hasHorizontalBounds{ false };
         float m_minHorizontalBound{ 0.0f };
         float m_maxHorizontalBound{ 0.0f };

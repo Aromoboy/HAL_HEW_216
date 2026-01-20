@@ -803,6 +803,62 @@ namespace SweetsSpace
         OnPhaseConfigurationChanged(m_currentPhase);
     }
 
+    bool SweetsSpawner::RequestSupplementalSpawn(int count, const char* context)
+    {
+        if (count <= 0)
+        {
+            return false;
+        }
+
+        if (m_phaseConfigs.empty())
+        {
+            return false;
+        }
+
+        if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
+        {
+            OnPhaseConfigurationChanged(m_currentPhase);
+            if (m_activePhaseConfigIndex < 0 || m_activePhaseConfigIndex >= static_cast<int>(m_phaseConfigs.size()))
+            {
+                return false;
+            }
+        }
+
+        const int liveSweets = CountLiveSweets();
+        const int pendingRequests = static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
+        int allowedCount = count;
+        if (m_liveSweetsCap > 0)
+        {
+            allowedCount = std::min(allowedCount, std::max(0, m_liveSweetsCap - liveSweets - pendingRequests));
+        }
+
+        const int availableQueueSlots = static_cast<int>(kMaxSpawnQueueEntries - m_spawnQueue.size());
+        allowedCount = std::min(allowedCount, std::max(0, availableQueueSlots));
+
+        if (allowedCount <= 0)
+        {
+            return false;
+        }
+
+        const int enqueued = EnqueueSupplementalSpawns(allowedCount);
+        if (enqueued > 0)
+        {
+            m_activeBurstPlanned = std::max(m_activeBurstPlanned, enqueued);
+            if (context)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << context << " でスイーツ補充を依頼したよ count=" << enqueued
+                    << " live=" << liveSweets
+                    << " queued=" << m_spawnQueue.size()
+                    << " burstRemaining=" << m_currentBurstRemaining << "\n";
+                DebugTrace(oss.str());
+            }
+            return true;
+        }
+
+        return false;
+    }
+
     int SweetsSpawner::CountLiveSweets() const
     {
         if (!m_registry)
@@ -944,6 +1000,54 @@ namespace SweetsSpace
         }
 
         m_currentBurstRemaining = enqueued;
+        return enqueued;
+    }
+
+    int SweetsSpawner::EnqueueSupplementalSpawns(int count)
+    {
+        if (count <= 0)
+        {
+            return 0;
+        }
+
+        const int burstTarget = (m_activeBurstPlanned > 0) ? m_activeBurstPlanned : count;
+        const int availableQueueSlots = static_cast<int>(kMaxSpawnQueueEntries - m_spawnQueue.size());
+        const int allowedCount = std::max(0, std::min({ count, burstTarget, availableQueueSlots }));
+
+        int enqueued = 0;
+        for (int i = 0; i < allowedCount; ++i)
+        {
+            if (m_spawnQueue.size() >= kMaxSpawnQueueEntries)
+            {
+                break;
+            }
+
+            const std::string chosenKind = ChooseKindFromActiveConfig();
+            const std::string resolvedKind = m_factory ? m_factory->ResolveKindKey(chosenKind) : chosenKind;
+            const std::string kind = NormalizeKey(resolvedKind);
+            if (kind.empty())
+            {
+                break;
+            }
+
+            m_spawnQueue.push_back(kind);
+            ++enqueued;
+        }
+
+        if (enqueued != allowedCount)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "補充リクエストの積み込みが足りなかったよ enqueued=" << enqueued
+                << " expected=" << allowedCount << " queueSize=" << m_spawnQueue.size() << ".\n";
+            DebugTrace(oss.str());
+        }
+
+        if (m_currentBurstRemaining < 0)
+        {
+            m_currentBurstRemaining = 0;
+        }
+
+        m_currentBurstRemaining += enqueued;
         return enqueued;
     }
 

@@ -2940,6 +2940,31 @@ namespace SceneGameConfig
                     ::DebugTrace(oss.str());
                 }
             }
+
+            if (key == "sweets.grabrespawndelay" || key == "grabrespawndelay")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    if (std::isfinite(*parsed))
+                    {
+                        settings.grabRespawnDelaySeconds = std::max(0.0f, *parsed);
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << kLogPrefix << "Non-finite sweets grabRespawnDelay value '" << value
+                            << "' on line=" << lineNumber << "; keeping default.\n";
+                        ::DebugTrace(oss.str());
+                    }
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets grabRespawnDelay value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
         }
 
         return settings;
