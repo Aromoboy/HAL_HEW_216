@@ -247,6 +247,14 @@ namespace Systems
         m_contactHandlers.push_back(ContactHandler{ std::move(onBegin), std::move(onEnd) });
     }
 
+    void PhysicsRegistration::ResetContactListenerCaches()
+    {
+        if (m_contactListener)
+        {
+            m_contactListener->ClearDestroyedCaches();
+        }
+    }
+
     void PhysicsRegistration::DispatchBeginContact(Entities::PhysicalEntity& a, Entities::PhysicalEntity& b,
         const ContactEventInfo& info)
     {

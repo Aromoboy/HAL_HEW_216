@@ -985,7 +985,7 @@ namespace SweetsSpace
             const bool tracked = m_registeredPhysicsBodies.erase(sweets.get()) > 0;
             if (tracked || b2Body_IsValid(m_physicsMachine->FindBody(*sweets)))
             {
-                m_physicsMachine->UnregisterBody(*sweets);
+                m_physicsMachine->RequestUnregisterBody(*sweets);
             }
         }
         else if (logWarnings && m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)

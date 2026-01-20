@@ -30,6 +30,7 @@ namespace Systems
         void UnregisterAllPhysicsBodies();
         void ValidatePlayerPhysicsRegistration();
         void AddContactHandler(ContactCallback onBegin, ContactCallback onEnd);
+        void ResetContactListenerCaches();
 
     private:
         struct ContactHandler

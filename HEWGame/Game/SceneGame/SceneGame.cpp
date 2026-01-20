@@ -2048,6 +2048,12 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
 }
 void SceneGame::ResetPlaySession()
 {
+    if (m_physicsBinder)
+    {
+        m_physicsBinder->Enable(false);
+        m_physicsBinder->ResetContactListenerCaches();
+    }
+
     if (m_sweetsManager)
     {
         m_sweetsManager->ClearAllSweets();
