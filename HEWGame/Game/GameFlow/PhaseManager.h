@@ -15,15 +15,11 @@ namespace GameFlow
         struct PhaseUpdateResult
         {
             bool phaseAdvanced;
-            bool miniPhaseAdvanced;
-            float timeElapsed;
         };
 
         void Initialize(
             const std::vector<float>& thresholds,
-            const std::vector<float>& rewardMultipliers,
-            const std::vector<float>& minithresholds,
-            const std::vector<float>& rewardMiniMultipliers
+            const std::vector<float>& rewardMultipliers
         );
 
         void Reset();
@@ -35,9 +31,6 @@ namespace GameFlow
         int GetCurrentPhase() const noexcept;
         float GetRewardMultiplier() const noexcept;
 
-        // ミニフェーズ対応
-        float GetRewardMiniMultiplier() const noexcept;
-
     private:
 
         // 時間計測
@@ -47,22 +40,14 @@ namespace GameFlow
         std::vector<float> m_thresholds;
         std::vector<float> m_rewardMultipliers;
 
-        // ミニ閾値
-        std::vector<float> m_minithresholds;
-        std::vector<float> m_minirewardMultipliers;
-
         std::size_t m_nextThresholdIndex;
         int m_currentPhase;
-
-        std::size_t m_nextMiniThresholdIndex;
-        int m_currentMiniPhase;
 
         bool m_initialized;
         float m_lastReportedHeight;
         float m_elapsedSeconds;
 
         float GetRewardMultiplierForPhase(int phaseIndex) const noexcept;
-        float GetRewardMiniMultiplierForPhase(int phaseminiIndex) const noexcept;
 
     };
 }

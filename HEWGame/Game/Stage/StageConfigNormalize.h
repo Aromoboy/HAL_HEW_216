@@ -16,8 +16,6 @@ namespace Stage
         std::vector<PlatformDescriptor> platforms;
         std::vector<float> phaseThresholds;
         std::vector<float> phaseRewardMultipliers;
-        std::vector<float> phaseMiniThresholds;
-        std::vector<float> phaseRewardMiniMultipliers;
         std::vector<float3> spawnPointsPrimary;
         std::vector<float3> spawnPointsSecondary;
         float cellSizeWorld = 0.0f;
@@ -94,8 +92,6 @@ namespace Stage
         static const std::string& DefaultGuidelineMaterialKey();
         static const std::vector<float>& DefaultThresholds();
         static const std::vector<float>& DefaultRewardMultipliers();
-        static const std::vector<float>& DefaultMiniThresholds();
-        static const std::vector<float>& DefaultMiniRewardMultipliers();
         static std::vector<float3> BuildDefaultSpawnPointsPrimary(float planeZ);
         static std::vector<float3> BuildDefaultSpawnPointsSecondary(float planeZ);
     };

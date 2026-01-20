@@ -439,20 +439,6 @@ namespace Stage
                     result.thresholds.insert(result.thresholds.end(), parsed.begin(), parsed.end());
                 }
             }
-            //ミニフェーズ
-            else if (key == "phaseMiniThresholds")
-            {
-                bool error = false;
-                auto parsed = ParseFloatList(rawValue, &error);
-                if (error)
-                {
-                    result.parseError = true;
-                }
-                else
-                {
-                    result.minithresholds.insert(result.minithresholds.end(), parsed.begin(), parsed.end());
-                }
-            }
             else if (key == "spawnPoints" || key == "spawnPointsPrimary" || key == "spawnPointsA")
             {
                 appendSpawnPoints("spawnPointsPrimary", rawValue, result.spawnPointsPrimary);
@@ -472,20 +458,6 @@ namespace Stage
                 else
                 {
                     result.rewardMultipliers.insert(result.rewardMultipliers.end(), parsed.begin(), parsed.end());
-                }
-            }
-            //ミニフェーズ
-            else if (key == "phaseMiniRewardMultipliers")
-            {
-                bool error = false;
-                auto parsed = ParseFloatList(rawValue, &error);
-                if (error)
-                {
-                    result.parseError = true;
-                }
-                else
-                {
-                    result.minirewardMultipliers.insert(result.minirewardMultipliers.end(), parsed.begin(), parsed.end());
                 }
             }
             else if (key == "platformCenterY")

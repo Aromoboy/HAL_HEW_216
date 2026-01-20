@@ -36,9 +36,6 @@ namespace Stage
 
         const std::vector<float>& GetPhaseThresholds() const noexcept;
         const std::vector<float>& GetPhaseRewardMultipliers() const noexcept;
-        //ミニフェーズ
-        const std::vector<float>& GetPhaseMiniThresholds() const noexcept;
-        const std::vector<float>& GetPhaseRewardMiniMultipliers() const noexcept;
         const std::vector<float3>& GetSpawnPointsPrimary() const noexcept;
         const std::vector<float3>& GetSpawnPointsSecondary() const noexcept;
         // 旧来のプライマリ出現ポイント用エイリアス
@@ -78,8 +75,6 @@ namespace Stage
         std::vector<PlatformDescriptor> m_platforms;
         std::vector<float> m_phaseThresholds;
         std::vector<float> m_phaseRewardMultipliers;
-        std::vector<float> m_phaseMiniThresholds;        //ミニフェーズ
-        std::vector<float> m_phaseRewardMiniMultipliers; //ミニフェーズ
         std::vector<float3> m_spawnPointsPrimary;
         std::vector<float3> m_spawnPointsSecondary;
         std::string m_sourcePath;

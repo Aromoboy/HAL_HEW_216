@@ -138,9 +138,7 @@ void SceneComposer::ComposeConfig(Composition& result)
     }
     result.phaseManager.Initialize(
         result.stageData.GetPhaseThresholds(),
-        result.stageData.GetPhaseRewardMultipliers(),
-        result.stageData.GetPhaseMiniThresholds(),
-        result.stageData.GetPhaseRewardMiniMultipliers());
+        result.stageData.GetPhaseRewardMultipliers());
     result.playerBaseHorizontalSpeed = result.stageData.GetPlayerHorizontalSpeedWorld();
     result.playerBaseVerticalSpeed = result.stageData.GetPlayerVerticalSpeedWorld();
     result.playerPickupBoxWidth = result.stageData.GetPickupBoxWidthWorld();

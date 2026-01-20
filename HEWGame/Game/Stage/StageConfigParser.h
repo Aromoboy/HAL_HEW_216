@@ -28,11 +28,9 @@ namespace Stage
         bool secondaryParseError = false;
 
         std::vector<float> thresholds;
-        std::vector<float> minithresholds;
         std::vector<float3> spawnPointsPrimary;
         std::vector<float3> spawnPointsSecondary;
         std::vector<float> rewardMultipliers;
-        std::vector<float> minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides;
 
         float planeZ = 0.0f;

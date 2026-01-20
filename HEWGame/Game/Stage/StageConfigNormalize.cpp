@@ -23,8 +23,6 @@ namespace
     const float3 kDefaultGuidelineSpinAxis{ 0.0f, 1.0f, 0.0f };
     const float kDefaultThresholds[] = { 5.0f, 15.0f, 30.0f };
     const float kDefaultRewardMultipliers[] = { 1.0f };
-    const float kDefaultMiniThresholds[] = { 3.0f, 7.0f, 16.0f };
-    const float kDefaultMiniRewardMultipliers[] = { 1.0f };
 
     DirectX::XMFLOAT4 SanitizeColor(const DirectX::XMFLOAT4& color, const DirectX::XMFLOAT4& fallback, const std::string& label)
     {
@@ -115,17 +113,6 @@ namespace Stage
         return defaults;
     }
 
-    const std::vector<float>& StageConfigDefaults::DefaultMiniThresholds()
-    {
-        static const std::vector<float> defaults(std::begin(kDefaultMiniThresholds), std::end(kDefaultMiniThresholds));
-        return defaults;
-    }
-
-    const std::vector<float>& StageConfigDefaults::DefaultMiniRewardMultipliers()
-    {
-        static const std::vector<float> defaults(std::begin(kDefaultMiniRewardMultipliers), std::end(kDefaultMiniRewardMultipliers));
-        return defaults;
-    }
 
     std::vector<float3> StageConfigDefaults::BuildDefaultSpawnPointsPrimary(float planeZ)
     {
@@ -217,11 +204,9 @@ namespace Stage
         normalized.secondaryParseError = parsed.secondaryParseError;
 
         std::vector<float> thresholds = parsed.thresholds;
-        std::vector<float> minithresholds = parsed.minithresholds;
         std::vector<float3> spawnPointsPrimary = parsed.spawnPointsPrimary;
         std::vector<float3> spawnPointsSecondary = parsed.spawnPointsSecondary;
         std::vector<float> rewardMultipliers = parsed.rewardMultipliers;
-        std::vector<float> minirewardMultipliers = parsed.minirewardMultipliers;
         std::vector<PlatformOverride> platformOverrides = parsed.platformOverrides;
         float planeZ = parsed.planeZ;
         bool planeZSet = parsed.planeZSet;
@@ -585,31 +570,6 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "All thresholds were invalid; falling back to defaults.\n";
         }
-        //ミニフェーズ
-        if (minithresholds.empty())
-        {
-            minithresholds = StageConfigDefaults::DefaultMiniThresholds();
-            std::ostringstream oss;
-            oss << kLogPrefix << "No phaseMiniThresholds provided; using defaults.\n";
-        }
-
-        std::sort(minithresholds.begin(), minithresholds.end());
-        minithresholds.erase(
-            std::remove_if(minithresholds.begin(), minithresholds.end(), [](float value)
-                {
-                    return !std::isfinite(value) || value <= 0.0f;
-                }),
-            minithresholds.end());
-
-        minithresholds.erase(std::unique(minithresholds.begin(), minithresholds.end()), minithresholds.end());
-
-        if (minithresholds.empty())
-        {
-            minithresholds = StageConfigDefaults::DefaultMiniThresholds();
-            std::ostringstream oss;
-            oss << kLogPrefix << "All minithresholds were invalid; falling back to defaults.\n";
-        }
-
         const auto defaultSpawnPointsPrimary = StageConfigDefaults::BuildDefaultSpawnPointsPrimary(planeZ);
         const auto defaultSpawnPointsSecondary = StageConfigDefaults::BuildDefaultSpawnPointsSecondary(planeZ);
 
@@ -960,18 +920,12 @@ namespace Stage
         }
 
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
-        const std::size_t minirequiredMultiplierCount = minithresholds.size() + 1; //ミニフェーズ
         EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount,
             kDefaultRewardMultipliers);
-        //ミニフェーズ
-        EnsureRewardMultiplierCoverage(minirewardMultipliers, minirequiredMultiplierCount,
-            kDefaultMiniRewardMultipliers);
 
         normalized.planeZ = planeZ;
         normalized.phaseThresholds = std::move(thresholds);
         normalized.phaseRewardMultipliers = std::move(rewardMultipliers);
-        normalized.phaseMiniThresholds = std::move(minithresholds);
-        normalized.phaseRewardMiniMultipliers = std::move(minirewardMultipliers);
         normalized.spawnPointsPrimary = std::move(spawnPointsPrimary);
         normalized.spawnPointsSecondary = std::move(spawnPointsSecondary);
         normalized.platforms = std::move(platformDescriptors);
@@ -1013,11 +967,6 @@ namespace Stage
         normalized.phaseRewardMultipliers = StageConfigDefaults::DefaultRewardMultipliers();
         EnsureRewardMultiplierCoverage(normalized.phaseRewardMultipliers, normalized.phaseThresholds.size() + 1,
             kDefaultRewardMultipliers);
-        normalized.phaseMiniThresholds = StageConfigDefaults::DefaultMiniThresholds();
-        normalized.phaseRewardMiniMultipliers = StageConfigDefaults::DefaultMiniRewardMultipliers();
-        EnsureRewardMultiplierCoverage(normalized.phaseRewardMiniMultipliers, normalized.phaseMiniThresholds.size() + 1,
-            kDefaultMiniRewardMultipliers);
-
         normalized.spawnPointsPrimary = StageConfigDefaults::BuildDefaultSpawnPointsPrimary(StageConfigDefaults::kDefaultPlaneZ);
         normalized.spawnPointsSecondary.clear();
         normalized.platforms.clear();
