@@ -6,6 +6,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -37,6 +38,7 @@ namespace SweetsSpace
         void OffsetSpawnOriginsY(float deltaY);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
+        void SetSpawnPointCap(int cap);
         void NotifyPhaseChanged(int newPhase);
 
         int CountLiveSweets() const;
@@ -45,16 +47,31 @@ namespace SweetsSpace
         int GetStackedInBatch() const;
 
         void OnStateChanged(const std::shared_ptr<ActiveSweets>& sweets, SweetsState previousState, SweetsState newState);
-        void OnSweetsRemoved(int remainingToStack, int liveAfterRemoval, const char* context);
+        void OnSweetsRemoved(const std::shared_ptr<ActiveSweets>& sweets, int remainingToStack, int liveAfterRemoval, const char* context);
 
         const std::vector<PhaseSpawnConfig>& GetPhaseConfigs() const;
         int GetActivePhaseConfigIndex() const;
 
     private:
+        enum class SpawnOriginLane
+        {
+            Primary,
+            Secondary,
+            Fallback,
+        };
+
         struct SpawnOriginSelection
         {
             float3 origin{};
             const char* laneLabel = "primary";
+            SpawnOriginLane lane = SpawnOriginLane::Primary;
+            std::size_t index = 0;
+        };
+
+        struct SpawnOriginAssignment
+        {
+            SpawnOriginLane lane = SpawnOriginLane::Fallback;
+            std::size_t index = 0;
         };
 
         int EnqueueSpawns(int count);
@@ -68,8 +85,11 @@ namespace SweetsSpace
         void LogAutoGenerationPolicy(const char* context) const;
         void ApplyDefaultPhaseConfigs();
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
-        SpawnOriginSelection NextSpawnOrigin();
+        std::optional<SpawnOriginSelection> NextSpawnOrigin();
         Transform BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection);
+        void ResetSpawnOriginTracking();
+        void RegisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets, const SpawnOriginSelection& selection);
+        void UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets);
         void EnsureRegisteredWeights(PhaseSpawnConfig& config, int phaseIndex,
             const std::unordered_set<std::string>& registeredKindsNormalized,
             const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const;
@@ -90,6 +110,9 @@ namespace SweetsSpace
         bool m_nextSpawnUsesPrimary{ true };
         std::size_t m_spawnOriginCursorPrimary{ 0 };
         std::size_t m_spawnOriginCursorSecondary{ 0 };
+        std::vector<int> m_spawnOriginLiveCountsPrimary;
+        std::vector<int> m_spawnOriginLiveCountsSecondary;
+        std::unordered_map<const ActiveSweets*, SpawnOriginAssignment> m_spawnOriginAssignments;
         float m_activeBurstInterval{ 0.0f };
         int m_activeBurstPlanned{ 0 };
         int m_currentBurstRemaining{ 0 };
@@ -108,6 +131,7 @@ namespace SweetsSpace
         float3 m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f };
         float3 m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f };
         int m_liveSweetsCap{ 0 };
+        int m_spawnPerPointCap{ 0 };
         bool m_warnedMissingSpawnOrigins{ false };
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_spawnPausedDueToLiveSweets{ false };

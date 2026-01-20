@@ -2944,4 +2944,59 @@ namespace SceneGameConfig
 
         return settings;
     }
+
+    SweetsSpawnLimitSettings LoadSweetsSpawnLimitSettings()
+    {
+        SweetsSpawnLimitSettings settings{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionSpawnLimits, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Spawn limits config section '" << GameplayConfig::kSectionSpawnLimits
+                << "' not found at '" << kGameplayConfigPath << "'.\n";
+            ::DebugTrace(oss.str());
+            return settings;
+        }
+
+        for (const auto& entry : lines)
+        {
+            std::string key = ToLowerCopy(TrimWhitespace(entry.key));
+            const std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+
+            if (key == "spawnperpointcap" || key == "perpointcap")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.spawnPerPointCap = std::max(0, *parsed);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid spawnPerPointCap value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "spawntotalcap" || key == "totalcap")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.spawnTotalCap = std::max(0, *parsed);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid spawnTotalCap value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+            }
+        }
+
+        return settings;
+    }
 }

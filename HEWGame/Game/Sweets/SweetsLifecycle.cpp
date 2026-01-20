@@ -899,7 +899,7 @@ namespace SweetsSpace
         {
             const int remainingToStack = std::max(0, m_spawner->GetBatchStackTarget() - m_spawner->GetStackedInBatch());
             const int liveAfterRemoval = m_spawner->CountLiveSweets();
-            m_spawner->OnSweetsRemoved(remainingToStack, liveAfterRemoval, context);
+            m_spawner->OnSweetsRemoved(sweets, remainingToStack, liveAfterRemoval, context);
         }
 
 #if defined(_DEBUG)

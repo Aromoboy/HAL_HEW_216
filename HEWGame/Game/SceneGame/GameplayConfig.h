@@ -20,6 +20,7 @@ namespace GameplayConfig
     inline constexpr const char* kCameraRigKeyPitchDegrees = "pitchDegrees";
     inline constexpr const char* kSectionStageChecklist = "stage.checklist";
     inline constexpr const char* kSectionSpawnPhases = "spawn.phases";
+    inline constexpr const char* kSectionSpawnLimits = "spawn.limits";
     inline constexpr const char* kSectionPowerUps = "powerups";
     inline constexpr const char* kSectionSweetsLifecycle = "sweets.lifecycle";
     inline constexpr const char* kSectionSweetsManifest = "sweets.manifest";
