@@ -708,15 +708,21 @@ void SceneGame::OnEnter()
     oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 
-    // BGMを再生（ループあり、音量40%）
-    if (m_pManager)
+    if (SoundManagerEX::GetInstance())
     {
-        m_pManager->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.4f);  // ループ有効
+        m_gameBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
+            "Assets/Audio/BGM_MainGame.wav", true, 0.4f);
     }
 }
 
 void SceneGame::OnExit()
 {
+    if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
+    {
+        SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
+        m_gameBGMHandle = -1;
+    }
+
     std::ostringstream oss;
     oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
@@ -728,7 +734,14 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     , m_playerController(DebugTrace, kLogPrefix)
     , m_manager(&a_manager)
 {
-    m_pManager = std::make_unique<SoundManagerEX>();
+    auto* soundMgr = SoundManagerEX::GetInstance();
+    if (soundMgr)
+    {
+        m_gameBGMHandle = soundMgr->PlaySoundEX("Assets/Sound/BGM_Game.wav",  
+            true,   // ループ
+            0.4f    // 音量
+        );
+    }
 }
 
 SceneGame::~SceneGame()
@@ -813,10 +826,11 @@ SceneGame::~SceneGame()
     {
         m_drawSystem->ClearRenderables();
     }
-        if (m_pManager)
-        {
-            m_pManager->StopAllSounds();
-        }
+    if (auto* soundMgr = SoundManagerEX::GetInstance())
+    {
+        soundMgr->StopAllSounds();
+    }
+
 }
 
 void SceneGame::ConfigureUpdates()
@@ -2040,6 +2054,11 @@ void SceneGame::OnStageStart()
 void SceneGame::OnStageClear()
 {
     ToggleGameplaySystems(false);
+
+    if (auto* soundMgr = SoundManagerEX::GetInstance())
+    {
+        soundMgr->PlaySoundEX("Assets/Audio/SE_ResultPop.wav", false, 0.5f);
+    }
 
     std::ostringstream oss;
     const float peakHeight = m_gameplayRules.GetPeakTowerHeight();

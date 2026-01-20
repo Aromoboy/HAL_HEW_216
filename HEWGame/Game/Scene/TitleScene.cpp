@@ -133,10 +133,22 @@ void TitleScene::OnEnter()
     m_countTimer = 0.0f;
     m_startTimer = 0.0f;
 
+
+    if (SoundManagerEX::GetInstance())
+    {
+        m_titleBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
+            "Assets/Audio/BGM_Menu.wav", true, 0.5f);
+    }
 }
 
 void TitleScene::OnExit()
 {
+    if (m_titleBGMHandle != -1 && SoundManagerEX::GetInstance())
+    {
+        SoundManagerEX::GetInstance()->StopSound(m_titleBGMHandle);
+        m_titleBGMHandle = -1;
+    }
+
     if (m_background) m_background->Shutdown();
     m_background.reset();
     if (m_inputRegistered)

@@ -112,6 +112,7 @@ private:
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
     int GetSweetsCount() const;
+    int m_gameBGMHandle = -1;
     void Initialize(const Stage::StageData& stageData);
 
 protected:

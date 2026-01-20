@@ -14,6 +14,7 @@
 #include "Sprite.h"
 #include "SceneManager.h"
 #include "Scene.h"
+#include "SoundManagerEX.h" 
 #include "TitleScene.h"
 #include "Defines.h"
 #include "ShaderList.h"
@@ -41,6 +42,7 @@ namespace
         Effekseer::Backend::GraphicsDeviceRef g_effectDevice;
         EffekseerRendererDX11::RendererRef g_effectRenderer;
         Effekseer::ManagerRef g_effectManager;
+        std::unique_ptr<SoundManagerEX> g_soundManager;
 
         std::filesystem::path GetExecutableDirectory()
         {
@@ -122,6 +124,9 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
                 return g_comInitResult;
         }
 
+        g_soundManager = std::make_unique<SoundManagerEX>();
+        Diagnostics::LogInfo("[Sound] SoundManagerEX initialized");
+
         HRESULT hr = InitDirectX(hWnd, width, height, false);
         if (FAILED(hr))
         {
@@ -184,6 +189,8 @@ void Uninit()
         g_effectManager.Reset();
         g_effectRenderer.Reset();
         g_effectDevice.Reset();
+        g_soundManager.reset();
+        Diagnostics::LogInfo("[Sound] SoundManagerEX shutdown");
 
         ShaderList::Uninit();
         Sprite::Uninit();

@@ -268,12 +268,18 @@ void SoundSystem::StopSound(int handle)
     auto it = m_sourceVoices.find(handle);
     if (it != m_sourceVoices.end() && it->second)
     {
-        it->second->Stop(0);  // すぐに停止
-        it->second->FlushSourceBuffers();  // バッファをフラッシュ
+        // For looping sounds, exit loop first
+        it->second->ExitLoop(XAUDIO2_COMMIT_NOW);
+
+        // Then stop immediately
+        it->second->Stop(0, XAUDIO2_COMMIT_NOW);
+        it->second->FlushSourceBuffers();
+
         it->second->DestroyVoice();
         m_sourceVoices.erase(it);
     }
 }
+
 
 void SoundSystem::StopAllSounds()
 {
@@ -281,7 +287,8 @@ void SoundSystem::StopAllSounds()
     {
         if (pair.second)
         {
-            pair.second->Stop(0);
+            pair.second->ExitLoop(XAUDIO2_COMMIT_NOW);  
+            pair.second->Stop(0, XAUDIO2_COMMIT_NOW);   
             pair.second->FlushSourceBuffers();
             pair.second->DestroyVoice();
         }
