@@ -147,6 +147,7 @@ namespace SceneGameConfig
     struct SweetsSpawnLimitSettings
     {
         int spawnPerPointCap = 6;
+        int spawnPerPointInitial = 0;
         int spawnTotalCap = 12;
     };
 

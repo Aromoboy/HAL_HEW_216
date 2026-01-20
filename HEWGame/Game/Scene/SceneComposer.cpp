@@ -481,6 +481,7 @@ void SceneComposer::ComposePhysics(Composition& result)
             result.stageData.GetSpawnPointsSecondary());
         result.sweetsManager->SetLiveSweetsCap(result.sweetsSpawnLimitSettings.spawnTotalCap);
         result.sweetsManager->SetSpawnPointCap(result.sweetsSpawnLimitSettings.spawnPerPointCap);
+        result.sweetsManager->SetSpawnPerPointInitial(result.sweetsSpawnLimitSettings.spawnPerPointInitial);
         const bool spawnConfigLoaded = result.sweetsManager->LoadPhaseSpawnConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;

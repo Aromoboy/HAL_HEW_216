@@ -39,6 +39,7 @@ namespace SweetsSpace
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
+        void SetSpawnPerPointInitial(int count);
         void NotifyPhaseChanged(int newPhase);
         bool RequestSupplementalSpawn(int count, const char* context);
 
@@ -89,6 +90,7 @@ namespace SweetsSpace
         std::vector<WeightedSweetsType> BuildDefaultWeights() const;
         std::optional<SpawnOriginSelection> NextSpawnOrigin();
         Transform BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection);
+        int SpawnInitialPerPoint(int perPoint);
         void ResetSpawnOriginTracking();
         void RegisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets, const SpawnOriginSelection& selection);
         void UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets);
@@ -134,6 +136,7 @@ namespace SweetsSpace
         float3 m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f };
         int m_liveSweetsCap{ 0 };
         int m_spawnPerPointCap{ 0 };
+        int m_spawnPerPointInitial{ 0 };
         bool m_warnedMissingSpawnOrigins{ false };
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_spawnPausedDueToLiveSweets{ false };
