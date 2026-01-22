@@ -1,4 +1,4 @@
-#include "ScenePowerUp.h"
+﻿#include "ScenePowerUp.h"
 
 #include "DirectX.h"
 #include "PerspectiveCamera.h"
@@ -49,11 +49,6 @@ namespace SceneSpace
                 std::unordered_map<std::string, EffectCreateData> effectDatas;
                 effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
                 m_effectSystem = std::make_unique<EffectSystem>(m_manager->GetEffectRenderer(), m_manager->GetEffectManager(), effectDatas);
-
-                std::unordered_map<std::string, EffectCreateData> effectDatas;
-                effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
-                m_effectSystem = std::make_unique<EffectSystem>(m_manager->GetEffectRenderer(), m_manager->GetEffectManager(), effectDatas);
-
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
                 m_rig = std::make_unique<CameraRig>(m_camera);
                 m_powerUpManager = std::make_unique<PowerUpManager>(GetUpdateScheduler(), cache, PowerUpManager::NodeFormat(3, 2));
