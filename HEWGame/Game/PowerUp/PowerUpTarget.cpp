@@ -15,7 +15,7 @@ const float3& PowerUpTarget::GetPosition()
 
 void PowerUpTarget::MoveTarget(float2 a_position, float2 a_distanse)
 {
-	// â‘Î’l“¯‚ğŒvZ‚µ‚ÄˆÚ“®—Ê‚ğ‘ª‚é
+	// â‘Î’l“¯m‚ğŒvZ‚µ‚ÄˆÚ“®—Ê‚ğ‘ª‚é
 	float travelDistance = std::abs(a_position.x - m_transform.position.x) - (std::abs(a_distanse.x));
 	if (travelDistance <= 0.05f) return;
 

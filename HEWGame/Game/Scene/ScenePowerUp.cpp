@@ -19,8 +19,11 @@
 
 namespace SceneSpace
 {
-        ScenePowerUp::ScenePowerUp(SceneSpace::SceneManager& manager)
-                : m_manager(&manager)
+
+    float kBackMoveSpeed = 0.2f;
+    ScenePowerUp::ScenePowerUp(SceneSpace::SceneManager& manager)
+        : m_manager(&manager)
+        , m_backUVProgress(0.0f)
         {
         }
 
@@ -36,15 +39,25 @@ namespace SceneSpace
                 cache.Load("Whip", GetDevice(), L"Assets/Texture/upgrade_UI_cream_plus_icon.png");
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("BackFrame", GetDevice(), L"Assets/Texture/UI_Cakeblock.png");
+                cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");         
                 cache.Load("PowerUpBG", GetDevice(), L"Assets/Texture/upgrade_menu_background.png");
+                cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
+                cache.Load("SweetsSpawnSpeed", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_Speed_icon.png");
+                cache.Load("SweetsSpawnQuantity", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_UP_icon.png");
+                cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
+
+                std::unordered_map<std::string, EffectCreateData> effectDatas;
+                effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
+                m_effectSystem = std::make_unique<EffectSystem>(m_manager->GetEffectRenderer(), m_manager->GetEffectManager(), effectDatas);
 
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
                 m_rig = std::make_unique<CameraRig>(m_camera);
                 m_powerUpManager = std::make_unique<PowerUpManager>(GetUpdateScheduler(), cache, PowerUpManager::NodeFormat(3, 2));
                 m_powerUpRenderer = std::make_unique<PowerUpRenderer>(cache);
-                m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input);
+                m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input, *m_effectSystem);
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
+                
                 m_rig->Attach(m_target);
 
                 LoadPowerUpFile();
@@ -65,6 +78,7 @@ namespace SceneSpace
         void ScenePowerUp::Update(Core::StepTimer& timer, Core::Input& input)
         {
                 RootUpdate(timer, input);
+                
         }
 
         void ScenePowerUp::Draw()
@@ -130,7 +144,10 @@ namespace SceneSpace
                 {
                         Register(*m_rig);
                 }
-
+                if (m_effectSystem)
+                {
+                        Register(*m_effectSystem);
+                }
         }
 
         void ScenePowerUp::Update(const Core::UpdateContext& ctx)
@@ -153,7 +170,11 @@ namespace SceneSpace
                 }
 
                 m_target->MoveTarget(m_cursor->GetDrawPos(), m_powerUpManager->GetNodeDistance());
+#if 0
+                m_backUVProgress += ctx.dt * kBackMoveSpeed;
+#endif // 0
 
+                
         }
 
         void ScenePowerUp::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
@@ -162,10 +183,13 @@ namespace SceneSpace
                 {
                         return;
                 }
-                m_powerUpRenderer->DrawBackground(*activeCamera);
+                m_powerUpRenderer->DrawBackground(*activeCamera, m_backUVProgress);
                 m_powerUpRenderer->DrawHud(*activeCamera);
+                m_powerUpRenderer->DrawCost(m_cost, *activeCamera);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
                 m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
+                SetDepthTest(true);
+                m_effectSystem->Draw(activeCamera.get());
         }
 
         bool ScenePowerUp::LoadPowerUpFile()
@@ -245,11 +269,16 @@ namespace SceneSpace
                         Unregister(*m_powerUpManager);
                 }
 
+                if (m_effectSystem)
+                {
+                        Unregister(*m_effectSystem);
+                }
                 m_target.reset();
                 m_rig.reset();
                 m_cursor.reset();
                 m_powerUpManager.reset();
                 m_powerUpRenderer.reset();
                 m_camera.reset();
+                m_effectSystem.reset();
         }
 }

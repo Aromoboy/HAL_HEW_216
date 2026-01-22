@@ -1,13 +1,14 @@
 #include "PowerUpCursor.h"
 #include "Core/Input.h"
 #include "DebugConsole.h"
+#include "Defines.h"
 #include <iostream>
 
 constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
+constexpr float2 kCursorOffset = { 0.0015f, 0.014f };
 
-
-PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input)
+PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input, EffectSystem& a_effectSystem)
 	:m_powerUpManager(a_powerUpManager)
 	, m_input(&input)
 	, m_index(0)
@@ -16,6 +17,9 @@ PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManage
 	, m_texture(a_texture)
 	, m_moveTimer(0.0f)
 	, m_keyTimer(0.0f)
+	, m_flicker(0.0f)
+	, m_alpha(0.0f)
+	, m_effectSystem(a_effectSystem)
 {
 }
 
@@ -25,6 +29,11 @@ void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 
 	m_moveTimer -= ctx.dt;
 	m_keyTimer -= ctx.dt;
+	m_flicker = std::fmod(m_flicker + ctx.dt, 2 * PI);
+
+	float sinAlpha = std::sin(m_flicker);
+
+	m_alpha = std::abs(sinAlpha) * 0.5f + 0.5f;
 
 
 	if (m_moveTimer <= 0.0f)
@@ -37,13 +46,26 @@ void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 	}
 	
 	
-	if (m_input && m_keyTimer <= 0.0f && m_input->GetAxis(Core::ActionId::Confirm))
+	if (m_input && m_keyTimer <= 0.0f && m_input->IsKeyTrigger(VK_RETURN))
 	{
 		m_keyTimer = maxPowerUpSecond;
 		std::optional<int> result = m_powerUpManager->GetCost(m_index);
 		if (result != std::nullopt && result <= m_cost)
 		{
-			if (m_powerUpManager->LevelUp(m_index)) m_cost -= result.value();
+			if (m_powerUpManager->LevelUp(m_index))
+			{
+				m_cost -= result.value();
+				std::optional<float2> result = m_powerUpManager->GetDrawPosition(m_index);
+
+				float2 drawPosition = result ? result.value() : float2{ 0.0f, 0.0f };
+
+				drawPosition.x += kCursorOffset.x;
+				drawPosition.y += kCursorOffset.y;
+
+				
+				EffectSystem::EffectCreateRequest request("PowerUp", float3(drawPosition.x, drawPosition.y, 1.0f), float3(0.0f, 0.0f, 0.0f));
+				m_effectSystem.SpawnEffect(request);
+			}
 		}
 
 		
@@ -57,15 +79,18 @@ void PowerUpCursor::Draw(PowerUpRenderer& render, const CameraSpace::ICamera& ca
 {
 
 	std::optional<float2> result = m_powerUpManager->GetDrawPosition(m_index);
-	
+
 	float2 drawPosition = result ? result.value() : float2{ 0.0f, 0.0f };
 	
+	drawPosition.x += kCursorOffset.x;
+	drawPosition.y += kCursorOffset.y;
+
 	result = m_powerUpManager->GetDrawScale(m_index);
 
 	float2 drawScale = result ? result.value() : float2{ 1.0f, 1.0f };
 	
 	
-	render.DrawCursor(m_texture, drawPosition, drawScale, camera);
+	render.DrawCursor(m_texture, drawPosition, drawScale, camera, m_alpha);
 }
 
 
