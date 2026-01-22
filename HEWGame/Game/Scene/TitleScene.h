@@ -32,13 +32,6 @@ class TitleScene : public SceneSpace::Scene, public SceneSpace::IScene
         Max
     };
 
-    enum class TitleState
-    {
-        Idle,       // タイトル待機
-        CountDown,  // 暗転＋カウントダウン
-        StartEffect // START表示
-    };
-
 public:
     explicit TitleScene(SceneSpace::SceneManager& manager);
 
@@ -62,20 +55,15 @@ private:
 private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;
-    TitleState m_titleState = TitleState::Idle;
-    int m_count = 3;
-    float m_countTimer = 0.0f;
-    float m_startTimer = 0.0f;
-    float m_deltaTime = 0.0f;
-    float m_fadeAlpha = 0;
+    
     Texture m_texStartRed;
     Texture m_texStartGreen;
     Texture m_texPowerUpRed;
     Texture m_texPowerUpGreen;
     Texture m_texExitRed;
     Texture m_texExitGreen;
-    Texture m_texStartEffect;
 
+   
     struct MenuItem
     {
         std::unique_ptr<TitleRenderer> red;

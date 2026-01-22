@@ -137,12 +137,9 @@ void TitleScene::OnEnter()
     m_texPowerUpGreen.Create("Assets/Texture/タイトル画面UI4.png");
     m_texExitRed.Create("Assets/Texture/タイトル画面.png");
     m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
-    m_texStartEffect.Create("Assets/Texture/start.png");
-    m_texNumber[1].Create("Assets/Texture/3-1.png");
-    m_texNumber[2].Create("Assets/Texture/2-1.png");
-    m_texNumber[3].Create("Assets/Texture/1-1.png");
-
-
+    */
+    DirectX::XMMATRIX p = DirectX::XMMatrixOrthographicOffCenterLH(
+        0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f);
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
         &proj,
@@ -218,34 +215,17 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 {
     (void)ctx;
     Core::Input* input = GetInput();
+
     if (!input)
     {
         return;
     }
 
-
-    if (m_titleState != TitleState::Idle) return;
-    // �X�V�����i�L�[���͂ƃJ�[�\������j
-    // ���㉺�ŃJ�[�\���ړ��A����ŃV�[���ؑ�
-
-    float vertical = input->GetAxis(Core::ActionId::RotateYaw); 
-    if (vertical > 0.5f)   
-    {
-        m_cursor--;
-        if (m_cursor < 0) m_cursor = static_cast<int>(TitleMenu::Max) - 1;
-    }
-    else if (vertical < -0.5f)  
-    {
-        m_cursor++;
-        if (m_cursor >= static_cast<int>(TitleMenu::Max)) m_cursor = 0;
-    }
-
-    // 決定
+    // Enter でゲーム開始
     if (input->IsTrigger(Core::ActionId::Confirm))
     {
-        switch (static_cast<TitleMenu>(m_cursor))
+        if (m_manager)
         {
-        case TitleMenu::Start:
             m_manager->RequestSceneChange(
                 std::make_unique<SceneGame>(*m_manager));
             break;
@@ -257,9 +237,9 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
             PostQuitMessage(0);
             break;
         }
-       
+        return;
     }
-
+    
     if (input->IsTrigger('P'))
     {
         if (m_manager)
@@ -302,9 +282,9 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     if (m_background) m_background->Draw(0.0f, 1.0f);
     
     (void)activeCamera;
-
-
-    auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
+    
+    // エラー出ているのでコメントアウトした　ドロスより
+    /*auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
         {
             float texWidth = static_cast<float>(tex.GetWidth());
             float texHeight = static_cast<float>(tex.GetHeight());
