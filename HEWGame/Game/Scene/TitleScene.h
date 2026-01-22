@@ -31,14 +31,6 @@ class TitleScene : public SceneSpace::Scene, public SceneSpace::IScene
         Exit,
         Max
     };
-    enum class StartState
-    {
-        Idle,        
-        FadeOut,   
-        Countdown,   
-        ShowStart,  
-        Done
-    };
 
     enum class TitleState
     {
@@ -70,22 +62,19 @@ private:
 private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;
-    StartState m_startState = StartState::Idle;
-    float m_stateTimer = 0.0f;
-    int   m_countdownNumber = 3;
-    bool  m_requestedFade = false;
-    bool m_countdownStarted = false;
-    bool m_sceneChangeRequested = false;
+    TitleState m_titleState = TitleState::Idle;
+    int m_count = 3;
+    float m_countTimer = 0.0f;
+    float m_startTimer = 0.0f;
+    float m_deltaTime = 0.0f;
+    float m_fadeAlpha = 0;
     Texture m_texStartRed;
     Texture m_texStartGreen;
     Texture m_texPowerUpRed;
     Texture m_texPowerUpGreen;
     Texture m_texExitRed;
     Texture m_texExitGreen;
-    Texture m_Count3;
-    Texture m_Count2;
-    Texture m_Count1;
-    Texture m_Start;
+    Texture m_texStartEffect;
 
     struct MenuItem
     {
