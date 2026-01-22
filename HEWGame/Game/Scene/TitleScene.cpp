@@ -28,10 +28,6 @@ TitleScene::TitleScene(SceneSpace::SceneManager& manager)
 bool TitleScene::Load(Core::Input& input)
 {
     (void)input;
-    m_Count3.Create("Assets/Texture/3-1.png");
-    m_Count2.Create("Assets/Texture/2-1.png");
-    m_Count1.Create("Assets/Texture/1-1.png");
-    m_Start.Create("Assets/Texture/start.png");
 
     return true;
 }
@@ -85,18 +81,14 @@ void TitleScene::OnEnter()
     m_texExitRed.Create("Assets/Texture/タイトル画面UI1.png");
     m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
     */
-
+    DirectX::XMMATRIX p = DirectX::XMMatrixOrthographicOffCenterLH(
+        0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f);
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
         &proj,
         DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
     );
     Sprite::SetProjection(proj);
-
-    m_startState = StartState::Idle;
-    m_stateTimer = 0.0f;
-    m_countdownNumber = 3;
-    m_requestedFade = false;
 
 }
 
@@ -135,76 +127,23 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 {
     (void)ctx;
     Core::Input* input = GetInput();
+
     if (!input)
     {
         return;
     }
-    
-    const float dt = 1.0f / 60.0f;
-    auto transState = m_manager->GetTransitionState();   
 
-    switch (m_startState)
+    // Enter でゲーム開始
+    if (input->IsTrigger(Core::ActionId::Confirm))
     {
-    case StartState::Idle:
-       
-        if (input->IsTrigger(Core::ActionId::Confirm))
+        if (m_manager)
         {
-            SceneGameConfig::RenderFadeSettings fadeSettings{};
-            fadeSettings.enable = true;
-            fadeSettings.fadeOutSeconds = 0.5f;
-            fadeSettings.fadeInSeconds = 0.0f;
-            fadeSettings.holdSeconds = 0.0f;
-            fadeSettings.easing = SceneGameConfig::RenderFadeEasing::Linear;
-            m_manager->ConfigureRenderFade(fadeSettings);
-
-            m_startState = StartState::FadeOut;
-            m_stateTimer = 0.0f;
-        }
-        break;
-
-    case StartState::FadeOut:
-        m_stateTimer += dt;
-
-        // フェードの途中でカウントダウンを開始
-        if (!m_countdownStarted && m_stateTimer >= 0.3f) // フェードアウト少し進んだら表示
-        {
-            m_countdownNumber = 3;
-            m_stateTimer = 0.0f;
-            m_startState = StartState::Countdown;
-            m_countdownStarted = true;
-        }
-        break;
-    case StartState::Countdown:
-        m_stateTimer += dt;
-        if (m_stateTimer >= 1.0f)
-        {
-            m_stateTimer = 0.0f;
-            m_countdownNumber--;
-
-            if (m_countdownNumber <= 0)
-            {
-                m_startState = StartState::ShowStart;
-                m_stateTimer = 0.0f;
-                m_countdownStarted = false;
-            }
-        }
-        break;
-
-    case StartState::ShowStart:
-        m_stateTimer += dt;
-        if (m_stateTimer >= 1.0f)
-        {
-            m_startState = StartState::Done;
-
             m_manager->RequestSceneChange(
                 std::make_unique<SceneGame>(*m_manager));
         }
-        break;
-
-    case StartState::Done:
-        break;
+        return;
     }
-
+    
     if (input->IsTrigger('P'))
     {
         if (m_manager)
@@ -247,49 +186,7 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     if (m_background) m_background->Draw(0.0f, 1.0f);
     
     (void)activeCamera;
-    if (m_startState == StartState::Countdown ||
-        m_startState == StartState::ShowStart)
-    {
-        Sprite::ScopedPassDefaults pass;
-        Texture* tex = nullptr;
-
-        if (m_startState == StartState::Countdown)
-        {
-            switch (m_countdownNumber)
-            {
-            case 3: tex = &m_Count3; break;
-            case 2: tex = &m_Count2; break;
-            case 1: tex = &m_Count1; break;
-            }
-        }
-        else if (m_startState == StartState::ShowStart)
-        {
-            tex = &m_Start;
-        }
-
-        if (tex)
-        {
-            Sprite::SetTexture(tex);
-
-            float texWidth = (float)tex->GetWidth();
-            float texHeight = (float)tex->GetHeight();
-
-            float scaleX = 400.0f / texWidth;
-            float scaleY = 400.0f / texHeight;
-
-            auto centering = DirectX::XMMatrixTranslation(-texWidth * 0.5f, -texHeight * 0.5f, 0);
-            auto scaling = DirectX::XMMatrixScaling(scaleX, scaleY, 1);
-            auto translation = DirectX::XMMatrixTranslation(1280.0f / 2.0f, 720.0f / 2.0f, 0);
-
-            auto world = translation * scaling * centering;
-
-            DirectX::XMFLOAT4X4 worldFloat;
-            DirectX::XMStoreFloat4x4(&worldFloat, world);
-
-            Sprite::SetWorld(worldFloat);
-            Sprite::Draw();
-        }
-    }
+    
     // エラー出ているのでコメントアウトした　ドロスより
     /*auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
         {
