@@ -21,7 +21,10 @@ void PowerUpTarget::MoveTarget(float2 a_position, float2 a_distanse)
 
 	float sign = a_position.x > m_transform.position.x ? 1.0f : -1.0f;
 
-	m_transform.position.x += travelDistance * sign;
+	//m_transform.position.x += travelDistance * sign;
+	m_transform.position.x = 0.0f;
+
+	m_transform.position.z = 0.0f;
 }
 
 
