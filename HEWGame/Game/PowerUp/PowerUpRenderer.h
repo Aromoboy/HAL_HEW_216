@@ -120,6 +120,7 @@ public:
 		std::string powerUpName;
 		std::string powerUpInfomation;
 		float level;
+		float maxLevel;
 		float cost;
 
 		NodeRenderData(
@@ -131,6 +132,7 @@ public:
 		std::string a_powerUpName,
 		std::string a_powerUpInfomation,
 		float a_level,
+		float a_maxLevel,
 		float a_cost)
 			: texture(a_texture)
 			, stringTexture(a_stringTexture)
@@ -140,6 +142,7 @@ public:
 			, powerUpName(a_powerUpName)
 			, powerUpInfomation(a_powerUpInfomation)
 			, level(a_level)
+			, maxLevel(a_maxLevel)
 			, cost(a_cost)
 		{
 		}
@@ -153,11 +156,11 @@ public:
 	bool Initialize(const PowerUpHudLayoutConfig& config);
 	void Shutdown();
 
+	void DrawCost(int cost, const CameraSpace::ICamera& camera);
 	void DrawHud(const CameraSpace::ICamera& camera);
-	void DrawCursor(std::shared_ptr<Texture2D> texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera&);
+	void DrawCursor(std::shared_ptr<Texture2D> texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera&, float a_alpha);
 	void DrawNode(const NodeRenderData& data , const CameraSpace::ICamera&);
-	void DrawBackground(const CameraSpace::ICamera& camera);
-
+	void DrawBackground(const CameraSpace::ICamera& camera, float uvProgress);
 
 
 
@@ -206,6 +209,7 @@ private:
 	std::shared_ptr<Shader> ps;
 
 	// 描画用テクスチャ
+	std::shared_ptr<Texture2D> m_number;
 	std::shared_ptr<Texture2D> m_cost;
 	std::shared_ptr<Texture2D> m_iconFrame;
 	std::shared_ptr<Texture2D> m_backFrame;
@@ -217,12 +221,13 @@ private:
 	void DestroyTextResources();
 	void UpdateBitmap(const NodeRenderData& data);
 	void UploadTexture(const NodeRenderData& data);
-	void RenderString(const NodeRenderData& data, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, int uvNum);
+	void RenderString(const NodeRenderData& data, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, int uvNum, float size);
 	void DetectTextBounds(TextBounds& bounds, const uint8_t* rgba, int width, int height);
 	UVRegion ComputeUV(const TextBounds& bounds, int textureHeight);
+	const std::wstring UTF8toWString(const std::string srcUTF8) const;
 
 	bool TryGetViewportSize(float& width, float& height) const;
-	std::string BuildHudString(const NodeRenderData& data) const;
+	std::wstring BuildHudString(const NodeRenderData& data) const;
 
 
 	// 各リソース

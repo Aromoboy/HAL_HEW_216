@@ -233,7 +233,15 @@ SceneGameLoader::Result SceneGameLoader::Load(const Config& config) const
         }
         result.player->SetBaseMoveSpeed(config.playerBaseHorizontalSpeed, config.playerBaseVerticalSpeed);
         result.player->SetSpeedMultiplier(config.playerSpeedMultiplier);
-        result.player->SetPickupArea(result.playerPickupBoxWidth, result.playerPickupBoxHeight, config.playerPickupOffset);
+
+        //pickup判定設定
+        Stage::PickupOffset pickupOffset = config.playerPickupOffset;
+        pickupOffset.localOffset = {0.2f,0.0f,0.0f };
+        //プレイヤーの向きに応じて左右反転させるため、FacingDirectionを設定
+        //FacingDirectionの場合、localOffset.xにfaacingSign(+1/-1)が掛かる
+        pickupOffset.mode = Stage::PickupOffsetMode::FacingDirection;
+        result.player->SetPickupArea(result.playerPickupBoxWidth, result.playerPickupBoxHeight, pickupOffset);
+       // result.player->SetPickupArea(result.playerPickupBoxWidth, result.playerPickupBoxHeight, config.playerPickupOffset);
         result.player->SetPickupMaxDistance(config.playerPickupMaxDistance);
         result.player->SetPickupDepthThreshold(config.playerPickupDepthThreshold);
         result.player->SetPickupOriginOffset(result.playerPickupOriginOffset);

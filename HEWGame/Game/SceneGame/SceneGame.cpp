@@ -1384,6 +1384,45 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
             drawState(SweetsSpace::SweetsState::Carried);
         }
 
+        if (player)
+        {
+            //プレイヤーの描画用トランスドームを取得
+            const Transform tf = player->GetRenderTransform();
+            const float3 basePos = tf.position;
+            //掴み枠の位置
+            constexpr float kPickupForwardOffset = 0.9f;
+
+            //掴み判定のボックスの半分サイズ
+            const float halfW = m_playerPickupBoxWidth  * 0.5f;
+            const float halfH = m_playerPickupBoxHeight * 0.5f;
+
+            //プレイヤーの向き
+            const float facingSign =
+                player->GetFacingSign();
+ 
+            //掴み判定ボックスの中心座標を計算
+            //X方向のみ向きに応じて反転
+            float3 center = {
+               // basePos.x + m_playerPickupOffset.localOffset.x * facingSign,
+                basePos.x + kPickupForwardOffset * facingSign,
+                basePos.y + m_playerPickupOffset.localOffset.y,
+                basePos.z
+            };
+
+            DirectX::XMFLOAT3 p0 = { center.x - halfW, center.y - halfH, center.z };
+            DirectX::XMFLOAT3 p1 = { center.x + halfW, center.y - halfH, center.z };
+            DirectX::XMFLOAT3 p2 = { center.x + halfW, center.y + halfH, center.z };
+            DirectX::XMFLOAT3 p3 = { center.x - halfW, center.y + halfH, center.z };
+
+            //赤い線
+            DirectX::XMFLOAT4 pickupColor(1.0f, 0.0f, 0.0f, 1.0f);
+
+            Geometory::AddLine(p0, p1, pickupColor);
+            Geometory::AddLine(p1, p2, pickupColor);
+            Geometory::AddLine(p2, p3, pickupColor);
+            Geometory::AddLine(p3, p0, pickupColor);
+        }
+
         if (g_RegisterOsaraColliders)
         {
             for (const auto& entity : m_stagePhysicsEntities)

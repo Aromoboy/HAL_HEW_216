@@ -164,6 +164,18 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         g_effectRenderer = ::EffekseerRendererDX11::Renderer::Create(g_effectDevice, 8000);
         g_effectManager = ::Effekseer::Manager::Create(8000);
 
+        g_effectManager->SetSpriteRenderer(g_effectRenderer->CreateSpriteRenderer());
+        g_effectManager->SetRibbonRenderer(g_effectRenderer->CreateRibbonRenderer());
+        g_effectManager->SetRingRenderer(g_effectRenderer->CreateRingRenderer());
+        g_effectManager->SetTrackRenderer(g_effectRenderer->CreateTrackRenderer());
+        g_effectManager->SetModelRenderer(g_effectRenderer->CreateModelRenderer());
+
+        g_effectManager->SetTextureLoader(g_effectRenderer->CreateTextureLoader());
+        g_effectManager->SetModelLoader(g_effectRenderer->CreateModelLoader());
+        g_effectManager->SetMaterialLoader(g_effectRenderer->CreateMaterialLoader());
+        g_effectManager->SetCurveLoader(Effekseer::MakeRefPtr<Effekseer::CurveLoader>());
+
+
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input, g_effectRenderer, g_effectManager);
         g_sceneManager->ConfigureRenderFade(g_renderFadeSettings);

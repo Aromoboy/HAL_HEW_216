@@ -15,7 +15,7 @@ EffectTestScene::EffectTestScene(SceneSpace::SceneManager& manager)
         : m_manager(&manager)
 {
     m_effectMap.clear();
-    m_effectMap.try_emplace("fly", EffectCreateData(u"Assets/Effect/fly_effect_test01.efkefc", 1.0f));
+    m_effectMap.try_emplace("fly", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 1.0f));
 
     m_effectSystem = std::make_unique<EffectSystem>(manager.GetEffectRenderer(), manager.GetEffectManager(), m_effectMap);
 }
@@ -88,7 +88,7 @@ void EffectTestScene::OnEnter()
                 EffectSystem::EffectCreateRequest request(
                         "fly",
                         float3{ 0.0f, 0.0f, 5.0f },
-                        float3{ 0.0f, 0.0f, 100.0f },
+                        float3{ 5.0f, 0.0f, 100.0f },
                         0);
                 m_effectSystem->SpawnEffect(request);
         }

@@ -9,6 +9,7 @@ namespace Entities
         , m_pickupSystem(sweetsManager)
         , m_physicsBinder(kinematic)
         , m_input(input)
+        , m_facingSign(1.0f) //プレイヤーの向き
     {
         m_modelSystem.Initialize(*this, m_model);
     }
@@ -159,4 +160,15 @@ namespace Entities
     {
         return m_pickupSystem.GetLastPickupResult();
     }
+    //プレイヤーの向き
+    float Player::GetFacingSign() const
+    {
+        return m_facingSign;
+    }
+    void Player::SetFacingSign(float sign)
+    {
+        m_facingSign = sign;
+    }
+
+
 }

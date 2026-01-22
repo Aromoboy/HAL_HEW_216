@@ -52,7 +52,7 @@ void PowerUpNode::Draw(PowerUpRenderer& render, const CameraSpace::ICamera& came
 {
 
 	// 描画用データを作成
-	PowerUpRenderer::NodeRenderData data(m_texture, m_stringTexture,m_drawPos, m_drawScale, m_dirty, m_nameText, m_infomationText, m_level, m_levelUpCost);
+	PowerUpRenderer::NodeRenderData data(m_texture, m_stringTexture,m_drawPos, m_drawScale, m_dirty, m_nameText, m_infomationText, m_level, m_maxLevel, m_levelUpCost);
 
 	// 描画
 	render.DrawNode(data, camera);

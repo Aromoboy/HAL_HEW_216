@@ -293,7 +293,7 @@ namespace Entities
             ? Player::ToWorldPosition(b2Body_GetPosition(player.GetBox2DBodyId()))
             : player.m_transform.position;
 
-        origin.center = float3{ basePosition.x + m_pickupOriginOffset.x, basePosition.y + m_pickupOriginOffset.y, basePosition.z + m_pickupOriginOffset.z };
+        origin.center = float3{ basePosition.x + m_pickupOriginOffset.x + 0.8f * m_facingSign, basePosition.y + m_pickupOriginOffset.y, basePosition.z + m_pickupOriginOffset.z };
         origin.halfDepth = 0.05f;
         origin.source = "TransformOffset";
 
@@ -669,5 +669,35 @@ namespace Entities
         {
             sound->PlaySoundEX("Assets/Audio/SE_FruitFall.wav", false, 0.2f);
         }
+    }
+    //掴み判定枠
+    PlayerPickupSystem::PickupBox PlayerPickupSystem::MakePickupBox(Player& player) const
+    {
+        const Transform tf = player.GetRenderTransform();
+        const float3 basePos = tf.position;
+
+        PickupBox box;
+        box.halfWidth =  m_pickupHalfWidth;
+        box.halfHeight = m_pickupHalfHeight;
+
+        box.center = {
+            basePos.x + m_pickupOffset.localOffset.x * m_facingSign,
+            basePos.y + m_pickupOffset.localOffset.y,
+            basePos.z
+        };
+
+        return box;
+    }
+
+    bool PlayerPickupSystem::IsInsidePickupBox(const PickupBox& box, const float3& pos) const
+    {
+        const float minX = box.center.x - box.halfWidth;
+        const float maxX = box.center.x + box.halfWidth;
+        const float minY = box.center.y - box.halfWidth;
+        const float maxY = box.center.y + box.halfWidth;
+
+        return
+            pos.x >= minX && pos.x <= maxX &&
+            pos.y >= minY && pos.y <= maxY;
     }
 }

@@ -73,6 +73,11 @@ namespace Entities
 
         const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
 
+        //プレイヤーの向き
+        float GetFacingSign() const ;
+        void  SetFacingSign(float sign);
+ 
+
         Transform GetRenderTransform() const override;
 
     private:
@@ -86,5 +91,7 @@ namespace Entities
         PlayerPickupSystem m_pickupSystem;
         PlayerPhysicsBinder m_physicsBinder;
         Core::Input* m_input = nullptr;
+
+        float m_facingSign;
     };
 }

@@ -102,7 +102,7 @@ void EffectSystem::Draw(const CameraSpace::ICamera* a_camera)
 
 	Effekseer::Manager::DrawParameter param;
 	param.ZNear = 0.0f;
-	param.ZFar = 1.0f;
+	param.ZFar = 1000.0f;
 	param.ViewProjectionMatrix = m_renderer->GetCameraProjectionMatrix();
 	m_manager->Draw(param);
 

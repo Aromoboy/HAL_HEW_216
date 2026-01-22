@@ -47,7 +47,7 @@ namespace Entities
         const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
 
         void HandleCarryInput(Player& player, PlayerModel& model, const Core::UpdateContext& ctx, Core::Input& input);
-        void UpdateCarriedSweets(Player& player);
+        void UpdateCarriedSweets(Player& player); 
 
     private:
         struct ColliderFootprint
@@ -62,11 +62,21 @@ namespace Entities
             float halfDepth = 0.05f;
             const char* source = "Unknown";
         };
+        //’Í‚Ý”»’è
+        struct  PickupBox
+        {
+            float3 center;
+            float halfWidth;
+            float halfHeight;
+        };
 
         float3 ComputeCarryAnchor(Player& player) const;
         PickupOrigin ComputePickupOrigin(Player& player) const;
         void TryPickupNearest(Player& player);
         void DropCarriedSweets(Player& player);
+        //’Í‚Ý”»’è‚Ì˜g
+        PickupBox MakePickupBox(Player& player) const;
+        bool IsInsidePickupBox(const PickupBox& box, const float3& pos) const;
 
         SweetsSpace::SweetsManager* m_sweetsManager = nullptr;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
