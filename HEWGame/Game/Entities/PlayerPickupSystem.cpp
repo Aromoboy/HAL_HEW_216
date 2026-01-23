@@ -517,6 +517,15 @@ namespace Entities
                 {
                     std::shared_ptr<SweetsSpace::ActiveSweets> nearest;
                     float nearestDistanceSq = std::numeric_limits<float>::max();
+                    float nearestDepthDelta = std::numeric_limits<float>::quiet_NaN();
+
+                    const auto computeDepthDelta = [&](const AABB& bounds)
+                    {
+                        const float frontExcess = bounds.min.z - (pickupCenter.z + halfDepth);
+                        const float backExcess = (pickupCenter.z - halfDepth) - bounds.max.z;
+                        const float outside = std::max(frontExcess, backExcess);
+                        return outside > 0.0f ? outside : 0.0f;
+                    };
 
                     const auto evaluateList = [&](const SweetsSpace::SweetsManager::SweetsList& list)
                     {
@@ -532,14 +541,18 @@ namespace Entities
                                 continue;
                             }
 
-                            const Transform sweetsTransform = sweets->GetTransform();
-                            const float dx = sweetsTransform.position.x - pickupCenter.x;
-                            const float dy = sweetsTransform.position.y - pickupCenter.y;
+                            sweets->SyncColliderBounds();
+                            const AABB bounds = sweets->GetAABB();
+                            const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
+                            const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
+                            const float dx = centerX - pickupCenter.x;
+                            const float dy = centerY - pickupCenter.y;
                             const float distanceSq = (dx * dx) + (dy * dy);
                             if (distanceSq < nearestDistanceSq)
                             {
                                 nearestDistanceSq = distanceSq;
                                 nearest = sweets;
+                                nearestDepthDelta = computeDepthDelta(bounds);
                             }
                         }
                     };
@@ -552,32 +565,56 @@ namespace Entities
                     {
                         const float nearestDistance = std::sqrt(nearestDistanceSq);
                         pickupResult.distance = nearestDistance;
+                        pickupResult.depthDelta = nearestDepthDelta;
 
-                        pickupResult.result = SweetsSpace::PickupResult::Success;
-                        pickupResult.failReason = SweetsSpace::PickupFailReason::None;
-                        candidate = nearest;
-                        candidateTransform = candidate->GetTransform();
-                        sweetsBounds = candidate->GetAABB();
-                        sweetsZ = candidateTransform.position.z;
+                        const float sanitizedDepthThreshold = (std::isfinite(depthThreshold) && depthThreshold >= 0.0f)
+                            ? depthThreshold
+                            : std::numeric_limits<float>::infinity();
 
-                        if (!m_sweetsManager->TryMarkAsCarried(candidate))
+                        if (nearestDistance > pickupMaxDistance)
                         {
                             pickupResult.result = SweetsSpace::PickupResult::Failure;
-                            pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
-                            candidate.reset();
+                            pickupResult.failReason = SweetsSpace::PickupFailReason::DistanceExceeded;
+                        }
+                        else if (nearestDepthDelta > sanitizedDepthThreshold)
+                        {
+                            pickupResult.result = SweetsSpace::PickupResult::Failure;
+                            pickupResult.failReason = SweetsSpace::PickupFailReason::DepthExceeded;
                         }
                         else
                         {
-                            const float3 originalRotation = candidateTransform.rotation;
-                            m_carriedRotations[candidate.get()] = originalRotation;
+                            pickupResult.result = SweetsSpace::PickupResult::Success;
+                            pickupResult.failReason = SweetsSpace::PickupFailReason::None;
+                            candidate = nearest;
+                            candidateTransform = candidate->GetTransform();
+                            sweetsBounds = candidate->GetAABB();
+                            sweetsZ = candidateTransform.position.z;
 
-                            Transform updated = candidateTransform;
-                            updated.position = ComputeCarryAnchor(player);
-                            updated.rotation = originalRotation;
-                            candidate->SetTransformViaPhysics(updated.position, updated.rotation);
-                            candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+                            if (!m_sweetsManager->TryMarkAsCarried(candidate))
+                            {
+                                pickupResult.result = SweetsSpace::PickupResult::Failure;
+                                pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
+                                candidate.reset();
+                            }
+                            else
+                            {
+                                const float3 originalRotation = candidateTransform.rotation;
+                                m_carriedRotations[candidate.get()] = originalRotation;
 
-                            m_carrieds.push_back(candidate);
+                                Transform updated = candidateTransform;
+                                updated.position = ComputeCarryAnchor(player);
+                                updated.rotation = originalRotation;
+                                candidate->SetTransformViaPhysics(updated.position, updated.rotation);
+                                candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+
+                                m_carrieds.push_back(candidate);
+                            }
+                        }
+
+                        if (!candidate)
+                        {
+                            sweetsBounds = {};
+                            sweetsZ = std::numeric_limits<float>::quiet_NaN();
                         }
                     }
                 }
