@@ -1,6 +1,5 @@
 #pragma once
 
-#include "PowerUpCursor.h"
 #include "Core/UpdateNode.h"
 #include "PowerUpManager.h"
 #include "PowerUpRenderer.h"

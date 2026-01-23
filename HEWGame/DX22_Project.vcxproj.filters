@@ -88,6 +88,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{F4C2B431-69F2-4B8F-98A9-043DBFF61120}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Game\Title">
+      <UniqueIdentifier>{d7283c61-7a55-4265-97ad-b515616f2d9f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Camera\BaseCamera.cpp">
@@ -726,9 +729,6 @@
     <ClInclude Include="Game\PowerUp\PowerUpManager.h">
       <Filter>Game\PowerUp</Filter>
     </ClInclude>
-    <ClInclude Include="Game\PowerUp\PowerUpNode.h">
-      <Filter>Game\PowerUp</Filter>
-    </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpRenderer.h">
       <Filter>Game\PowerUp</Filter>
     </ClInclude>
@@ -879,11 +879,30 @@
     <None Include="cpp.hint">
       <Filter>_Unsorted</Filter>
     </None>
+    <ClCompile Include="Game\Title\TitleCursor.cpp">
+      <Filter>Game\Title</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Title\TitleManager.cpp">
+      <Filter>Game\Title</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\postprocess.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\postprocess.hlsl" />
+    <FxCompile Include="shaders\postprocess.hlsl" />
+    <FxCompile Include="shaders\postprocess.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Title\TitleCursor.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Title\TitleManager.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\PowerUp\PowerUpNode.h">
+      <Filter>Game\PowerUp</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

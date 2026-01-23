@@ -23,11 +23,32 @@ TitleScene::TitleScene(SceneSpace::SceneManager& manager)
         item.red = nullptr;
         item.green = nullptr;
     }
+    
+
 }
 
 bool TitleScene::Load(Core::Input& input)
 {
     (void)input;
+
+    TextureCache& cache = TextureCache::Instance();
+
+    cache.Load("TitleCursor", GetDevice(), L"Assets/Texture/STARTUIselect.png");
+    cache.Load("GameSceneNode", GetDevice(), L"Assets/Texture/STARTUI.png");
+    cache.Load("PowerUpSceneNode", GetDevice(), L"Assets/Texture/GREADUPUI.png");
+    cache.Load("GameEndNode", GetDevice(), L"Assets/Texture/ENDUI.png");
+    cache.Load("SelectGameSceneNode", GetDevice(), L"Assets/Texture/STARTUIselect.png");
+    cache.Load("SelectPowerUpSceneNode", GetDevice(), L"Assets/Texture/GREADUPUIselect.png");
+    cache.Load("SelectGameEndNode", GetDevice(), L"Assets/Texture/ENDUIselect.png");
+
+
+    m_titleManager = std::make_unique<TitleManager>(
+        &GetUpdateScheduler(),
+        cache,
+        TitleCursor::NodeFormat(2, 2, 3),
+        input);
+
+    m_titleRenderer = std::make_unique<TitleRenderer>();
     return true;
 }
 
@@ -149,6 +170,12 @@ void TitleScene::OnExit()
         m_titleBGMHandle = -1;
     }
 
+    if (m_titleManager)
+    {
+        m_titleManager->UnregisterCursor();
+        Unregister(*m_titleManager);
+    }
+
     if (m_background) m_background->Shutdown();
     m_background.reset();
     if (m_inputRegistered)
@@ -160,6 +187,8 @@ void TitleScene::OnExit()
         m_inputRegistered = false;
     }
     UnregisterSceneUpdateNode();
+
+    
 }
 
 void TitleScene::ConfigureUpdates()
@@ -173,6 +202,13 @@ void TitleScene::ConfigureUpdates()
                 m_inputRegistered = true;
             }
         }
+    }
+
+
+    if (m_titleManager)
+    {
+        Register(*m_titleManager);
+        m_titleManager->RegisterCursor();
     }
 
     RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
@@ -337,4 +373,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
         Sprite::SetColor({ 1,1,1,1 });
         Sprite::Draw();
     }
+
+    m_titleManager->DrawAll(*m_titleRenderer, *m_camera);
 }
