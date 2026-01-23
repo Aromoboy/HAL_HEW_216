@@ -456,10 +456,8 @@ namespace Entities
             }
             else
             {
-                bool hasIntersectingCandidate = false;
-                bool hasAnyCandidate = false;
-                std::vector<std::shared_ptr<SweetsSpace::ActiveSweets>> excludeNonIntersecting = m_carrieds;
-                std::vector<std::shared_ptr<SweetsSpace::ActiveSweets>> excludeCarried = m_carrieds;
+                std::shared_ptr<SweetsSpace::ActiveSweets> nearest;
+                float nearestDistanceSq = std::numeric_limits<float>::max();
 
                 const auto intersectsBox = [&](const AABB& bounds, const float3& position)
                 {
@@ -488,17 +486,21 @@ namespace Entities
                             continue;
                         }
 
-                        hasAnyCandidate = true;
                         sweets->SyncColliderBounds();
                         const AABB bounds = sweets->GetAABB();
                         const Transform sweetsTransform = sweets->GetTransform();
-                        if (intersectsBox(bounds, sweetsTransform.position))
+                        if (!intersectsBox(bounds, sweetsTransform.position))
                         {
-                            hasIntersectingCandidate = true;
+                            continue;
                         }
-                        else
+
+                        const float dx = sweetsTransform.position.x - box.center.x;
+                        const float dy = sweetsTransform.position.y - box.center.y;
+                        const float distanceSq = (dx * dx) + (dy * dy);
+                        if (distanceSq < nearestDistanceSq)
                         {
-                            excludeNonIntersecting.push_back(sweets);
+                            nearestDistanceSq = distanceSq;
+                            nearest = sweets;
                         }
                     }
                 };
@@ -507,33 +509,17 @@ namespace Entities
                 evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
                 evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked));
 
-                if (hasIntersectingCandidate)
+                if (!nearest)
                 {
-                    pickupResult = m_sweetsManager->FindNearestCarryable(
-                        pickupCenter,
-                        box.halfWidth,
-                        box.halfHeight,
-                        halfDepth,
-                        depthThreshold,
-                        excludeNonIntersecting,
-                        std::numeric_limits<float>::infinity());
+                    pickupResult.result = SweetsSpace::PickupResult::Failure;
+                    pickupResult.failReason = SweetsSpace::PickupFailReason::NoCandidates;
                 }
                 else
                 {
-                    pickupResult = m_sweetsManager->FindNearestCarryable(
-                        pickupCenter,
-                        box.halfWidth,
-                        box.halfHeight,
-                        halfDepth,
-                        depthThreshold,
-                        excludeCarried,
-                        pickupMaxDistance);
-                    if (pickupResult.result == SweetsSpace::PickupResult::Failure
-                        && pickupResult.failReason == SweetsSpace::PickupFailReason::NoCandidates
-                        && hasAnyCandidate)
-                    {
-                        pickupResult.failReason = SweetsSpace::PickupFailReason::NoIntersections;
-                    }
+                    pickupResult.result = SweetsSpace::PickupResult::Success;
+                    pickupResult.failReason = SweetsSpace::PickupFailReason::None;
+                    pickupResult.sweets = nearest;
+                    pickupResult.distance = std::sqrt(nearestDistanceSq);
                 }
 
                 if (pickupResult.result == SweetsSpace::PickupResult::Success && pickupResult.sweets)
