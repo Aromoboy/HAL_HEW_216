@@ -54,6 +54,26 @@ bool TitleScene::Load(Core::Input& input)
 
 void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 {
+    if (m_titleState == TitleState::Idle && input.IsTrigger(Core::ActionId::Confirm))
+    {
+        switch (static_cast<TitleMenu>(m_cursor))
+        {
+        case TitleMenu::Start:
+            m_titleState = TitleState::CountDown;
+            m_count = 3;
+            m_countTimer = 0.0f;
+            m_fadeAlpha = 0.0f; // 暗転開始
+            break;
+        case TitleMenu::PowerUp:
+            if (m_manager)
+                m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
+            break;
+        case TitleMenu::Exit:
+            PostQuitMessage(0);
+            break;
+        }
+    }
+
     RootUpdate(timer, input);
 }
 
@@ -188,6 +208,12 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         return;
     }
 
+    if (m_sceneChangePending && m_titleState == TitleState::StartEffect)
+    {
+        m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
+        m_sceneChangePending = false;
+    }
+
     switch (m_titleState)
     {
     case TitleState::CountDown:
@@ -208,7 +234,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
     case TitleState::StartEffect:
         m_startTimer += dt;
         if (m_startTimer >= 1.0f) {
-            m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
+            m_sceneChangePending = true;
         }
         break;
     }
@@ -227,28 +253,6 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
     {
         m_cursor++;
         if (m_cursor >= static_cast<int>(TitleMenu::Max)) m_cursor = 0;
-    }
-
-    // 決定
-    if (input->IsTrigger(Core::ActionId::Confirm))
-    {
-        switch (static_cast<TitleMenu>(m_cursor))
-        {
-        case TitleMenu::Start:
-            m_titleState = TitleState::CountDown;
-            m_count = 3;
-            m_countTimer = 0.0f;
-            m_fadeAlpha = 0.0f; // �Ó]�J�n
-            break;
-        case TitleMenu::PowerUp:
-            if (m_manager)
-                m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
-            break;
-        case TitleMenu::Exit:
-            PostQuitMessage(0);
-            break;
-        }
-       
     }
 
     if (input->IsTrigger('P'))

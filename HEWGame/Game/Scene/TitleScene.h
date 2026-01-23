@@ -68,6 +68,7 @@ private:
     float m_startTimer = 0.0f;
     float m_deltaTime = 0.0f;
     float m_fadeAlpha = 0;
+    bool m_sceneChangePending = false;
     Texture m_texStartRed;
     Texture m_texStartGreen;
     Texture m_texPowerUpRed;
