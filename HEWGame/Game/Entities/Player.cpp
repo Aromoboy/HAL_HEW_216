@@ -172,7 +172,6 @@ namespace Entities
     {
         const float normalizedSign = (sign >= 0.0f) ? 1.0f : -1.0f;
         m_facingSign = normalizedSign;
-        m_transform.scale.x = std::abs(m_transform.scale.x) * normalizedSign;
     }
 
 
