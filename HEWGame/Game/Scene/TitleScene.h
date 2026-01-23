@@ -7,7 +7,7 @@
 #include <array> 
 #include <memory>
 #include "TitleRenderer.h"
-
+#include "Title/TitleManager.h"
 
 
 namespace CameraSpace
@@ -84,6 +84,9 @@ private:
     std::array<Texture, 4> m_texNumber;
     std::array<MenuItem, static_cast<int>(TitleMenu::Max)> m_menu;
     std::unique_ptr<BackgroundRenderer> m_background;
+    std::unique_ptr<TitleRenderer> m_titleRenderer;
+    std::unique_ptr<TitleManager> m_titleManager;
+    
 
     int m_titleBGMHandle = -1;
 };

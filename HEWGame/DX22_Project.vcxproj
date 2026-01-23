@@ -296,6 +296,8 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Sweets\SweetsRegistry.cpp" />
     <ClCompile Include="Game\Sweets\SweetsRenderer.cpp" />
     <ClCompile Include="Game\Sweets\SweetsSpawner.cpp" />
+    <ClCompile Include="Game\Title\TitleCursor.cpp" />
+    <ClCompile Include="Game\Title\TitleManager.cpp" />
     <ClCompile Include="Game\UI\BackgroundRenderer.cpp" />
     <ClCompile Include="Game\UI\HudRenderer.cpp" />
     <ClCompile Include="Game\UI\ResultRenderer.cpp" />
@@ -436,6 +438,8 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Sweets\SweetsRenderer.h" />
     <ClInclude Include="Game\Sweets\SweetsSpawner.h" />
     <ClInclude Include="Game\Sweets\SweetsTypes.h" />
+    <ClInclude Include="Game\Title\TitleCursor.h" />
+    <ClInclude Include="Game\Title\TitleManager.h" />
     <ClInclude Include="Game\UI\BackgroundRenderer.h" />
     <ClInclude Include="Game\UI\HudRenderer.h" />
     <ClInclude Include="Game\UI\ResultRenderer.h" />
