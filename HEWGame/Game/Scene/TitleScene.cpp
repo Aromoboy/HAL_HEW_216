@@ -54,42 +54,6 @@ bool TitleScene::Load(Core::Input& input)
 
 void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 {
-    float dt = static_cast<float>(timer.DeltaTime());
-    m_deltaTime = dt; // Draw�p�ɕێ�
-
-    switch (m_titleState)
-    {
-    case TitleState::Idle:
-        if (input.IsTrigger(Core::ActionId::Confirm)) {
-            m_titleState = TitleState::CountDown;
-            m_count = 3;
-            m_countTimer = 0.0f;
-            m_fadeAlpha = 0.0f; // �Ó]�J�n
-        }
-        break;
-
-    case TitleState::CountDown:
-        m_countTimer += dt;
-        m_fadeAlpha += dt; // �Ó]����X�ɐi�߂�
-        if (m_fadeAlpha > 1.0f) m_fadeAlpha = 1.0f;
-
-        if (m_countTimer >= 1.0f) {
-            m_countTimer = 0.0f;
-            m_count--;
-            if (m_count <= 0) {
-                m_titleState = TitleState::StartEffect;
-                m_startTimer = 0.0f;
-            }
-        }
-        break;
-
-    case TitleState::StartEffect:
-        m_startTimer += dt;
-        if (m_startTimer >= 1.0f) {
-            m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
-        }
-        break;
-    }
     RootUpdate(timer, input);
 }
 
@@ -216,13 +180,38 @@ void TitleScene::ConfigureUpdates()
 
 void TitleScene::Update(const Core::UpdateContext& ctx)
 {
-    (void)ctx;
+    float dt = ctx.dt;
+    m_deltaTime = dt; // Draw�p�ɕێ�
     Core::Input* input = GetInput();
     if (!input)
     {
         return;
     }
 
+    switch (m_titleState)
+    {
+    case TitleState::CountDown:
+        m_countTimer += dt;
+        m_fadeAlpha += dt; // �Ó]����X�ɐi�߂�
+        if (m_fadeAlpha > 1.0f) m_fadeAlpha = 1.0f;
+
+        if (m_countTimer >= 1.0f) {
+            m_countTimer = 0.0f;
+            m_count--;
+            if (m_count <= 0) {
+                m_titleState = TitleState::StartEffect;
+                m_startTimer = 0.0f;
+            }
+        }
+        break;
+
+    case TitleState::StartEffect:
+        m_startTimer += dt;
+        if (m_startTimer >= 1.0f) {
+            m_manager->RequestSceneChange(std::make_unique<SceneGame>(*m_manager));
+        }
+        break;
+    }
 
     if (m_titleState != TitleState::Idle) return;
     // �X�V�����i�L�[���͂ƃJ�[�\������j
@@ -246,8 +235,10 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         switch (static_cast<TitleMenu>(m_cursor))
         {
         case TitleMenu::Start:
-            m_manager->RequestSceneChange(
-                std::make_unique<SceneGame>(*m_manager));
+            m_titleState = TitleState::CountDown;
+            m_count = 3;
+            m_countTimer = 0.0f;
+            m_fadeAlpha = 0.0f; // �Ó]�J�n
             break;
         case TitleMenu::PowerUp:
             if (m_manager)
