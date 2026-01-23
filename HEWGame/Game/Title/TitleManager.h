@@ -86,7 +86,8 @@ public:
 
 	void SetFormat(const TitleCursor::NodeFormat&);
 
-	// 全てのノードとカーソルを描画
+	bool m_cursorRegistered = false;
+	// 蜈ｨ縺ｦ縺ｮ繝弱�ｼ繝峨→繧ｫ繝ｼ繧ｽ繝ｫ繧呈緒逕ｻ
 	void DrawAll(TitleRenderer& TitleRenderer, const CameraSpace::ICamera& Camera);
 
 

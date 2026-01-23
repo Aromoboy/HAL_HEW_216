@@ -10,6 +10,7 @@
 #include "DrawMatrix.h"
 
 #include <cassert>
+#include <utility>
 
 
 constexpr float2 kUnitDistanse = { 1.4f, -0.5f };
@@ -41,12 +42,28 @@ TitleManager::~TitleManager()
 
 void TitleManager::RegisterCursor()
 {
-	m_scheduler->Register(*m_cursor);
+	if (!m_scheduler || !m_cursor || m_cursorRegistered)
+	{
+		return;
+	}
+
+	auto handle = m_scheduler->Register(*m_cursor);
+	if (handle.IsValid())
+	{
+		m_cursor->SetRegistrationHandle(std::move(handle));
+		m_cursorRegistered = true;
+	}
 }
 
 void TitleManager::UnregisterCursor()
 {
-	m_scheduler->Unregister(*m_cursor);
+	if (!m_cursor || !m_cursorRegistered)
+	{
+		return;
+	}
+
+	m_cursor->ReleaseRegistrationHandle();
+	m_cursorRegistered = false;
 }
 
 void TitleManager::OnUpdate(const Core::UpdateContext& ctx)
