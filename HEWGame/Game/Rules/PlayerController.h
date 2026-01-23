@@ -56,6 +56,23 @@ public:
         None,
         ConfirmRestart,
         RetryIgnored,
+        GoToPowerUp,
+    };
+
+    enum class ResultScreenOption
+    {
+        Retry,       // ���������
+        PowerUp,     // ������ʂɍs��
+        ReturnTitle  // ���j���[�ɖ߂�
+    };
+
+    class ResultScreenState
+    {
+    public:
+        ResultScreenOption currentOption = ResultScreenOption::Retry;
+
+        void MoveUp() { currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 2) % 3); }
+        void MoveDown() { currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 1) % 3); }
     };
 
     PlayerController(LogFn log, const char* logPrefix);
