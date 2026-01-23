@@ -9,7 +9,7 @@
 #include "SettingScene.h"
 #include "EffectTestScene.h"
 #include "DirectX.h"
-#include "SceneManager.h"
+
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
  
@@ -130,22 +130,30 @@ void TitleScene::OnEnter()
         }
     }
 
-    /* UI ボタン用テクスチャ読み込み
+    // UI �{�^���p�e�N�X�`���ǂݍ���
     m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
     m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
     m_texPowerUpRed.Create("Assets/Texture/タイトル画面UI3.png");
     m_texPowerUpGreen.Create("Assets/Texture/タイトル画面UI4.png");
     m_texExitRed.Create("Assets/Texture/タイトル画面.png");
     m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
-    */
-    DirectX::XMMATRIX p = DirectX::XMMatrixOrthographicOffCenterLH(
-        0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f);
+    m_texStartEffect.Create("Assets/Texture/start.png");
+    m_texNumber[1].Create("Assets/Texture/3-1.png");
+    m_texNumber[2].Create("Assets/Texture/2-1.png");
+    m_texNumber[3].Create("Assets/Texture/1-1.png");
+
+
     DirectX::XMFLOAT4X4 proj;
     DirectX::XMStoreFloat4x4(
         &proj,
         DirectX::XMMatrixOrthographicOffCenterLH(0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f)
     );
     Sprite::SetProjection(proj);
+   
+    m_count = 3;
+    m_countTimer = 0.0f;
+    m_startTimer = 0.0f;
+
 
     if (SoundManagerEX::GetInstance())
     {
@@ -210,23 +218,48 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 {
     (void)ctx;
     Core::Input* input = GetInput();
-
     if (!input)
     {
         return;
     }
 
-    // Enter でゲーム開始
+
+    if (m_titleState != TitleState::Idle) return;
+    // �X�V�����i�L�[���͂ƃJ�[�\������j
+    // ���㉺�ŃJ�[�\���ړ��A����ŃV�[���ؑ�
+
+    float vertical = input->GetAxis(Core::ActionId::RotateYaw); 
+    if (vertical > 0.5f)   
+    {
+        m_cursor--;
+        if (m_cursor < 0) m_cursor = static_cast<int>(TitleMenu::Max) - 1;
+    }
+    else if (vertical < -0.5f)  
+    {
+        m_cursor++;
+        if (m_cursor >= static_cast<int>(TitleMenu::Max)) m_cursor = 0;
+    }
+
+    // 決定
     if (input->IsTrigger(Core::ActionId::Confirm))
     {
-        if (m_manager)
+        switch (static_cast<TitleMenu>(m_cursor))
         {
+        case TitleMenu::Start:
             m_manager->RequestSceneChange(
                 std::make_unique<SceneGame>(*m_manager));
+            break;
+        case TitleMenu::PowerUp:
+            if (m_manager)
+                m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
+            break;
+        case TitleMenu::Exit:
+            PostQuitMessage(0);
+            break;
         }
-        return;
+       
     }
-    
+
     if (input->IsTrigger('P'))
     {
         if (m_manager)
@@ -261,7 +294,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
             m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
         }
     }
-    
+
 }
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
@@ -269,9 +302,9 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     if (m_background) m_background->Draw(0.0f, 1.0f);
     
     (void)activeCamera;
-    
-    // エラー出ているのでコメントアウトした　ドロスより
-    /*auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
+
+
+    auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
         {
             float texWidth = static_cast<float>(tex.GetWidth());
             float texHeight = static_cast<float>(tex.GetHeight());
@@ -340,6 +373,6 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
         Sprite::SetColor({ 1,1,1,1 });
         Sprite::Draw();
     }
-    */
+
     m_titleManager->DrawAll(*m_titleRenderer, *m_camera);
 }

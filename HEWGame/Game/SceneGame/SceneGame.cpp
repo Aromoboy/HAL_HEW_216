@@ -712,16 +712,6 @@ void SceneGame::OnEnter()
         m_gameBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
             "Assets/Audio/BGM_MainGame.wav", true, 0.4f);
     }
-
-    for (int i = 0; i <= 3; ++i)
-    {
-        m_countdownTextures[i] = std::make_shared<Texture>();
-    }
-
-    m_countdownTextures[0]->Create("Assets/Texture/start.png", true);
-    m_countdownTextures[1]->Create("Assets/Texture/1-1.png", true);
-    m_countdownTextures[2]->Create("Assets/Texture/2-1.png", true);
-    m_countdownTextures[3]->Create("Assets/Texture/3-1.png", true);
 }
 
 void SceneGame::OnExit()
@@ -964,7 +954,23 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-   
+    const GameplayRulesSystem::UpdateInput rulesInput{
+        m_stageState == StageState::Playing,
+        ctx.dt,
+        m_sweetsManager.get(),
+        &m_phaseManager,
+        m_clearPhaseCount
+    };
+    const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
+    if (rulesResult.timeUp && m_stageState == StageState::Playing)
+    {
+        SetStageState(StageState::TimeUp);
+    }
+    if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
+    {
+        UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
+        BroadcastPhaseAdvance(rulesResult.currentPhase);
+    }
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
@@ -1025,48 +1031,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     case StageState::Playing:
     {
-        Core::Input* input = GetInput();
-
-        // --- カウントダウン処理 ---
-        if (!m_gameStarted)
-        {
-            m_startCountdownTimer += ctx.dt;
-
-            if (m_startCountdownTimer >= 1.5f)
-            {
-                m_startCountdownTimer = 0.0f;
-
-                if (m_startCountdownNumber > 1)
-                {
-                    m_startCountdownNumber--; // 3→2→1
-                }
-                else if (m_startCountdownNumber == 1)
-                {
-                    m_startCountdownNumber = 0; // 数字は終了
-                    m_showStartImage = true;    // start を表示
-                }
-                else if (m_showStartImage)
-                {
-                    m_showStartImage = false;    // start 表示終了
-                    m_gameStarted = true;        // ゲーム本編開始
-                    ToggleGameplaySystems(true); // プレイヤーやスイーツ動かす
-                }
-            }
-
-            return; // カウントダウン中はここで Update を終了
-        }
-
-        // --- ゲーム本編更新（カウントダウン終了後） ---
-        const GameplayRulesSystem::UpdateInput rulesInput{
-            true, // ゲーム本編が始まったときだけ true
-            ctx.dt,
-            m_sweetsManager.get(),
-            &m_phaseManager,
-            m_clearPhaseCount
-        };
-        const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
-
-
         if (input)
         {
             PlayerController::SpeedInput speedInput{
@@ -1149,25 +1113,21 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
-        const auto action = input ? m_playerController.HandlePostGameMenuInput(*input, peakHeight, score, m_resultState)
+        const auto action = input ? m_playerController.HandlePostGameInput(*input, peakHeight, score)
             : PlayerController::PostGameAction::None;
-        switch (action)
+        if (action == PlayerController::PostGameAction::ConfirmRestart)
         {
-        case PlayerController::PostGameAction::RetryGame:
-            SetStageState(StageState::Playing);
+            m_pendingRetryReset = true;
             return;
-        case PlayerController::PostGameAction::GoToPowerUp:
-            return;
-        case PlayerController::PostGameAction::GoToTitle:
+        }
+        else if (action == PlayerController::PostGameAction::GoToPowerUp)
+        {
             if (m_manager)
             {
                 m_manager->RequestSceneChange(
-                    std::make_unique<TitleScene>(*m_manager));
+                    std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
             }
             return;
-
-        default:
-            break;
         }
     }
 
@@ -1800,20 +1760,6 @@ void SceneGame::DrawOverlay()
         m_uiOverlay->Draw();
     }
 
-    if (!m_gameStarted && m_startCountdownNumber >= 0)
-    {
-        Sprite::ScopedPassDefaults guard;
-
-        Sprite::SetTexture(m_countdownTextures[m_startCountdownNumber].get());
-
-        // 画面中央に表示（サイズは調整）
-        Sprite::SetOffset({ 0.0f, 0.0f }); 
-        Sprite::SetSize({ 1.0f, 1.0f });   
-        Sprite::SetColor({ 1,1,1,1 });
-
-        Sprite::Draw();
-    }
-    
 #if defined(_DEBUG)
 #endif
 }
@@ -2141,14 +2087,6 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
-
-    // カウントダウン開始
-    m_startCountdownNumber = 3;   // 秒数
-    m_startCountdownTimer = 0.0f;
-    m_gameStarted = false;
-
-    // この時点ではプレイヤーやスイーツは止めておく
-    ToggleGameplaySystems(false);
 }
 
 void SceneGame::OnStageClear()
