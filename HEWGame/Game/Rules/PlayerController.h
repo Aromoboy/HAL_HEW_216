@@ -56,6 +56,23 @@ public:
         None,
         ConfirmRestart,
         RetryIgnored,
+        RetryGame,     // もう一回やる
+        GoToPowerUp,   // 強化画面へ
+        GoToTitle,     // タイトルへ
+    };
+
+    enum class ResultScreenOption
+    {
+        Retry,       // もう一回やる
+        PowerUp,     // 強化画面に行く
+        ReturnTitle  // メニューに戻る
+    };
+    class ResultScreenState
+    {
+    public:
+        ResultScreenOption currentOption = ResultScreenOption::Retry;
+       void MoveUp()  { currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 2) % 3);}
+       void MoveDown(){ currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 1) % 3);}
     };
 
     PlayerController(LogFn log, const char* logPrefix);
@@ -63,6 +80,8 @@ public:
     SpeedResult HandleSpeedInput(const SpeedInput& input) const;
     bool HandleManualRetryInput(Core::Input& input, float elapsedSeconds, float peakHeight) const;
     PostGameAction HandlePostGameInput(Core::Input& input, float peakHeight, int score) const;
+    PostGameAction HandlePostGameMenuInput(Core::Input& input,float peakHeight,int score,ResultScreenState& state) const;
+
     void UpdatePlayerBounds(const BoundsInput& input);
 
 private:
