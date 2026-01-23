@@ -22,6 +22,7 @@ namespace Entities
         if (m_input)
         {
             m_movementSystem.Update(*this, ctx, *m_input);
+            SetFacingSign(m_movementSystem.GetFacingSign());
         }
         m_pickupSystem.SetFacingSign(m_movementSystem.GetFacingSign());
         m_modelSystem.UpdateAnimation(*this);
