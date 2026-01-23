@@ -70,6 +70,7 @@ namespace SweetsSpace
         MissingSystems,
         InvalidConfiguration,
         NoCandidates,
+        NoIntersections,
         DistanceExceeded,
         DepthExceeded,
         StateTransitionFailed,

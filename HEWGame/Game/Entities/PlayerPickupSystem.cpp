@@ -77,6 +77,7 @@ namespace
         case SweetsSpace::PickupFailReason::MissingSystems: return "missing-systems";
         case SweetsSpace::PickupFailReason::InvalidConfiguration: return "invalid-configuration";
         case SweetsSpace::PickupFailReason::NoCandidates: return "no-candidates";
+        case SweetsSpace::PickupFailReason::NoIntersections: return "no-intersections";
         case SweetsSpace::PickupFailReason::DistanceExceeded: return "distance-exceeded";
         case SweetsSpace::PickupFailReason::DepthExceeded: return "depth-exceeded";
         case SweetsSpace::PickupFailReason::StateTransitionFailed: return "state-transition-failed";
@@ -456,7 +457,9 @@ namespace Entities
             else
             {
                 bool hasIntersectingCandidate = false;
-                std::vector<std::shared_ptr<SweetsSpace::ActiveSweets>> exclude = m_carrieds;
+                bool hasAnyCandidate = false;
+                std::vector<std::shared_ptr<SweetsSpace::ActiveSweets>> excludeNonIntersecting = m_carrieds;
+                std::vector<std::shared_ptr<SweetsSpace::ActiveSweets>> excludeCarried = m_carrieds;
 
                 const auto intersectsBox = [&](const AABB& bounds, const float3& position)
                 {
@@ -485,6 +488,7 @@ namespace Entities
                             continue;
                         }
 
+                        hasAnyCandidate = true;
                         sweets->SyncColliderBounds();
                         const AABB bounds = sweets->GetAABB();
                         const Transform sweetsTransform = sweets->GetTransform();
@@ -494,7 +498,7 @@ namespace Entities
                         }
                         else
                         {
-                            exclude.push_back(sweets);
+                            excludeNonIntersecting.push_back(sweets);
                         }
                     }
                 };
@@ -503,9 +507,16 @@ namespace Entities
                 evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Active));
                 evaluateList(m_sweetsManager->GetByState(SweetsSpace::SweetsState::Stacked));
 
-                if (!hasIntersectingCandidate)
+                if (hasIntersectingCandidate)
                 {
-                    pickupResult.failReason = SweetsSpace::PickupFailReason::NoCandidates;
+                    pickupResult = m_sweetsManager->FindNearestCarryable(
+                        pickupCenter,
+                        box.halfWidth,
+                        box.halfHeight,
+                        halfDepth,
+                        depthThreshold,
+                        excludeNonIntersecting,
+                        std::numeric_limits<float>::infinity());
                 }
                 else
                 {
@@ -515,42 +526,48 @@ namespace Entities
                         box.halfHeight,
                         halfDepth,
                         depthThreshold,
-                        exclude,
+                        excludeCarried,
                         pickupMaxDistance);
-
-                    if (pickupResult.result == SweetsSpace::PickupResult::Success && pickupResult.sweets)
+                    if (pickupResult.result == SweetsSpace::PickupResult::Failure
+                        && pickupResult.failReason == SweetsSpace::PickupFailReason::NoCandidates
+                        && hasAnyCandidate)
                     {
-                        candidate = pickupResult.sweets;
-                        candidateTransform = candidate->GetTransform();
-                        sweetsBounds = candidate->GetAABB();
-                        sweetsZ = candidateTransform.position.z;
-
-                        if (!m_sweetsManager->TryMarkAsCarried(candidate))
-                        {
-                            pickupResult.result = SweetsSpace::PickupResult::Failure;
-                            pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
-                            candidate.reset();
-                        }
-                        else
-                        {
-                            const float3 originalRotation = candidateTransform.rotation;
-                            m_carriedRotations[candidate.get()] = originalRotation;
-
-                            Transform updated = candidateTransform;
-                            updated.position = ComputeCarryAnchor(player);
-                            updated.rotation = originalRotation;
-                            candidate->SetTransformViaPhysics(updated.position, updated.rotation);
-                            candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
-
-                            m_carrieds.push_back(candidate);
-                        }
+                        pickupResult.failReason = SweetsSpace::PickupFailReason::NoIntersections;
                     }
+                }
 
-                    if (!candidate)
+                if (pickupResult.result == SweetsSpace::PickupResult::Success && pickupResult.sweets)
+                {
+                    candidate = pickupResult.sweets;
+                    candidateTransform = candidate->GetTransform();
+                    sweetsBounds = candidate->GetAABB();
+                    sweetsZ = candidateTransform.position.z;
+
+                    if (!m_sweetsManager->TryMarkAsCarried(candidate))
                     {
-                        sweetsBounds = {};
-                        sweetsZ = std::numeric_limits<float>::quiet_NaN();
+                        pickupResult.result = SweetsSpace::PickupResult::Failure;
+                        pickupResult.failReason = SweetsSpace::PickupFailReason::StateTransitionFailed;
+                        candidate.reset();
                     }
+                    else
+                    {
+                        const float3 originalRotation = candidateTransform.rotation;
+                        m_carriedRotations[candidate.get()] = originalRotation;
+
+                        Transform updated = candidateTransform;
+                        updated.position = ComputeCarryAnchor(player);
+                        updated.rotation = originalRotation;
+                        candidate->SetTransformViaPhysics(updated.position, updated.rotation);
+                        candidate->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+
+                        m_carrieds.push_back(candidate);
+                    }
+                }
+
+                if (!candidate)
+                {
+                    sweetsBounds = {};
+                    sweetsZ = std::numeric_limits<float>::quiet_NaN();
                 }
             }
         }
