@@ -61,9 +61,9 @@ public:
 
     enum class ResultScreenOption
     {
-        Retry,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-        PowerUp,     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê‚Ésï¿½ï¿½
-        ReturnTitle  // ï¿½ï¿½ï¿½jï¿½ï¿½ï¿½[ï¿½É–ß‚ï¿½
+        Retry,       // ‚à‚¤ˆê‰ñ‚â‚é
+        PowerUp,     // ‹­‰»‰æ–Ê‚És‚­
+        ReturnTitle  // ƒƒjƒ…[‚É–ß‚é
     };
 
     class ResultScreenState
