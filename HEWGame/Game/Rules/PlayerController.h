@@ -56,23 +56,23 @@ public:
         None,
         ConfirmRestart,
         RetryIgnored,
-        GoToPowerUp,
+        RetryGame,     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        GoToPowerUp,   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê‚ï¿½
+        GoToTitle,     // ï¿½^ï¿½Cï¿½gï¿½ï¿½ï¿½ï¿½
     };
 
     enum class ResultScreenOption
     {
-        Retry,       // ‚à‚¤ˆê‰ñ‚â‚é
-        PowerUp,     // ‹­‰»‰æ–Ê‚És‚­
-        ReturnTitle  // ƒƒjƒ…[‚É–ß‚é
+        Retry,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        PowerUp,     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê‚Ésï¿½ï¿½
+        ReturnTitle  // ï¿½ï¿½ï¿½jï¿½ï¿½ï¿½[ï¿½É–ß‚ï¿½
     };
-
     class ResultScreenState
     {
     public:
         ResultScreenOption currentOption = ResultScreenOption::Retry;
-
-        void MoveUp() { currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 2) % 3); }
-        void MoveDown() { currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 1) % 3); }
+       void MoveUp()  { currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 2) % 3);}
+       void MoveDown(){ currentOption = static_cast<ResultScreenOption>((static_cast<int>(currentOption) + 1) % 3);}
     };
 
     PlayerController(LogFn log, const char* logPrefix);
@@ -80,6 +80,8 @@ public:
     SpeedResult HandleSpeedInput(const SpeedInput& input) const;
     bool HandleManualRetryInput(Core::Input& input, float elapsedSeconds, float peakHeight) const;
     PostGameAction HandlePostGameInput(Core::Input& input, float peakHeight, int score) const;
+    PostGameAction HandlePostGameMenuInput(Core::Input& input,float peakHeight,int score,ResultScreenState& state) const;
+
     void UpdatePlayerBounds(const BoundsInput& input);
 
 private:
