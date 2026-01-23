@@ -1,5 +1,7 @@
 ﻿#include "Entities/Player.h"
 
+#include <cmath>
+
 namespace Entities
 {
     Player::Player(const Transform& transform, std::shared_ptr<Render::Model> model, Systems::PhysicsMachine* physicsMachine, SweetsSpace::SweetsManager* sweetsManager, Core::Input* input, Collision::CollisionLayer collisionLayer, bool kinematic, Core::UpdatePhase phase, int priority, std::string tag)
@@ -168,7 +170,9 @@ namespace Entities
     }
     void Player::SetFacingSign(float sign)
     {
-        m_facingSign = sign;
+        const float normalizedSign = (sign >= 0.0f) ? 1.0f : -1.0f;
+        m_facingSign = normalizedSign;
+        m_transform.scale.x = std::abs(m_transform.scale.x) * normalizedSign;
     }
 
 
