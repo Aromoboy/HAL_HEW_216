@@ -39,12 +39,16 @@ namespace SceneSpace
                 cache.Load("Whip", GetDevice(), L"Assets/Texture/upgrade_UI_cream_plus_icon.png");
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("BackFrame", GetDevice(), L"Assets/Texture/UI_Cakeblock.png");
-                cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");
+                cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");         
                 cache.Load("PowerUpBG", GetDevice(), L"Assets/Texture/upgrade_menu_background.png");
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("SweetsSpawnSpeed", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_Speed_icon.png");
                 cache.Load("SweetsSpawnQuantity", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_UP_icon.png");
                 cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
+
+                std::unordered_map<std::string, EffectCreateData> effectDatas;
+                effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
+                m_effectSystem = std::make_unique<EffectSystem>(m_manager->GetEffectRenderer(), m_manager->GetEffectManager(), effectDatas);
 
                 std::unordered_map<std::string, EffectCreateData> effectDatas;
                 effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
