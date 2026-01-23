@@ -434,31 +434,8 @@ namespace Entities
             halfDepth = pickupOrigin.halfDepth;
             depthThreshold = m_pickupDepthThreshold;
 
-            float3 pickupOffset{ 0.0f, 0.0f, 0.0f };
-            switch (m_pickupOffset.mode)
-            {
-            case Stage::PickupOffsetMode::FacingDirection:
-                pickupOffset.x = m_pickupOffset.localOffset.x * m_facingSign;
-                pickupOffset.y = m_pickupOffset.localOffset.y;
-                pickupOffset.z = m_pickupOffset.localOffset.z;
-                break;
-
-            case Stage::PickupOffsetMode::WorldX:
-                pickupOffset = m_pickupOffset.localOffset;
-                break;
-
-            case Stage::PickupOffsetMode::None:
-            default:
-                break;
-            }
-
-            pickupCenter = float3
-            {
-                pickupOrigin.center.x + pickupOffset.x,
-                pickupOrigin.center.y + pickupOffset.y,
-                pickupOrigin.center.z + pickupOffset.z
-            };
             const PickupBox box = MakePickupBox(player);
+            pickupCenter = box.center;
 
             const bool depthThresholdValid = std::isfinite(depthThreshold)
                 ? depthThreshold >= 0.0f
@@ -478,18 +455,8 @@ namespace Entities
             }
             else
             {
-                std::shared_ptr<SweetsSpace::ActiveSweets> nearest;
-                float nearestDistanceSq = std::numeric_limits<float>::max();
-                float nearestDepthDelta = std::numeric_limits<float>::quiet_NaN();
                 bool hasIntersectingCandidate = false;
-
-                const auto computeDepthDelta = [&](const AABB& bounds)
-                {
-                    const float frontExcess = bounds.min.z - (pickupCenter.z + halfDepth);
-                    const float backExcess = (pickupCenter.z - halfDepth) - bounds.max.z;
-                    const float outside = std::max(frontExcess, backExcess);
-                    return outside > 0.0f ? outside : 0.0f;
-                };
+                std::vector<std::shared_ptr<SweetsSpace::ActiveSweets>> exclude = m_carrieds;
 
                 const auto intersectsBox = [&](const AABB& bounds, const float3& position)
                 {
@@ -521,23 +488,13 @@ namespace Entities
                         sweets->SyncColliderBounds();
                         const AABB bounds = sweets->GetAABB();
                         const Transform sweetsTransform = sweets->GetTransform();
-                        if (!intersectsBox(bounds, sweetsTransform.position))
+                        if (intersectsBox(bounds, sweetsTransform.position))
                         {
-                            continue;
+                            hasIntersectingCandidate = true;
                         }
-
-                        hasIntersectingCandidate = true;
-
-                        const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
-                        const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
-                        const float dx = centerX - pickupCenter.x;
-                        const float dy = centerY - pickupCenter.y;
-                        const float distanceSq = (dx * dx) + (dy * dy);
-                        if (distanceSq < nearestDistanceSq)
+                        else
                         {
-                            nearestDistanceSq = distanceSq;
-                            nearest = sweets;
-                            nearestDepthDelta = computeDepthDelta(bounds);
+                            exclude.push_back(sweets);
                         }
                     }
                 };
@@ -550,31 +507,20 @@ namespace Entities
                 {
                     pickupResult.failReason = SweetsSpace::PickupFailReason::NoCandidates;
                 }
-                else if (nearest)
+                else
                 {
-                    const float nearestDistance = std::sqrt(nearestDistanceSq);
-                    pickupResult.distance = nearestDistance;
-                    pickupResult.depthDelta = nearestDepthDelta;
+                    pickupResult = m_sweetsManager->FindNearestCarryable(
+                        pickupCenter,
+                        box.halfWidth,
+                        box.halfHeight,
+                        halfDepth,
+                        depthThreshold,
+                        exclude,
+                        pickupMaxDistance);
 
-                    const float sanitizedDepthThreshold = (std::isfinite(depthThreshold) && depthThreshold >= 0.0f)
-                        ? depthThreshold
-                        : std::numeric_limits<float>::infinity();
-
-                    if (nearestDistance > pickupMaxDistance)
+                    if (pickupResult.result == SweetsSpace::PickupResult::Success && pickupResult.sweets)
                     {
-                        pickupResult.result = SweetsSpace::PickupResult::Failure;
-                        pickupResult.failReason = SweetsSpace::PickupFailReason::DistanceExceeded;
-                    }
-                    else if (nearestDepthDelta > sanitizedDepthThreshold)
-                    {
-                        pickupResult.result = SweetsSpace::PickupResult::Failure;
-                        pickupResult.failReason = SweetsSpace::PickupFailReason::DepthExceeded;
-                    }
-                    else
-                    {
-                        pickupResult.result = SweetsSpace::PickupResult::Success;
-                        pickupResult.failReason = SweetsSpace::PickupFailReason::None;
-                        candidate = nearest;
+                        candidate = pickupResult.sweets;
                         candidateTransform = candidate->GetTransform();
                         sweetsBounds = candidate->GetAABB();
                         sweetsZ = candidateTransform.position.z;
@@ -605,10 +551,6 @@ namespace Entities
                         sweetsBounds = {};
                         sweetsZ = std::numeric_limits<float>::quiet_NaN();
                     }
-                }
-                else
-                {
-                    pickupResult.failReason = SweetsSpace::PickupFailReason::NoCandidates;
                 }
             }
         }
