@@ -39,7 +39,7 @@ namespace SceneSpace
                 cache.Load("Whip", GetDevice(), L"Assets/Texture/upgrade_UI_cream_plus_icon.png");
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("BackFrame", GetDevice(), L"Assets/Texture/UI_Cakeblock.png");
-                cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");         
+                cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");
                 cache.Load("PowerUpBG", GetDevice(), L"Assets/Texture/upgrade_menu_background.png");
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("SweetsSpawnSpeed", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_Speed_icon.png");
