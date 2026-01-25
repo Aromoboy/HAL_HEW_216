@@ -1,4 +1,5 @@
-﻿#include "Transform.h"
+﻿//なんでマージしないのー？
+#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
