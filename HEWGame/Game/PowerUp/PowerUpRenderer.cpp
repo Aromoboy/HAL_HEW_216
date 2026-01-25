@@ -31,6 +31,9 @@ constexpr float kLevelScaleOffset = 0.06f;
 constexpr float kCostScaleOffset = 0.05f;
 constexpr float kCostNumberScaleOffset = 0.08f;
 
+constexpr float kNodeNameCharCount = 5.0f * 3.0f;
+constexpr float kInfoCharCount = 15.0f * 3.0f;
+
 constexpr float kCostNumberInterval = 0.06f;
 // 背景のY移動に対してXの移動する割合
 constexpr float kUVMoveRatioX = 2.0f / 2.0f;

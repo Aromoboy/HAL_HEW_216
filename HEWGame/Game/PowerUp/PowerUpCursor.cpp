@@ -52,19 +52,20 @@ void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 		std::optional<int> result = m_powerUpManager->GetCost(m_index);
 		if (result != std::nullopt && result <= m_cost)
 		{
-			if (m_powerUpManager->LevelUp(m_index)) m_cost -= result.value();
+			if (m_powerUpManager->LevelUp(m_index))
+			{
+				m_cost -= result.value();
+				std::optional<float2> result = m_powerUpManager->GetDrawPosition(m_index);
 
+				float2 drawPosition = result ? result.value() : float2{ 0.0f, 0.0f };
 
-			std::optional<float2> result = m_powerUpManager->GetDrawPosition(m_index);
+				drawPosition.x += kCursorOffset.x;
+				drawPosition.y += kCursorOffset.y;
 
-			float2 drawPosition = result ? result.value() : float2{ 0.0f, 0.0f };
-
-			drawPosition.x += kCursorOffset.x;
-			drawPosition.y += kCursorOffset.y;
-
-
-			EffectSystem::EffectCreateRequest request("PowerUp", float3(drawPosition.x, drawPosition.y, 1.0f), float3(0.0f, 0.0f, 0.0f));
-			m_effectSystem.SpawnEffect(request);
+				
+				EffectSystem::EffectCreateRequest request("PowerUp", float3(drawPosition.x, drawPosition.y, 1.0f), float3(0.0f, 0.0f, 0.0f));
+				m_effectSystem.SpawnEffect(request);
+			}
 		}
 
 		
