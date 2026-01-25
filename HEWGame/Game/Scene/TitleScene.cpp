@@ -34,6 +34,16 @@ bool TitleScene::Load(Core::Input& input)
 
 void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 {
+    if (input.IsTrigger(Core::ActionId::Confirm))
+    {
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange(
+                std::make_unique<SceneGame>(*m_manager));
+        }
+        return;
+    }
+
     RootUpdate(timer, input);
 }
 
@@ -90,10 +100,23 @@ void TitleScene::OnEnter()
     );
     Sprite::SetProjection(proj);
 
+    if (SoundManagerEX::GetInstance())
+    {
+        m_titleBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
+            "Assets/Audio/BGM_Menu.wav", true, 0.5f);
+    }
+
 }
 
 void TitleScene::OnExit()
 {
+
+    if (m_titleBGMHandle != -1 && SoundManagerEX::GetInstance())
+    {
+        SoundManagerEX::GetInstance()->StopSound(m_titleBGMHandle);
+        m_titleBGMHandle = -1;
+    }
+
     if (m_background) m_background->Shutdown();
     m_background.reset();
     if (m_inputRegistered)

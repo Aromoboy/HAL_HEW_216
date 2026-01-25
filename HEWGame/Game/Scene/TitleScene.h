@@ -72,6 +72,8 @@ private:
 
     std::array<MenuItem, static_cast<int>(TitleMenu::Max)> m_menu;
     std::unique_ptr<BackgroundRenderer> m_background;
+
+    int m_titleBGMHandle = -1;
 };
 
 #endif
