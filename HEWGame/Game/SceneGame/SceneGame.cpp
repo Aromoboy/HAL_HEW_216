@@ -1371,9 +1371,14 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             SetStageState(StageState::Playing);
             return;
         case PlayerController::PostGameAction::GoToPowerUp:
+            if (m_manager && EnsureResultSaved())
+            {
+                m_manager->RequestSceneChange(
+                    std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
+            }
             return;
         case PlayerController::PostGameAction::GoToTitle:
-            if (m_manager)
+            if (m_manager && EnsureResultSaved())
             {
                 m_manager->RequestSceneChange(
                     std::make_unique<TitleScene>(*m_manager));
@@ -2358,6 +2363,8 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
+    m_resultFinalized = false;
+    m_resultSaved = false;
 
     // カウントダウン開始
     m_startCountdownNumber = 3;   // 秒数
@@ -2399,6 +2406,12 @@ void SceneGame::OnStageFail()
 
 void SceneGame::OnStageResult()
 {
+    if (m_resultFinalized)
+    {
+        return;
+    }
+
+    m_resultFinalized = true;
     const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
     const int earnedPoints = ConvertScoreToPoints(score);
     const int currentPoints = std::max(0, m_playerPowerUpData.nPoints);
@@ -2417,7 +2430,8 @@ void SceneGame::OnStageResult()
         entries.front() = updatedEntry;
     }
     m_playerData.SetEntries(entries);
-    if (!m_playerData.SaveData())
+    m_resultSaved = m_playerData.SaveData();
+    if (!m_resultSaved)
     {
         DebugTrace(std::string(kLogPrefix) + "[PlayerData] Failed to save points.\n");
     }
@@ -2428,6 +2442,28 @@ void SceneGame::OnStageResult()
         << " earnedPoints=" << earnedPoints
         << " totalPoints=" << updatedPoints << "\n";
     ::DebugTrace(oss.str());
+}
+
+bool SceneGame::EnsureResultSaved()
+{
+    if (!m_resultFinalized)
+    {
+        OnStageResult();
+        return m_resultSaved;
+    }
+
+    if (m_resultSaved)
+    {
+        return true;
+    }
+
+    m_resultSaved = m_playerData.SaveData();
+    if (!m_resultSaved)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Failed to save points.\n");
+    }
+
+    return m_resultSaved;
 }
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
