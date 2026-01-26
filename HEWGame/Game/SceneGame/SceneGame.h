@@ -110,6 +110,7 @@ private:
     void OnStageClear();
     void OnStageFail();
     void OnStageResult();
+    bool EnsureResultSaved();
     void ResetPlaySession();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
@@ -150,6 +151,8 @@ protected:
     void BroadcastPhaseAdvance(int newPhase);
     StageState m_stageState = StageState::Intro;
     PlayerController::ResultScreenState m_resultState;
+    bool m_resultFinalized = false;
+    bool m_resultSaved = false;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
