@@ -885,6 +885,10 @@
     <ClCompile Include="Game\Title\TitleManager.cpp">
       <Filter>Game\Title</Filter>
     </ClCompile>
+    <ClCompile Include="SceneResult.cpp" />
+      <Filter>Game\UI</Filter>
+    </ClCompile>
+
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\postprocess.hlsl">
@@ -903,6 +907,11 @@
     </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpNode.h">
       <Filter>Game\PowerUp</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SceneResult.h" />
+    <Filter>Game\UI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
