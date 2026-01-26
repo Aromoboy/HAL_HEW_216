@@ -62,6 +62,8 @@ namespace SceneSpace
 
     void SceneResult::OnEnter()
     {
+        
+
 
         if (!m_camera)
         {
@@ -84,7 +86,7 @@ namespace SceneSpace
 
         BackgroundRendererConfig cfg{};
         BackgroundRendererConfig::BackgroundLayer layer;
-        layer.texturePath = "Assets/Texture/background_UI_remake.png";  // ”wŒi‰æ‘œ
+        layer.texturePath = "Assets/Texture/img_1769391385.png";  // ”wŒi‰æ‘œ
         layer.parallaxFactor = 0.0f;
         layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
         layer.tintColor = DirectX::XMFLOAT4(1, 1, 1, 1);
@@ -227,24 +229,28 @@ namespace SceneSpace
     void SceneResult::Draw()
     {
         SetDepthTest(false);
-       
+
+        DirectX::XMFLOAT4X4 proj;
+        DirectX::XMStoreFloat4x4(
+            &proj,
+            DirectX::XMMatrixOrthographicOffCenterLH(
+                0.0f, 1280.0f,
+                960.0f, 0.0f,
+                0.0f, 1.0f)
+        );
+        Sprite::SetProjection(proj);
         Sprite::ScopedPassDefaults spritePass;
 
-        {
+        
             if (m_background)
             {
                 m_background->Draw(0.0f, 1.0f);
             }
 
-           
-            Sprite::ScopedPassDefaults spritePass;
+         
             RootDraw();   // © Draw(const Camera&) ‚ªŒÄ‚Î‚ê‚é
-        }
-        // background_UI_remake.png
-        Sprite::SetColor({ 1,1,1,1 });
-        Sprite::SetSize({ 1280.0f, 960.0f }); // © UI—pƒTƒCƒY
-        Sprite::SetOffset({ 640.0f, 480.0f }); // © ‰æ–Ê’†‰›
-        Sprite::Draw();
+    
+
         SetDepthTest(true);
     }
 

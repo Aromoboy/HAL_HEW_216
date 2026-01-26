@@ -63,6 +63,7 @@ namespace SceneSpace
         Texture m_texStartEffect;
         Texture m_texNumber[4];
 
+        //RestoreDefaultViewport();
     };
 }
 
