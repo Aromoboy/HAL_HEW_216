@@ -2637,6 +2637,17 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 colliderRequest.scaleOffset = false;
                 const bool isCake = IsCakeStageObject(obj);
                 colliderRequest.allowFallback = isCake;
+                const bool registryMissing = !Physics::ColliderRegistry::Instance().Find(colliderRequest.key);
+                if (registryMissing)
+                {
+                    DebugTrace(std::string(kLogPrefix)
+                        + "[StageColliders] registry missing; using fallback if enabled "
+                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath + "').\n");
+                }
+                DebugTrace(std::string(kLogPrefix)
+                    + "[StageColliders] rebuild request "
+                    + "(key='" + colliderRequest.key + "', model='" + obj.modelPath
+                    + "', allowFallback=" + (colliderRequest.allowFallback ? "true" : "false") + ").\n");
 
                 const auto shapeConfig = obj.physicsEntity->GetBox2DShapeConfig();
                 if (shapeConfig)
@@ -2660,20 +2671,6 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 auto colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
                     && colliderBuild.shapeConfig
                     && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-
-                if (!colliderReady && !colliderRequest.allowFallback)
-                {
-                    DebugTrace(std::string(kLogPrefix)
-                        + "[StageColliders] cake collider rebuild failed; retrying with fallback "
-                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath
-                        + "', scale=" + formatScale(obj.transform.scale)
-                        + ", reason='" + buildColliderFailureReason(colliderBuild) + "').\n");
-                    colliderRequest.allowFallback = true;
-                    colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
-                    colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
-                        && colliderBuild.shapeConfig
-                        && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
-                }
 
                 if (colliderReady)
                 {
