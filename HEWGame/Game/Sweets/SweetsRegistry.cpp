@@ -159,6 +159,14 @@ namespace SweetsSpace
         const float broadPhaseHalfHeight = halfHeight + sanitizedMaxDistance;
         const float broadPhaseHalfDepth = std::max(sanitizedHalfDepth, sanitizedDepthThreshold);
 
+        AABB pickupBoxBounds{};
+        pickupBoxBounds.min.x = sanitizedCenter.x - halfWidth;
+        pickupBoxBounds.max.x = sanitizedCenter.x + halfWidth;
+        pickupBoxBounds.min.y = sanitizedCenter.y - halfHeight;
+        pickupBoxBounds.max.y = sanitizedCenter.y + halfHeight;
+        pickupBoxBounds.min.z = sanitizedCenter.z - sanitizedHalfDepth;
+        pickupBoxBounds.max.z = sanitizedCenter.z + sanitizedHalfDepth;
+
         AABB pickupBounds{};
         pickupBounds.min.x = sanitizedCenter.x - broadPhaseHalfWidth;
         pickupBounds.max.x = sanitizedCenter.x + broadPhaseHalfWidth;
@@ -167,11 +175,11 @@ namespace SweetsSpace
         pickupBounds.min.z = sanitizedCenter.z - broadPhaseHalfDepth;
         pickupBounds.max.z = sanitizedCenter.z + broadPhaseHalfDepth;
 
-        const auto intersects = [&](const AABB& bounds)
+        const auto intersects = [&](const AABB& bounds, const AABB& target)
         {
-            const float overlapX = std::min(bounds.max.x, pickupBounds.max.x) - std::max(bounds.min.x, pickupBounds.min.x);
-            const float overlapY = std::min(bounds.max.y, pickupBounds.max.y) - std::max(bounds.min.y, pickupBounds.min.y);
-            const float overlapZ = std::min(bounds.max.z, pickupBounds.max.z) - std::max(bounds.min.z, pickupBounds.min.z);
+            const float overlapX = std::min(bounds.max.x, target.max.x) - std::max(bounds.min.x, target.min.x);
+            const float overlapY = std::min(bounds.max.y, target.max.y) - std::max(bounds.min.y, target.min.y);
+            const float overlapZ = std::min(bounds.max.z, target.max.z) - std::max(bounds.min.z, target.min.z);
             return overlapX >= 0.0f && overlapY >= 0.0f && overlapZ >= 0.0f;
         };
 
@@ -214,16 +222,17 @@ namespace SweetsSpace
 
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
-                if (!intersects(bounds))
+                if (!intersects(bounds, pickupBounds))
                 {
                     continue;
                 }
 
+                const bool intersectsPickupBox = intersects(bounds, pickupBoxBounds);
                 const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
                 const float centerY = (bounds.min.y + bounds.max.y) * 0.5f;
                 const float dx = centerX - sanitizedCenter.x;
                 const float dy = centerY - sanitizedCenter.y;
-                const float distanceSq = (dx * dx) + (dy * dy);
+                const float distanceSq = intersectsPickupBox ? 0.0f : (dx * dx) + (dy * dy);
                 if (distanceSq <= bestDistanceSq)
                 {
                     bestDistanceSq = distanceSq;

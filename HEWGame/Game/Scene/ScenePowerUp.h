@@ -13,6 +13,7 @@
 #include "SpriteRenderer.h"
 #include "EffectSystem.h"
 
+
 class PowerUpManager;
 
 namespace SceneSpace
@@ -47,6 +48,6 @@ namespace SceneSpace
                 std::unique_ptr<CameraRig> m_rig;
                 std::shared_ptr<PowerUpTarget> m_target;
                 bool m_inputRegistered = false;
-                int m_cost = 10000;        
+                int m_cost;        
         };
 }

@@ -267,6 +267,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Rules\GameplayRules.cpp" />
     <ClCompile Include="Game\Rules\GameplayRulesSystem.cpp" />
     <ClCompile Include="Game\Rules\PlayerController.cpp" />
+    <ClCompile Include="Game\Save\Save.cpp" />
     <ClCompile Include="Game\Scene\EffectTestScene.cpp" />
     <ClCompile Include="Game\Scene\ISceneServices.cpp" />
     <ClCompile Include="Game\Scene\Main.cpp" />
@@ -296,6 +297,8 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Sweets\SweetsRegistry.cpp" />
     <ClCompile Include="Game\Sweets\SweetsRenderer.cpp" />
     <ClCompile Include="Game\Sweets\SweetsSpawner.cpp" />
+    <ClCompile Include="Game\Title\TitleCursor.cpp" />
+    <ClCompile Include="Game\Title\TitleManager.cpp" />
     <ClCompile Include="Game\UI\BackgroundRenderer.cpp" />
     <ClCompile Include="Game\UI\HudRenderer.cpp" />
     <ClCompile Include="Game\UI\ResultRenderer.cpp" />
@@ -303,6 +306,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\UI\TimerDisplay.cpp" />
     <ClCompile Include="Game\UI\TitleRenderer.cpp" />
     <ClCompile Include="Game\UI\UIManager.cpp" />
+    <ClCompile Include="SceneResult.cpp" />
     <ClInclude Include="Engine\Camera\BaseCamera.h" />
     <ClInclude Include="Engine\Camera\CameraMath.h" />
     <ClInclude Include="Engine\Camera\CameraManager.h" />
@@ -403,6 +407,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Rules\GameplayRules.h" />
     <ClInclude Include="Game\Rules\GameplayRulesSystem.h" />
     <ClInclude Include="Game\Rules\PlayerController.h" />
+    <ClInclude Include="Game\Save\Save.h" />
     <ClInclude Include="Game\Scene\EffectTestScene.h" />
     <ClInclude Include="Game\Scene\ISceneServices.h" />
     <ClInclude Include="Game\Scene\Main.h" />
@@ -436,6 +441,8 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Sweets\SweetsRenderer.h" />
     <ClInclude Include="Game\Sweets\SweetsSpawner.h" />
     <ClInclude Include="Game\Sweets\SweetsTypes.h" />
+    <ClInclude Include="Game\Title\TitleCursor.h" />
+    <ClInclude Include="Game\Title\TitleManager.h" />
     <ClInclude Include="Game\UI\BackgroundRenderer.h" />
     <ClInclude Include="Game\UI\HudRenderer.h" />
     <ClInclude Include="Game\UI\ResultRenderer.h" />
@@ -445,6 +452,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\UI\UIManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SceneResult.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" />

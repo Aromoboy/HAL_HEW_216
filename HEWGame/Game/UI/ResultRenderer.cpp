@@ -265,7 +265,7 @@ void ResultRenderer::RenderFream(const ResultDisplayData& data)
 
     for (int i = 0; i < MAX_RESULT_SPRITE; i++)
     {
-        if (!m_resultTexture[i]) return;
+        if (!m_resultTexture[i]) continue;
     }
 
     float viewportWidth = 0.0f;
@@ -281,15 +281,25 @@ void ResultRenderer::RenderFream(const ResultDisplayData& data)
         SetDepthTest(false);
         SetBlendMode(BLEND_ALPHA);
 
+       
+        DirectX::XMFLOAT4X4 proj;
+        DirectX::XMStoreFloat4x4(
+            &proj,
+            DirectX::XMMatrixOrthographicOffCenterLH(
+                0.0f, 1280.0f,
+                720.0f, 0.0f,
+                0.0f, 1.0f)
+        );
         Sprite::SetWorld(m_identityMatrix);
         Sprite::SetView(m_identityMatrix);
-        Sprite::SetProjection(m_identityMatrix);
+        Sprite::SetProjection(proj);
         Sprite::SetTexture(m_resultTexture[i].get());
-        Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
-        Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));
-        Sprite::SetColor(m_config.normalTextColor);
-        Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
-        Sprite::SetOffset(DirectX::XMFLOAT2(0.0f, 0.0f));
+       /* Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
+        Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));*/
+        Sprite::SetColor({ 1,1,1,1 });
+     /*   Sprite::SetColor(m_config.normalTextColor);*/
+        Sprite::SetSize(DirectX::XMFLOAT2(512.0f, 256.0f));
+        Sprite::SetOffset(DirectX::XMFLOAT2(640.0f, 360.0f));
         Sprite::Draw();
 
         SetDepthTest(true);
@@ -324,8 +334,11 @@ void ResultRenderer::RenderSprite(const ResultDisplayData& data)
     SetBlendMode(BLEND_ALPHA);
 
     Sprite::SetWorld(m_identityMatrix);
-    Sprite::SetView(m_identityMatrix);
-    Sprite::SetProjection(m_identityMatrix);
+   /* Sprite::SetView(m_identityMatrix);
+    Sprite::SetProjection(m_identityMatrix);*/
+
+
+
     Sprite::SetTexture(m_texture.get());
     Sprite::SetUVPos(DirectX::XMFLOAT2(0.0f, 0.0f));
     Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));

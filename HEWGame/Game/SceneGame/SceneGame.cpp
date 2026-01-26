@@ -1,4 +1,5 @@
-﻿#include "Transform.h"
+﻿//なんでマージしないのー？
+#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
@@ -50,6 +51,8 @@
 #include "Physical.h"
 #include "ColliderRegistry.h"
 #include "TitleScene.h"
+#include "SceneResult.h"
+
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -712,20 +715,153 @@ void SceneGame::OnEnter()
         m_gameBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
             "Assets/Audio/BGM_MainGame.wav", true, 0.4f);
     }
+
+    for (int i = 0; i <= 3; ++i)
+    {
+        m_countdownTextures[i] = std::make_shared<Texture>();
+    }
+
+    m_countdownTextures[0]->Create("Assets/Texture/start.png", true);
+    m_countdownTextures[1]->Create("Assets/Texture/1-1.png", true);
+    m_countdownTextures[2]->Create("Assets/Texture/2-1.png", true);
+    m_countdownTextures[3]->Create("Assets/Texture/3-1.png", true);
 }
 
 void SceneGame::OnExit()
 {
+    //if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
+    //{
+    //    SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
+    //    m_gameBGMHandle = -1;
+    //}
+
+    //if (m_inputRegistered)
+    //{
+    //    if (auto* input = GetInput())
+    //    {
+    //        Unregister(*input);
+    //    }
+    //    m_inputRegistered = false;
+    //}
+
+    //UnregisterSceneUpdateNode();
+    //UnregisterCameraUpdateNode();
+
+    //// CameraRig や Update 登録しているものがあれば必ず解除
+    //if (m_cameraRig)
+    //{
+    //    Unregister(*m_cameraRig);
+    //}
+   /* if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
+    {
+        SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
+        m_gameBGMHandle = -1;
+    }
+
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
+        {
+            Unregister(*input);
+        }
+        m_inputRegistered = false;
+    }
+
+    UnregisterSceneUpdateNode();
+    UnregisterCameraUpdateNode();
+
+    if (m_cameraRig)
+    {
+        Unregister(*m_cameraRig);
+    }*/
+
+    // --- Input ---
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
+        {
+            Unregister(*input);
+        }
+        m_inputRegistered = false;
+    }
+
+    // --- Scene update ---
+    UnregisterSceneUpdateNode();
+    UnregisterCameraUpdateNode();
+
+    // --- Physics ---
+    if (m_physicsBinder)
+    {
+        if (auto* pm = m_physicsBinder->GetPhysicsMachine())
+        {
+            Unregister(*pm);
+            if (auto* contact = pm->GetContactDispatchNode())
+            {
+                Unregister(*contact);
+            }
+        }
+    }
+    m_physicsRegistered = false;
+    m_contactDispatchRegistered = false;
+
+    // --- Draw ---
+    if (m_drawRegistered && m_drawSystem)
+    {
+        Unregister(*m_drawSystem);
+        m_drawRegistered = false;
+    }
+
+    // --- Camera ---
+    if (m_cameraRigRegistered && m_cameraRig)
+    {
+        Unregister(*m_cameraRig);
+        m_cameraRigRegistered = false;
+    }
+
+    // --- Sweets ---
+    if (m_sweetsRegistered && m_sweetsManager)
+    {
+        Unregister(*m_sweetsManager);
+        m_sweetsRegistered = false;
+    }
+
+    if (m_sweetsLateRegistered && m_sweetsManager)
+    {
+        if (auto* late = m_sweetsManager->GetLateUpdateNode())
+        {
+            Unregister(*late);
+        }
+        m_sweetsLateRegistered = false;
+    }
+
+    // --- Player ---
+    if (player)
+    {
+        Unregister(*player);
+    }
+
+    // --- Effect ---
+    if (m_effectSystemRegistered && m_effectSystem)
+    {
+        Unregister(*m_effectSystem);
+        m_effectSystemRegistered = false;
+    }
+
+    // --- BGM ---
     if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
     {
         SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
         m_gameBGMHandle = -1;
     }
 
+
+
     std::ostringstream oss;
     oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 }
+   
+
 
 
 SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
@@ -965,6 +1101,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     if (rulesResult.timeUp && m_stageState == StageState::Playing)
     {
         SetStageState(StageState::TimeUp);
+
+     
+       
+        return;
+
+
+
     }
     if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
     {
@@ -1031,6 +1174,48 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     case StageState::Playing:
     {
+        Core::Input* input = GetInput();
+
+        // --- カウントダウン処理 ---
+        if (!m_gameStarted)
+        {
+            m_startCountdownTimer += ctx.dt;
+
+            if (m_startCountdownTimer >= 1.5f)
+            {
+                m_startCountdownTimer = 0.0f;
+
+                if (m_startCountdownNumber > 1)
+                {
+                    m_startCountdownNumber--; // 3→2→1
+                }
+                else if (m_startCountdownNumber == 1)
+                {
+                    m_startCountdownNumber = 0; // 数字は終了
+                    m_showStartImage = true;    // start を表示
+                }
+                else if (m_showStartImage)
+                {
+                    m_showStartImage = false;    // start 表示終了
+                    m_gameStarted = true;        // ゲーム本編開始
+                    ToggleGameplaySystems(true); // プレイヤーやスイーツ動かす
+                }
+            }
+
+            return; // カウントダウン中はここで Update を終了
+        }
+
+        // --- ゲーム本編更新（カウントダウン終了後） ---
+        const GameplayRulesSystem::UpdateInput rulesInput{
+            true, // ゲーム本編が始まったときだけ true
+            ctx.dt,
+            m_sweetsManager.get(),
+            &m_phaseManager,
+            m_clearPhaseCount
+        };
+        const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
+
+
         if (input)
         {
             PlayerController::SpeedInput speedInput{
@@ -1113,21 +1298,25 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
-        const auto action = input ? m_playerController.HandlePostGameInput(*input, peakHeight, score)
+        const auto action = input ? m_playerController.HandlePostGameMenuInput(*input, peakHeight, score, m_resultState)
             : PlayerController::PostGameAction::None;
-        if (action == PlayerController::PostGameAction::ConfirmRestart)
+        switch (action)
         {
-            m_pendingRetryReset = true;
+        case PlayerController::PostGameAction::RetryGame:
+            SetStageState(StageState::Playing);
             return;
-        }
-        else if (action == PlayerController::PostGameAction::GoToPowerUp)
-        {
+        case PlayerController::PostGameAction::GoToPowerUp:
+            return;
+        case PlayerController::PostGameAction::GoToTitle:
             if (m_manager)
             {
                 m_manager->RequestSceneChange(
-                    std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
+                    std::make_unique<TitleScene>(*m_manager));
             }
             return;
+
+        default:
+            break;
         }
     }
 
@@ -1760,6 +1949,20 @@ void SceneGame::DrawOverlay()
         m_uiOverlay->Draw();
     }
 
+    if (!m_gameStarted && m_startCountdownNumber >= 0)
+    {
+        Sprite::ScopedPassDefaults guard;
+
+        Sprite::SetTexture(m_countdownTextures[m_startCountdownNumber].get());
+
+        // 画面中央に表示（サイズは調整）
+        Sprite::SetOffset({ 0.0f, 0.0f }); 
+        Sprite::SetSize({ 1.0f, 1.0f });   
+        Sprite::SetColor({ 1,1,1,1 });
+
+        Sprite::Draw();
+    }
+    
 #if defined(_DEBUG)
 #endif
 }
@@ -2087,6 +2290,14 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
+
+    // カウントダウン開始
+    m_startCountdownNumber = 3;   // 秒数
+    m_startCountdownTimer = 0.0f;
+    m_gameStarted = false;
+
+    // この時点ではプレイヤーやスイーツは止めておく
+    ToggleGameplaySystems(false);
 }
 
 void SceneGame::OnStageClear()

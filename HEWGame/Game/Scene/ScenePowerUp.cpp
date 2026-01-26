@@ -12,6 +12,8 @@
 
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
+#include "Save/Save.h"
+
 
 #include <sstream>
 #include <string>
@@ -24,6 +26,7 @@ namespace SceneSpace
     ScenePowerUp::ScenePowerUp(SceneSpace::SceneManager& manager)
         : m_manager(&manager)
         , m_backUVProgress(0.0f)
+        , m_cost(0)
         {
         }
 
@@ -99,10 +102,26 @@ namespace SceneSpace
                 {
                         SetActiveCamera(registeredCamera);
                 }
+
+                Save& save = Save::Instance();
+                m_cost = save.GetCost();
+                m_powerUpManager->LoadNodeData(save);
         }
 
         void ScenePowerUp::OnExit()
         {
+
+            Save& save = Save::Instance();
+            int index = m_powerUpManager->GetNodeCount();
+            for (int i = 0; i < index; i++)
+            {
+                save.UpdatePowerUp(m_powerUpManager->GetName(i), m_powerUpManager->GetLevel(i));
+            }
+
+            save.UpdateCost(m_cost);
+
+            save.FileSave();
+
                 ShutdownPowerUpSystems();
                 if (m_inputRegistered)
                 {
@@ -114,7 +133,9 @@ namespace SceneSpace
                 }
                 UnregisterSceneUpdateNode();
                 UnregisterCameraUpdateNode();
+
         }
+
 
         void  ScenePowerUp::ConfigureUpdates()
         {
@@ -128,6 +149,7 @@ namespace SceneSpace
                                 }
                         }
                 }
+
 
                 RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 

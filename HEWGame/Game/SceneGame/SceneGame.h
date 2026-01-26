@@ -145,6 +145,7 @@ protected:
     float m_lastGuidelineHeight = 0.0f;
     void BroadcastPhaseAdvance(int newPhase);
     StageState m_stageState = StageState::Intro;
+    PlayerController::ResultScreenState m_resultState;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
@@ -178,9 +179,12 @@ protected:
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
     bool m_isComposed = false;
-    
-
-
+    float m_countdownInterval = 1.0f; // 1秒ごとに切り替え
+    int   m_startCountdownNumber = 3;    
+    float m_startCountdownTimer = 0.0f;
+    bool m_showStartImage = false;
+    bool  m_gameStarted = false; 
+    std::shared_ptr<Texture> m_countdownTextures[4]; // 0～3秒
     SceneSpace::SceneManager* m_manager = nullptr;
 };
 
