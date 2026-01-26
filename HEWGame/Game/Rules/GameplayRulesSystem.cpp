@@ -126,10 +126,10 @@ int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager)
 
 int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager, float peakHeight)
 {
-    const float adjustedBaseScore = m_baseScorePerMeter * m_scoreMultiplier;
     const GameplayRules::ScoreInput scoreInput{
         phaseManager,
-        adjustedBaseScore,
+        m_baseScorePerMeter,
+        m_scoreMultiplier,
         m_log,
         m_logPrefix
     };
