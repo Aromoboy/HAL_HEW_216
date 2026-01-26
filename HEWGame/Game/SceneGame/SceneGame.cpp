@@ -2696,10 +2696,36 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
 
         return reasons.str();
     };
+    const auto formatShapeType = [](const std::optional<Physics::Box2DShapeConfig>& shapeConfig)
+    {
+        if (!shapeConfig)
+        {
+            return std::string("missing");
+        }
+
+        switch (shapeConfig->type)
+        {
+        case Physics::Box2DShapeConfig::Type::None:
+            return std::string("None");
+        case Physics::Box2DShapeConfig::Type::Box:
+            return std::string("Box");
+        case Physics::Box2DShapeConfig::Type::Polygon:
+            return std::string("Polygon");
+        case Physics::Box2DShapeConfig::Type::Circle:
+            return std::string("Circle");
+        default:
+            return std::string("Unknown");
+        }
+    };
 
     const float cakeScaleMultiplier = std::max(0.0f, 1.0f + data.fCakeSize);
     if (cakeScaleMultiplier != 1.0f)
     {
+        if (m_physicsBinder)
+        {
+            m_physicsBinder->Enable(true);
+        }
+
         for (auto& obj : m_stageObjects)
         {
             if (!IsCakeStageObject(obj))
@@ -2714,9 +2740,37 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
 
             if (obj.physicsEntity)
             {
+                const auto logColliderState = [&](const char* phase)
+                {
+                    const auto& colliderComponent = obj.physicsEntity->GetBoxColliderComponent();
+                    const auto& shapeConfig = obj.physicsEntity->GetBox2DShapeConfig();
+                    const b2BodyId bodyId = obj.physicsEntity->GetBox2DBodyId();
+                    const uint64_t bodyIdValue = b2StoreBodyId(bodyId);
+                    const std::string colliderId = colliderComponent ? colliderComponent->colliderId : std::string("missing");
+
+                    std::ostringstream log;
+                    log << kLogPrefix << "[StageColliders] " << phase
+                        << " hasBody=" << (obj.physicsEntity->HasBox2DBody() ? "true" : "false")
+                        << " bodyId=" << bodyIdValue
+                        << " colliderId='" << colliderId << "'"
+                        << " shapeType=" << formatShapeType(shapeConfig) << "\n";
+                    DebugTrace(log.str());
+                };
+                const auto applyColliderState = [&](std::optional<Physics::BoxColliderComponent> collider,
+                    std::optional<Physics::Box2DShapeConfig> shapeConfig)
+                {
+                    obj.physicsEntity->SetBoxColliderComponent(std::move(collider));
+                    obj.physicsEntity->SetBox2DShapeConfig(std::move(shapeConfig));
+                    if (m_physicsBinder)
+                    {
+                        obj.physicsEntity->AttachPhysicsMachine(m_physicsBinder->GetPhysicsMachine());
+                    }
+                };
                 const auto originalCollider = obj.physicsEntity->GetBoxColliderComponent();
                 const auto originalShapeConfig = obj.physicsEntity->GetBox2DShapeConfig();
                 obj.physicsEntity->SetScale(obj.transform.scale);
+
+                logColliderState("rebuild-before");
 
                 Physics::ColliderBuilder colliderBuilder(
                     [&](const std::string& message)
@@ -2781,13 +2835,11 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                             + ", reason='" + *mismatchReason + "').\n");
                         obj.transform.scale = originalScale;
                         obj.physicsEntity->SetScale(obj.transform.scale);
-                        obj.physicsEntity->SetBoxColliderComponent(originalCollider);
-                        obj.physicsEntity->SetBox2DShapeConfig(originalShapeConfig);
+                        applyColliderState(originalCollider, originalShapeConfig);
                     }
                     else
                     {
-                        obj.physicsEntity->SetBoxColliderComponent(colliderBuild.collider);
-                        obj.physicsEntity->SetBox2DShapeConfig(colliderBuild.shapeConfig);
+                        applyColliderState(colliderBuild.collider, colliderBuild.shapeConfig);
                     }
                 }
                 else
@@ -2799,9 +2851,10 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                         + ", reason='" + buildColliderFailureReason(colliderBuild) + "').\n");
                     obj.transform.scale = originalScale;
                     obj.physicsEntity->SetScale(obj.transform.scale);
-                    obj.physicsEntity->SetBoxColliderComponent(originalCollider);
-                    obj.physicsEntity->SetBox2DShapeConfig(originalShapeConfig);
+                    applyColliderState(originalCollider, originalShapeConfig);
                 }
+
+                logColliderState("rebuild-after");
             }
         }
     }
