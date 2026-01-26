@@ -14,6 +14,7 @@
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
 #include "Save/Save.h"
+#include "Debug.h"
 
 
 #include <sstream>
@@ -24,6 +25,7 @@ namespace SceneSpace
 {
 
     float kBackMoveSpeed = 0.2f;
+    constexpr const char* kLogPrefix = "[ScenePowerUp] ";
     ScenePowerUp::ScenePowerUp(SceneSpace::SceneManager& manager)
         : m_manager(&manager)
         , m_backUVProgress(0.0f)
@@ -276,6 +278,10 @@ namespace SceneSpace
 
                         if (tokens.size() < 7)
                         {
+                                std::ostringstream warn;
+                                warn << kLogPrefix << "Line " << entry.lineNumber
+                                     << ": entry must provide name, info, texture, max level, default cost, additional cost, and magnification.\n";
+                                DebugLog::DebugMessage(warn.str());
                                 continue;
                         }
 
@@ -305,13 +311,26 @@ namespace SceneSpace
                                 m_powerUpManager->AddNode(name, info, textureKey, currentLevel, maxLevel, defaultCost, costAdditional, costMagnification);
                                 ++loaded;
                         }
-                        catch (const std::exception&)
+                        catch (const std::exception& ex)
                         {
+                                std::ostringstream warn;
+                                warn << kLogPrefix << "Line " << entry.lineNumber
+                                     << ": failed to parse power-up entry values (" << ex.what() << ").\n";
+                                DebugLog::DebugMessage(warn.str());
                                 continue;
                         }
                 }
 
-                return loaded > 0;
+                if (loaded == 0)
+                {
+                        std::ostringstream warn;
+                        warn << kLogPrefix << "[Error] No power-up entries were loaded from section '"
+                             << GameplayConfig::kSectionPowerUps << "'.\n";
+                        DebugLog::DebugMessage(warn.str());
+                        return false;
+                }
+
+                return true;
         }
 
         void ScenePowerUp::ShutdownPowerUpSystems()
