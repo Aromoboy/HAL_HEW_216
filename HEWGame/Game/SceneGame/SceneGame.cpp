@@ -85,6 +85,7 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
+        constexpr float kScoreToPointsMultiplier = 1.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
@@ -116,6 +117,12 @@ namespace
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
+        }
+
+        int ConvertScoreToPoints(int score)
+        {
+            const float rawPoints = static_cast<float>(score) * kScoreToPointsMultiplier;
+            return std::max(0, static_cast<int>(std::lround(rawPoints)));
         }
 
         std::string NormalizeStageKey(std::string value)
@@ -2340,6 +2347,9 @@ void SceneGame::SetStageState(StageState newState)
     case StageState::TimeUp:
         OnStageFail();
         break;
+    case StageState::ShowingResult:
+        OnStageResult();
+        break;
     default:
         break;
     }
@@ -2384,6 +2394,39 @@ void SceneGame::OnStageFail()
     const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
     oss << kLogPrefix << "[Countdown] timeUp peakTop=" << std::fixed << std::setprecision(2)
         << peakHeight << "m score=" << score << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::OnStageResult()
+{
+    const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+    const int earnedPoints = ConvertScoreToPoints(score);
+    const int currentPoints = std::max(0, m_playerPowerUpData.nPoints);
+    const int updatedPoints = currentPoints + earnedPoints;
+
+    PlayerData::Data updatedEntry = m_playerPowerUpData;
+    updatedEntry.nPoints = updatedPoints;
+
+    std::vector<PlayerData::Data> entries = m_playerData.GetEntries();
+    if (entries.empty())
+    {
+        entries.push_back(updatedEntry);
+    }
+    else
+    {
+        entries.front() = updatedEntry;
+    }
+    m_playerData.SetEntries(entries);
+    if (!m_playerData.SaveData())
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Failed to save points.\n");
+    }
+    m_playerPowerUpData = updatedEntry;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Result] score=" << score
+        << " earnedPoints=" << earnedPoints
+        << " totalPoints=" << updatedPoints << "\n";
     ::DebugTrace(oss.str());
 }
 
