@@ -27,6 +27,7 @@
 #include "UIManager.h"
 #include "PlayerController.h"
 #include "AppGame.h"
+#include "Systems/Physics/ColliderBuilder.h"
 #include "CameraMath.h"
 #include "AnimationCache.h"
 #include "AssimpModelLorder.h"
@@ -37,6 +38,7 @@
 #include <cctype>
 #include <initializer_list>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -123,6 +125,26 @@ namespace
                     return static_cast<char>(std::tolower(ch));
                 });
             return value;
+        }
+
+        std::string BuildStageColliderKey(const StageObject& obj)
+        {
+            if (!obj.colliderPresetId.empty())
+            {
+                return NormalizeStageKey(obj.colliderPresetId);
+            }
+
+            std::string key = obj.modelPath;
+            try
+            {
+                key = std::filesystem::path(obj.modelPath).stem().string();
+            }
+            catch (...)
+            {
+                // fallback to model path as-is
+            }
+
+            return NormalizeStageKey(key);
         }
 
         bool IsCakeStageObject(const StageObject& obj)
@@ -2466,9 +2488,54 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
             if (obj.physicsEntity)
             {
                 obj.physicsEntity->SetScale(obj.transform.scale);
-                if (obj.physicsEntity->GetBox2DShapeConfig())
+
+                Physics::ColliderBuilder colliderBuilder(
+                    [&](const std::string& message)
+                    {
+                        DebugTrace(message);
+                    },
+                    kLogPrefix);
+
+                Physics::ColliderBuilder::RegistryBuildRequest colliderRequest{};
+                colliderRequest.key = BuildStageColliderKey(obj);
+                colliderRequest.transform = obj.transform;
+                colliderRequest.offset = float3{ 0.0f, 0.0f, 0.0f };
+                colliderRequest.scaleOffset = false;
+                colliderRequest.allowFallback = false;
+
+                const auto shapeConfig = obj.physicsEntity->GetBox2DShapeConfig();
+                if (shapeConfig)
                 {
-                    obj.physicsEntity->SetBox2DShapeConfig(obj.physicsEntity->GetBox2DShapeConfig());
+                    colliderRequest.bodyType = shapeConfig->bodyType;
+                    colliderRequest.fixedRotation = shapeConfig->fixedRotation;
+                    colliderRequest.allowRotation = shapeConfig->allowRotation;
+                    colliderRequest.angularDamping = shapeConfig->angularDamping;
+                    colliderRequest.linearDamping = shapeConfig->linearDamping;
+                }
+                else
+                {
+                    colliderRequest.bodyType = b2_staticBody;
+                    colliderRequest.fixedRotation = true;
+                    colliderRequest.allowRotation = false;
+                    colliderRequest.angularDamping = 0.0f;
+                    colliderRequest.linearDamping = 0.0f;
+                }
+
+                auto colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
+                const bool colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
+                    && colliderBuild.shapeConfig
+                    && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+
+                if (colliderReady)
+                {
+                    obj.physicsEntity->SetBoxColliderComponent(colliderBuild.collider);
+                    obj.physicsEntity->SetBox2DShapeConfig(colliderBuild.shapeConfig);
+                }
+                else
+                {
+                    DebugTrace(std::string(kLogPrefix)
+                        + "[StageColliders] cake collider rebuild failed for model '"
+                        + obj.modelPath + "' (key='" + colliderRequest.key + "').\n");
                 }
             }
         }
