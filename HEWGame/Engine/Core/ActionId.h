@@ -22,6 +22,8 @@ namespace Core
         ColliderNudgeDown,
         MoveMenu,
         UP,
-        DOWN
+        DOWN,
+        Select,
+        Back
     };
 }

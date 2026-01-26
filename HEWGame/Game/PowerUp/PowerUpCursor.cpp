@@ -7,6 +7,7 @@
 constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
 constexpr float2 kCursorOffset = { 0.0015f, 0.014f };
+constexpr float kPowerUpInputDeadzone = 0.2f;
 
 PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input, EffectSystem& a_effectSystem)
 	:m_powerUpManager(a_powerUpManager)
@@ -46,7 +47,7 @@ void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 	}
 	
 	
-	if (m_input && m_keyTimer <= 0.0f && m_input->IsKeyTrigger(VK_RETURN))
+	if (m_input && m_keyTimer <= 0.0f && m_input->IsTrigger(Core::ActionId::Select))
 	{
 		m_keyTimer = maxPowerUpSecond;
 		std::optional<int> result = m_powerUpManager->GetCost(m_index);
@@ -109,20 +110,20 @@ void PowerUpCursor::MoveInput(Core::Input& input)
 	float controllerX = input.GetAxis(Core::ActionId::MoveX);
 	float controllerY = input.GetAxis(Core::ActionId::RotateYaw);
 
-	if (controllerX < 0 || input.IsPress('A'))
+	if (controllerX < -kPowerUpInputDeadzone || input.IsPress('A'))
 	{
 		if (m_index - m_format.y >= 0) m_index -= m_format.y;
 	}
-	else if (controllerX > 0 || input.IsPress('D'))
+	else if (controllerX > kPowerUpInputDeadzone || input.IsPress('D'))
 	{
 		if (m_index + m_format.y < m_powerUpManager->GetNodeCount()) m_index += m_format.y;
 	}
 
-	if (controllerY > 0 || input.IsPress('W'))
+	if (controllerY > kPowerUpInputDeadzone || input.IsPress('W'))
 	{
 		if (m_index - 1 >= 0 && m_index % m_format.y != 0) m_index--;
 	}
-	else if (controllerY < 0 || input.IsPress('S'))
+	else if (controllerY < -kPowerUpInputDeadzone || input.IsPress('S'))
 	{
 		if (m_index + 1 < m_powerUpManager->GetNodeCount() && (m_index + 1) % m_format.y != 0)	m_index++;
 	}

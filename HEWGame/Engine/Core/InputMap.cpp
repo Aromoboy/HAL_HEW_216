@@ -45,9 +45,9 @@ namespace Core
     {
         m_bindings[ActionId::MoveX] = MakeBinding(0, 0, 0, 1.0f);
         m_bindings[ActionId::RotateYaw] = MakeBinding(0, 0, 2, 1.0f);
-        m_bindings[ActionId::Drop] = MakeBinding('Q', 0, -1, 1.0f);
+        m_bindings[ActionId::Drop] = MakeBinding('Q', XINPUT_GAMEPAD_B, -1, 1.0f);
         m_bindings[ActionId::Confirm] = MakeBinding(VK_RETURN, 0, -1, 1.0f);
-        m_bindings[ActionId::Cancel] = MakeBinding(VK_ESCAPE, 0, -1, 1.0f);
+        m_bindings[ActionId::Cancel] = MakeBinding(VK_ESCAPE, XINPUT_GAMEPAD_A, -1, 1.0f);
         m_bindings[ActionId::Pause] = MakeBinding(VK_SPACE, 0, -1, 1.0f);
         m_bindings[ActionId::Retry] = MakeBinding('R', 0, -1, 1.0f);
         m_bindings[ActionId::DebugConsole] = MakeBinding(VK_F1, 0, -1, 1.0f);
@@ -60,6 +60,7 @@ namespace Core
         m_bindings[ActionId::ColliderNudgeUp] = MakeBinding(VK_F2, 0, -1, 1.0f);
         m_bindings[ActionId::ColliderNudgeDown] = MakeBinding(VK_F3, 0, -1, 1.0f);
         m_bindings[ActionId::MoveMenu] = MakeBinding(0, 0, 2, 1.0f);
+        m_bindings[ActionId::Select] = MakeBinding(VK_RETURN, XINPUT_GAMEPAD_B, -1, 1.0f);
 
         m_axisKeys[ActionId::MoveX] = { VK_A, VK_D };
         m_axisKeys[ActionId::RotateYaw] = { VK_S, VK_W };
@@ -205,6 +206,9 @@ namespace Core
         case 3: value = gamepad.AxisRY(); break;
         default: value = 0.0f; break;
         }
+
+
+
         return value * sign;
     }
 
