@@ -233,6 +233,21 @@ namespace Entities
         PlayerDebugTrace(oss.str());
     }
 
+    void PlayerPickupSystem::SetMaxCarry(int maxCarry)
+    {
+        const int sanitizedMaxCarry = std::max(1, maxCarry);
+        if (m_maxCarry == sanitizedMaxCarry)
+        {
+            return;
+        }
+
+        m_maxCarry = sanitizedMaxCarry;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "最大保持数を " << m_maxCarry << " に設定しました \n";
+        PlayerDebugTrace(oss.str());
+    }
+
     void PlayerPickupSystem::SetPickupOriginOffset(const float3& offset)
     {
         if (!std::isfinite(offset.x) || !std::isfinite(offset.y) || !std::isfinite(offset.z))

@@ -43,6 +43,7 @@ namespace Entities
         void SetPickupOriginOffset(const float3& offset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
         void SetFacingSign(float facingSign);
+        void SetMaxCarry(int maxCarry);
 
         const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
 
