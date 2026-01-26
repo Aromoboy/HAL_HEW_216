@@ -305,6 +305,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\UI\TimerDisplay.cpp" />
     <ClCompile Include="Game\UI\TitleRenderer.cpp" />
     <ClCompile Include="Game\UI\UIManager.cpp" />
+    <ClCompile Include="SceneResult.cpp" />
     <ClInclude Include="Engine\Camera\BaseCamera.h" />
     <ClInclude Include="Engine\Camera\CameraMath.h" />
     <ClInclude Include="Engine\Camera\CameraManager.h" />
@@ -449,6 +450,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\UI\UIManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SceneResult.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.Modules.h" />
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.SIMD.h" />

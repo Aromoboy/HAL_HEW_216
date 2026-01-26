@@ -12,7 +12,8 @@
 #include "SceneManager.h"
 #include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
-
+#include "SceneResult.h"
+ 
 #include <memory>
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
@@ -199,6 +200,15 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
+        }
+    }
+
+
+    if (input->IsTrigger('O'))
+    {
+        if (m_manager)
+        {
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager));
         }
     }
 

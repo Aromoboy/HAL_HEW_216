@@ -51,6 +51,8 @@
 #include "Physical.h"
 #include "ColliderRegistry.h"
 #include "TitleScene.h"
+#include "SceneResult.h"
+
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -727,16 +729,139 @@ void SceneGame::OnEnter()
 
 void SceneGame::OnExit()
 {
+    //if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
+    //{
+    //    SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
+    //    m_gameBGMHandle = -1;
+    //}
+
+    //if (m_inputRegistered)
+    //{
+    //    if (auto* input = GetInput())
+    //    {
+    //        Unregister(*input);
+    //    }
+    //    m_inputRegistered = false;
+    //}
+
+    //UnregisterSceneUpdateNode();
+    //UnregisterCameraUpdateNode();
+
+    //// CameraRig や Update 登録しているものがあれば必ず解除
+    //if (m_cameraRig)
+    //{
+    //    Unregister(*m_cameraRig);
+    //}
+   /* if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
+    {
+        SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
+        m_gameBGMHandle = -1;
+    }
+
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
+        {
+            Unregister(*input);
+        }
+        m_inputRegistered = false;
+    }
+
+    UnregisterSceneUpdateNode();
+    UnregisterCameraUpdateNode();
+
+    if (m_cameraRig)
+    {
+        Unregister(*m_cameraRig);
+    }*/
+
+    // --- Input ---
+    if (m_inputRegistered)
+    {
+        if (auto* input = GetInput())
+        {
+            Unregister(*input);
+        }
+        m_inputRegistered = false;
+    }
+
+    // --- Scene update ---
+    UnregisterSceneUpdateNode();
+    UnregisterCameraUpdateNode();
+
+    // --- Physics ---
+    if (m_physicsBinder)
+    {
+        if (auto* pm = m_physicsBinder->GetPhysicsMachine())
+        {
+            Unregister(*pm);
+            if (auto* contact = pm->GetContactDispatchNode())
+            {
+                Unregister(*contact);
+            }
+        }
+    }
+    m_physicsRegistered = false;
+    m_contactDispatchRegistered = false;
+
+    // --- Draw ---
+    if (m_drawRegistered && m_drawSystem)
+    {
+        Unregister(*m_drawSystem);
+        m_drawRegistered = false;
+    }
+
+    // --- Camera ---
+    if (m_cameraRigRegistered && m_cameraRig)
+    {
+        Unregister(*m_cameraRig);
+        m_cameraRigRegistered = false;
+    }
+
+    // --- Sweets ---
+    if (m_sweetsRegistered && m_sweetsManager)
+    {
+        Unregister(*m_sweetsManager);
+        m_sweetsRegistered = false;
+    }
+
+    if (m_sweetsLateRegistered && m_sweetsManager)
+    {
+        if (auto* late = m_sweetsManager->GetLateUpdateNode())
+        {
+            Unregister(*late);
+        }
+        m_sweetsLateRegistered = false;
+    }
+
+    // --- Player ---
+    if (player)
+    {
+        Unregister(*player);
+    }
+
+    // --- Effect ---
+    if (m_effectSystemRegistered && m_effectSystem)
+    {
+        Unregister(*m_effectSystem);
+        m_effectSystemRegistered = false;
+    }
+
+    // --- BGM ---
     if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
     {
         SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
         m_gameBGMHandle = -1;
     }
 
+
+
     std::ostringstream oss;
     oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 }
+   
+
 
 
 SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
@@ -965,7 +1090,30 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-   
+    const GameplayRulesSystem::UpdateInput rulesInput{
+        m_stageState == StageState::Playing,
+        ctx.dt,
+        m_sweetsManager.get(),
+        &m_phaseManager,
+        m_clearPhaseCount
+    };
+    const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
+    if (rulesResult.timeUp && m_stageState == StageState::Playing)
+    {
+        SetStageState(StageState::TimeUp);
+
+     
+       
+        return;
+
+
+
+    }
+    if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
+    {
+        UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
+        BroadcastPhaseAdvance(rulesResult.currentPhase);
+    }
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
