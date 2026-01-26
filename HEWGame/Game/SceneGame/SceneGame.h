@@ -28,6 +28,7 @@
 #include "SceneGameConfigTypes.h"
 #include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
+#include "Save/PlayerData.h"
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -111,6 +112,7 @@ private:
     void ResetPlaySession();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
+    void ApplyPowerUpEffects(const PlayerData::Data& data);
     int GetSweetsCount() const;
     int m_gameBGMHandle = -1;
     void Initialize(const Stage::StageData& stageData);
@@ -168,6 +170,10 @@ protected:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
+    float m_playerSpeedMultiplierBase = 1.0f;
+    PlayerData m_playerData;
+    PlayerData::Data m_playerPowerUpData{};
+    bool m_playerPowerUpLoaded = false;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     bool m_pendingRetryReset = false;

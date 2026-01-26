@@ -48,6 +48,7 @@ public:
 
     void Configure(const Config& config, GameplayProgression::LogFn log, const char* logPrefix);
     void ResetSession();
+    void SetScoreMultiplier(float multiplier);
     void AddPendingBonuses(std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses);
     UpdateResult Update(const UpdateInput& input);
 
@@ -67,6 +68,7 @@ private:
     float m_defaultPlaySeconds = 0.0f;
     float m_countdownLogIntervalSeconds = 0.0f;
     float m_baseScorePerMeter = 0.0f;
+    float m_scoreMultiplier = 1.0f;
     GameplayProgression::LogFn m_log;
     const char* m_logPrefix = "";
 

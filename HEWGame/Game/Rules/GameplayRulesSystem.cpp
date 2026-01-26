@@ -34,6 +34,17 @@ void GameplayRulesSystem::ResetSession()
     m_pendingTimeBonuses.clear();
 }
 
+void GameplayRulesSystem::SetScoreMultiplier(float multiplier)
+{
+    if (!(multiplier > 0.0f) || !std::isfinite(multiplier))
+    {
+        m_scoreMultiplier = 1.0f;
+        return;
+    }
+
+    m_scoreMultiplier = multiplier;
+}
+
 void GameplayRulesSystem::AddPendingBonuses(std::deque<GameplayProgression::PendingTimeBonus> pendingBonuses)
 {
     if (pendingBonuses.empty())
@@ -115,9 +126,10 @@ int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager)
 
 int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager, float peakHeight)
 {
+    const float adjustedBaseScore = m_baseScorePerMeter * m_scoreMultiplier;
     const GameplayRules::ScoreInput scoreInput{
         phaseManager,
-        m_baseScorePerMeter,
+        adjustedBaseScore,
         m_log,
         m_logPrefix
     };

@@ -56,6 +56,7 @@ namespace SweetsSpace
         void ClearContactState(ActiveSweets* sweets);
         void ClearSweetsContact(ActiveSweets* sweets);
         void Reset();
+        void SetCreamEnabled(bool enabled);
 
         void RemoveCreamWeldJointsForSweets(ActiveSweets* sweets, const char* context);
         void ClearCreamWeldJoints(const char* context);
@@ -189,5 +190,6 @@ namespace SweetsSpace
         std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
         std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
         std::unordered_map<ActiveSweets*, float> m_glueCooldown;
+        bool m_creamEnabled{ true };
     };
 }

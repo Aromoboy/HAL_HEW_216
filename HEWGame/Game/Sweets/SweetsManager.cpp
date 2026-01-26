@@ -259,6 +259,11 @@ namespace SweetsSpace
         return m_contacts.IsAnchoredToCake(sweets);
     }
 
+    void SweetsManager::SetCreamEnabled(bool enabled)
+    {
+        m_contacts.SetCreamEnabled(enabled);
+    }
+
     int SweetsManager::GetSweetsCount() const
     {
         return m_registry.CountAll();
@@ -301,6 +306,16 @@ namespace SweetsSpace
     void SweetsManager::OffsetSpawnOriginsY(float deltaY)
     {
         m_spawner.OffsetSpawnOriginsY(deltaY);
+    }
+
+    void SweetsManager::SetSpawnIntervalMultiplier(float multiplier)
+    {
+        m_spawner.SetSpawnIntervalMultiplier(multiplier);
+    }
+
+    void SweetsManager::SetSpawnCountBonus(int bonusCount)
+    {
+        m_spawner.SetSpawnCountBonus(bonusCount);
     }
 
     void SweetsManager::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)

@@ -34,6 +34,7 @@
 #include "ShaderCache.h"
 #include <cassert>
 #include <algorithm>
+#include <cctype>
 #include <initializer_list>
 #include <cmath>
 #include <fstream>
@@ -113,6 +114,33 @@ namespace
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
+        }
+
+        std::string NormalizeStageKey(std::string value)
+        {
+            std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch)
+                {
+                    return static_cast<char>(std::tolower(ch));
+                });
+            return value;
+        }
+
+        bool IsCakeStageObject(const StageObject& obj)
+        {
+            const std::string materialKey = NormalizeStageKey(obj.materialKey);
+            if (materialKey == "cake")
+            {
+                return true;
+            }
+
+            const std::string colliderKey = NormalizeStageKey(obj.colliderPresetId);
+            if (colliderKey == "cake")
+            {
+                return true;
+            }
+
+            const std::string modelPath = NormalizeStageKey(obj.modelPath);
+            return modelPath.find("cake") != std::string::npos;
         }
 
         float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
@@ -402,6 +430,25 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
     m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
+    m_playerSpeedMultiplierBase = m_playerSpeedMultiplier;
+    m_playerPowerUpLoaded = m_playerData.LoadData();
+    if (m_playerPowerUpLoaded)
+    {
+        const auto& entries = m_playerData.GetEntries();
+        if (!entries.empty())
+        {
+            m_playerPowerUpData = entries.front();
+        }
+        else
+        {
+            m_playerPowerUpLoaded = false;
+            DebugTrace(std::string(kLogPrefix) + "[PlayerData] No entries found; using defaults.\n");
+        }
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Load failed; using defaults.\n");
+    }
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
@@ -526,6 +573,7 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
     m_stageObjects = std::move(composition->stageObjects);
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    ApplyPowerUpEffects(m_playerPowerUpData);
 
 #if defined(_DEBUG)
     {
@@ -1226,6 +1274,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 m_playerSpeedMultiplier
             };
             m_playerSpeedMultiplier = m_playerController.HandleSpeedInput(speedInput).speedMultiplier;
+            if (m_playerSpeedMultiplier < m_playerSpeedMultiplierBase)
+            {
+                m_playerSpeedMultiplier = m_playerSpeedMultiplierBase;
+                player->SetSpeedMultiplier(m_playerSpeedMultiplier);
+            }
         }
 
         const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
@@ -2362,7 +2415,7 @@ void SceneGame::ResetPlaySession()
         player->ClearCarriedSweets();
         if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
         {
-            m_playerSpeedMultiplier = 1.0f;
+            m_playerSpeedMultiplier = m_playerSpeedMultiplierBase;
             player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
             player->SetSpeedMultiplier(m_playerSpeedMultiplier);
         }
@@ -2391,6 +2444,52 @@ void SceneGame::ResetPlaySession()
     std::ostringstream oss;
     oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";
     ::DebugTrace(oss.str());
+}
+
+void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
+{
+    const float speedMultiplier = std::max(0.0f, 1.0f + data.fSpeed);
+    m_playerSpeedMultiplierBase = speedMultiplier;
+    m_playerSpeedMultiplier = speedMultiplier;
+    if (player)
+    {
+        player->SetSpeedMultiplier(speedMultiplier);
+    }
+
+    m_gameplayRules.SetScoreMultiplier(data.fPtMultipl);
+
+    if (m_sweetsManager)
+    {
+        const float spawnMultiplier = std::max(0.01f, 1.0f + data.fReplenishSpeed);
+        m_sweetsManager->SetSpawnIntervalMultiplier(spawnMultiplier);
+        m_sweetsManager->SetSpawnCountBonus(std::max(0, data.nReplenishCount));
+        m_sweetsManager->SetCreamEnabled(data.bCream);
+    }
+
+    const float cakeScaleMultiplier = std::max(0.0f, 1.0f + data.fCakeSize);
+    if (cakeScaleMultiplier != 1.0f)
+    {
+        for (auto& obj : m_stageObjects)
+        {
+            if (!IsCakeStageObject(obj))
+            {
+                continue;
+            }
+
+            obj.transform.scale.x *= cakeScaleMultiplier;
+            obj.transform.scale.y *= cakeScaleMultiplier;
+            obj.transform.scale.z *= cakeScaleMultiplier;
+
+            if (obj.physicsEntity)
+            {
+                obj.physicsEntity->SetScale(obj.transform.scale);
+                if (obj.physicsEntity->GetBox2DShapeConfig())
+                {
+                    obj.physicsEntity->SetBox2DShapeConfig(obj.physicsEntity->GetBox2DShapeConfig());
+                }
+            }
+        }
+    }
 }
 
 
