@@ -2556,6 +2556,52 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
         m_sweetsManager->SetCreamEnabled(data.creamEnabled);
     }
 
+    const auto formatScale = [](const float3& scale)
+    {
+        std::ostringstream oss;
+        oss << "(" << scale.x << ", " << scale.y << ", " << scale.z << ")";
+        return oss.str();
+    };
+    const auto buildColliderFailureReason = [](const Physics::ColliderBuilder::BuildResult& build)
+    {
+        std::ostringstream oss;
+        bool first = true;
+        const auto appendReason = [&](const char* reason)
+        {
+            if (!first)
+            {
+                oss << ", ";
+            }
+            oss << reason;
+            first = false;
+        };
+
+        if (!build.collider)
+        {
+            appendReason("collider-missing");
+        }
+        else if (build.collider->Empty())
+        {
+            appendReason("collider-empty");
+        }
+
+        if (!build.shapeConfig)
+        {
+            appendReason("shape-config-missing");
+        }
+        else if (build.shapeConfig->type == Physics::Box2DShapeConfig::Type::None)
+        {
+            appendReason("shape-type-none");
+        }
+
+        if (first)
+        {
+            appendReason("unknown");
+        }
+
+        return oss.str();
+    };
+
     const float cakeScaleMultiplier = std::max(0.0f, 1.0f + data.fCakeSize);
     if (cakeScaleMultiplier != 1.0f)
     {
@@ -2573,6 +2619,8 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
 
             if (obj.physicsEntity)
             {
+                const auto originalCollider = obj.physicsEntity->GetBoxColliderComponent();
+                const auto originalShapeConfig = obj.physicsEntity->GetBox2DShapeConfig();
                 obj.physicsEntity->SetScale(obj.transform.scale);
 
                 Physics::ColliderBuilder colliderBuilder(
@@ -2617,7 +2665,9 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 {
                     DebugTrace(std::string(kLogPrefix)
                         + "[StageColliders] cake collider rebuild failed; retrying with fallback "
-                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath + "').\n");
+                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath
+                        + "', scale=" + formatScale(obj.transform.scale)
+                        + ", reason='" + buildColliderFailureReason(colliderBuild) + "').\n");
                     colliderRequest.allowFallback = true;
                     colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
                     colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
@@ -2633,10 +2683,14 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 else
                 {
                     DebugTrace(std::string(kLogPrefix)
-                        + "[StageColliders] cake collider rebuild failed; restoring scale "
-                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath + "').\n");
+                        + "[StageColliders] cake collider rebuild failed; restoring scale/collider "
+                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath
+                        + "', scale=" + formatScale(obj.transform.scale)
+                        + ", reason='" + buildColliderFailureReason(colliderBuild) + "').\n");
                     obj.transform.scale = originalScale;
                     obj.physicsEntity->SetScale(obj.transform.scale);
+                    obj.physicsEntity->SetBoxColliderComponent(originalCollider);
+                    obj.physicsEntity->SetBox2DShapeConfig(originalShapeConfig);
                 }
             }
         }
