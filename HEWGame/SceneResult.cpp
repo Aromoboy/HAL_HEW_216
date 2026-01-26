@@ -37,6 +37,9 @@ namespace SceneSpace
 
         m_resultRenderer->Initialize(config);
 
+        TextureCache& cache = TextureCache::Instance();
+        m_backTexture = cache.Load("Back", GetDevice(), L"Assets/Texture/background_UI_remake.png");
+
         // UI テクスチャ
         const char* paths[3] =
         {
@@ -44,6 +47,8 @@ namespace SceneSpace
             "Assets/Texture/basket_UI_remake3.png",
             "Assets/Texture/basket_UI_remake4.png"
         };
+
+        
 
         for (int i = 0; i < 3; i++)
         {
@@ -231,10 +236,12 @@ namespace SceneSpace
         Sprite::ScopedPassDefaults spritePass;
 
         {
-            if (m_background)
-            {
-                m_background->Draw(0.0f, 1.0f);
-            }
+            //if (m_background)
+            //{
+            //    m_background->Draw(0.0f, 1.0f);
+            //}
+
+            m_resultRenderer->Draw(m_backTexture, float2(0.0f, 0.0f), float2(7.0f, 7.0f));
 
            
             Sprite::ScopedPassDefaults spritePass;

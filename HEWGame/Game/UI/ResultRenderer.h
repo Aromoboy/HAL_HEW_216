@@ -85,6 +85,7 @@ public:
     bool Initialize(const ResultLayoutConfig& config);
     void Shutdown();
     void Draw(const ResultDisplayData& data);
+    void Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size);
 
 private:
     class DynamicTexture;
@@ -98,7 +99,6 @@ private:
     void RenderSprite(const ResultDisplayData& data);
     bool TryGetViewportSize(float& width, float& height) const;
     std::string BuildHudString(const ResultDisplayData& data) const;
-    void Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size);
     void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
     void MeshDraw();
 

@@ -888,14 +888,14 @@
     <ClCompile Include="Game\Title\TitleCursor.cpp">
       <Filter>Game\Title</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Title\TitleManager.cpp">
-      <Filter>Game\Title</Filter>
-    </ClCompile>
     <ClCompile Include="SceneResult.cpp">
       <Filter>Game\UI</Filter>
     </ClCompile>
     <ClCompile Include="Game\Save\Save.cpp">
       <Filter>Game\Save</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Title\TitleManager.cpp">
+      <Filter>Game\Title</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -903,12 +903,10 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\postprocess.hlsl" />
+    <FxCompile Include="shaders\postprocess.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Title\TitleCursor.h">
-      <Filter>Game\Title</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Title\TitleManager.h">
       <Filter>Game\Title</Filter>
     </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpNode.h">
@@ -917,10 +915,13 @@
     <ClInclude Include="Game\Save\Save.h">
       <Filter>Game\Save</Filter>
     </ClInclude>
+    <ClInclude Include="Game\Title\TitleManager.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
   </ItemGroup>
-<ItemGroup>
-  <ClInclude Include="SceneResult.h">
-    <Filter>Game\UI</Filter>
-  </ClInclude>
-</ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SceneResult.h">
+      <Filter>Game\UI</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

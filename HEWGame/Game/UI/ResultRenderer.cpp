@@ -72,6 +72,81 @@ bool ResultRenderer::Initialize(const ResultLayoutConfig& config)
         return false;
     }
 
+
+    const char* VS = R"EOT(
+struct VS_IN {
+	float3 pos : POSITION0;
+	float2 uv : TEXCOORD0;
+};
+struct VS_OUT {
+	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORD0;
+	float4 color : COLOR0;
+};
+cbuffer Matrix : register(b0) {
+	float4x4 world;
+	float4x4 view;
+	float4x4 proj;
+};
+cbuffer Param : register(b1) {
+	float2 offset;
+	float2 size;
+	float2 uvPos;
+	float2 uvScale;
+	float4 color;
+};
+VS_OUT main(VS_IN vin) {
+	VS_OUT vout;
+	vout.pos = float4(vin.pos, 1.0f);
+	vout.pos.xy *= size;
+	vout.pos.xy += offset;
+	vout.pos = mul(vout.pos, world);
+	vout.pos = mul(vout.pos, view);
+	vout.pos = mul(vout.pos, proj);
+	vout.uv = vin.uv;
+	vout.uv *= uvScale;
+	vout.uv += uvPos;
+	vout.color = color;
+	return vout;
+})EOT";
+    const char* PS = R"EOT(
+struct PS_IN {
+	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORD0;
+	float4 color : COLOR0;
+};
+Texture2D tex : register(t0);
+SamplerState samp : register(s0);
+float4 main(PS_IN pin) : SV_TARGET {
+	return tex.Sample(samp, pin.uv) * pin.color;
+})EOT";
+
+
+    struct Vertex
+    {
+        float pos[3];
+        float uv[2];
+    } vtx[] = {
+        {{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f}},
+        {{ 0.5f, 0.5f, 0.0f}, {1.0f, 0.0f}},
+        {{-0.5f,-0.5f, 0.0f}, {0.0f, 1.0f}},
+        {{ 0.5f,-0.5f, 0.0f}, {1.0f, 1.0f}},
+    };
+
+    MeshDX::Description desc{};
+    desc.pVtx = vtx;
+    desc.vtxSize = sizeof(Vertex);
+    desc.vtxCount = 4;
+    desc.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+    m_spriteMesh = std::make_shared<MeshDX>(desc, -1);
+
+    vs = std::make_shared<VertexShader>();
+    vs->Compile(VS);
+
+    ps = std::make_shared <PixelShader>();
+    ps->Compile(PS);
+
     m_ready = true;
     m_textureDirty = true;
     return true;
@@ -187,7 +262,7 @@ void ResultRenderer::Draw(const ResultDisplayData& data)
 
 void ResultRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size)
 {
-    float3 pos(0.0f, 0.0f, 1.0f);
+    float3 pos(0.0f, 0.0f, 0.0f);
     float3 size(1.0f, 1.0f, 1.0f);
 
 
