@@ -96,3 +96,23 @@ PowerUpEffectResult PowerUpEffectConfig::ComputeEffect(PowerUpType type, int lev
 
 	return result;
 }
+
+const std::array<PowerUpEffectConfig::Entry, 6>& PowerUpEffectConfig::Entries()
+{
+	return kPowerUpEntries;
+}
+
+const char* PowerUpEffectConfig::ToKey(PowerUpType type)
+{
+	const auto it = std::find_if(kPowerUpEntries.begin(), kPowerUpEntries.end(), [type](const Entry& entry)
+		{
+			return entry.type == type;
+		});
+
+	if (it == kPowerUpEntries.end())
+	{
+		return "";
+	}
+
+	return it->key;
+}

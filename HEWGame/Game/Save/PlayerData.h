@@ -1,7 +1,10 @@
 #pragma once
 
+#include <unordered_map>
 #include <string>
 #include <vector>
+
+#include "PowerUpEffectConfig.h"
 
 
 class PlayerData
@@ -9,6 +12,7 @@ class PlayerData
 public:
 	struct Data
 	{
+		std::unordered_map<PowerUpType, int> levels;
 		float fSpeed = 0.0f;
 		bool bCream = false;
 		float fCakeSize = 0.0f;
@@ -20,7 +24,7 @@ public:
 
 	// Storage format (INI-like):
 	// [PlayerData]
-	// entry=fSpeed,bCream,fCakeSize,fReplenishSpeed,nReplenishCount,fPtMultipl,nPoints
+	// entry=currency,SpeedUp=level,CakeSize=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
 	bool LoadData();
 	bool SaveData() const;
 

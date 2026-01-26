@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <optional>
 #include <string_view>
 
@@ -43,4 +44,6 @@ struct PowerUpEffectConfig
 	static PowerUpType FromKey(std::string_view key);
 	static PowerUpEffectType GetEffectType(PowerUpType type);
 	static PowerUpEffectResult ComputeEffect(PowerUpType type, int level);
+	static const std::array<Entry, 6>& Entries();
+	static const char* ToKey(PowerUpType type);
 };
