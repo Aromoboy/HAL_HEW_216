@@ -73,7 +73,7 @@ namespace
 	void ApplyEffects(PlayerData::Data& entry)
 	{
 		entry.fSpeed = 0.0f;
-		entry.bCream = false;
+		entry.creamEnabled = false;
 		entry.fCakeSize = 0.0f;
 		entry.fReplenishSpeed = 0.0f;
 		entry.nReplenishCount = 0;
@@ -103,7 +103,7 @@ namespace
 				entry.fPtMultipl = effect.value;
 				break;
 			case PowerUpType::Whip:
-				entry.bCream = effect.enabled;
+				entry.creamEnabled = effect.enabled;
 				break;
 			case PowerUpType::Unknown:
 			default:

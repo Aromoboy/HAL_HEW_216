@@ -6,6 +6,26 @@
 #include "Sweets/BaseSweets.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
+namespace
+{
+    std::string NormalizeTag(const std::string& tag)
+    {
+        return SweetsSpace::NormalizeKey(tag);
+    }
+
+    bool IsCreamTag(const std::string& tag)
+    {
+        static const std::string kCreamKey = NormalizeTag(::SweetsSpace::ToString(::SweetsSpace::SweetsType::Cream));
+        return NormalizeTag(tag) == kCreamKey;
+    }
+
+    bool IsCreamKind(const std::string& kind)
+    {
+        const auto resolved = ::SweetsSpace::SweetsPrototypeManifest::Instance().Resolve(kind);
+        return resolved && *resolved == ::SweetsSpace::SweetsType::Cream;
+    }
+}
+
 namespace SweetsSpace
 {
     class LateUpdateNode : public Core::UpdateNode
@@ -149,6 +169,11 @@ namespace SweetsSpace
 
     std::shared_ptr<ActiveSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
     {
+        if (!m_creamEnabled && IsCreamKind(kind))
+        {
+            return nullptr;
+        }
+
         auto sweets = m_factory.Create(kind, transform);
         if (!sweets)
         {
@@ -262,6 +287,26 @@ namespace SweetsSpace
     void SweetsManager::SetCreamEnabled(bool enabled)
     {
         m_contacts.SetCreamEnabled(enabled);
+        m_spawner.SetCreamEnabled(enabled);
+        m_creamEnabled = enabled;
+        if (!enabled)
+        {
+            std::vector<std::shared_ptr<ActiveSweets>> toRemove;
+            toRemove.reserve(m_registry.Lookup().size());
+            for (const auto& entry : m_registry.Lookup())
+            {
+                const auto& sweets = entry.first;
+                if (sweets && IsCreamTag(sweets->GetTag()))
+                {
+                    toRemove.push_back(sweets);
+                }
+            }
+
+            for (const auto& sweets : toRemove)
+            {
+                m_lifecycle.Erase(sweets);
+            }
+        }
     }
 
     int SweetsManager::GetSweetsCount() const

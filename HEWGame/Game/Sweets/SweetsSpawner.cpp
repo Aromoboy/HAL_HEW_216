@@ -671,6 +671,11 @@ namespace SweetsSpace
         m_spawnCountBonus = bonusCount;
     }
 
+    void SweetsSpawner::SetCreamEnabled(bool enabled)
+    {
+        m_creamEnabled = enabled;
+    }
+
     void SweetsSpawner::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)
     {
         m_randomRotationMinDegrees = minDegrees;
@@ -999,9 +1004,16 @@ namespace SweetsSpace
         }
 
         float totalWeight = 0.0f;
+        const auto isAllowed = [this](const WeightedSweetsType& entry) -> bool
+        {
+            return m_creamEnabled || entry.kind != SweetsType::Cream;
+        };
         for (const auto& entry : config.weights)
         {
-            totalWeight += entry.weight;
+            if (isAllowed(entry))
+            {
+                totalWeight += entry.weight;
+            }
         }
 
         if (!(totalWeight > 0.0f))
@@ -1012,19 +1024,30 @@ namespace SweetsSpace
         std::uniform_real_distribution<float> dist(0.0f, totalWeight);
         float roll = dist(m_random);
         std::optional<SweetsType> chosenType;
+        std::optional<SweetsType> lastAllowed;
         for (const auto& entry : config.weights)
         {
+            if (!isAllowed(entry))
+            {
+                continue;
+            }
             if (roll <= entry.weight)
             {
                 chosenType = entry.kind;
                 break;
             }
             roll -= entry.weight;
+            lastAllowed = entry.kind;
         }
 
         if (!chosenType)
         {
-            chosenType = config.weights.back().kind;
+            chosenType = lastAllowed;
+        }
+
+        if (!chosenType)
+        {
+            return {};
         }
 
         const auto* descriptor = SweetsPrototypeManifest::Instance().Find(*chosenType);

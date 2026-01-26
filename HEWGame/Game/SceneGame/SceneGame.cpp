@@ -2446,7 +2446,7 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
         const float spawnMultiplier = std::max(0.01f, 1.0f + data.fReplenishSpeed);
         m_sweetsManager->SetSpawnIntervalMultiplier(spawnMultiplier);
         m_sweetsManager->SetSpawnCountBonus(std::max(0, data.nReplenishCount));
-        m_sweetsManager->SetCreamEnabled(data.bCream);
+        m_sweetsManager->SetCreamEnabled(data.creamEnabled);
     }
 
     const float cakeScaleMultiplier = std::max(0.0f, 1.0f + data.fCakeSize);
