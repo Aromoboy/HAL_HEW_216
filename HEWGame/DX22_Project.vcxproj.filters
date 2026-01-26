@@ -91,6 +91,12 @@
     <Filter Include="Game\Title">
       <UniqueIdentifier>{d7283c61-7a55-4265-97ad-b515616f2d9f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Systems\Data">
+      <UniqueIdentifier>{bccb86f5-748a-4979-a872-afdd1218fb34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Save">
+      <UniqueIdentifier>{465b636a-9c8f-49d5-82df-8b6e2e8ae15a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Camera\BaseCamera.cpp">
@@ -888,8 +894,9 @@
     <ClCompile Include="SceneResult.cpp">
       <Filter>Game\UI</Filter>
     </ClCompile>
-
-
+    <ClCompile Include="Game\Save\Save.cpp">
+      <Filter>Game\Save</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\postprocess.hlsl">
@@ -906,6 +913,9 @@
     </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpNode.h">
       <Filter>Game\PowerUp</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Save\Save.h">
+      <Filter>Game\Save</Filter>
     </ClInclude>
   </ItemGroup>
 <ItemGroup>

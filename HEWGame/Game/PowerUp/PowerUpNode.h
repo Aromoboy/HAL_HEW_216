@@ -31,6 +31,8 @@ public:
 	float2 GetDrawPos();
 	float2 GetDrawScale();
 	
+	// 時間がないのでセッタを使う、本来は良くない
+	void SetLevel(int level);
 
 private:
 
