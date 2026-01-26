@@ -1,8 +1,9 @@
 #pragma once
 
-#include <array>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 
 enum class PowerUpType
@@ -24,6 +25,13 @@ enum class PowerUpEffectType
 	FeatureToggle
 };
 
+enum class PowerUpEffectCurveType
+{
+	Levels,
+	Linear,
+	Toggle
+};
+
 struct PowerUpEffectResult
 {
 	PowerUpEffectType effectType = PowerUpEffectType::AdditivePercent;
@@ -37,13 +45,18 @@ struct PowerUpEffectConfig
 	{
 		PowerUpType type = PowerUpType::Unknown;
 		PowerUpEffectType effectType = PowerUpEffectType::AdditivePercent;
-		const char* key = "";
+		PowerUpEffectCurveType curveType = PowerUpEffectCurveType::Levels;
+		std::string key;
+		std::vector<float> levels;
+		float baseValue = 0.0f;
+		float perLevel = 0.0f;
 	};
 
 	static std::optional<Entry> FindByKey(std::string_view key);
 	static PowerUpType FromKey(std::string_view key);
 	static PowerUpEffectType GetEffectType(PowerUpType type);
 	static PowerUpEffectResult ComputeEffect(PowerUpType type, int level);
-	static const std::array<Entry, 6>& Entries();
+	static const std::vector<Entry>& Entries();
 	static const char* ToKey(PowerUpType type);
+	static bool LoadFromConfig(const std::string& path, const std::string& section);
 };
