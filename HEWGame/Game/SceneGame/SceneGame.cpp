@@ -2562,6 +2562,12 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
         oss << "(" << scale.x << ", " << scale.y << ", " << scale.z << ")";
         return oss.str();
     };
+    const auto formatVec2 = [](const b2Vec2& value)
+    {
+        std::ostringstream oss;
+        oss << "(" << value.x << ", " << value.y << ")";
+        return oss.str();
+    };
     const auto buildColliderFailureReason = [](const Physics::ColliderBuilder::BuildResult& build)
     {
         std::ostringstream oss;
@@ -2600,6 +2606,95 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
         }
 
         return oss.str();
+    };
+    const auto buildColliderMismatchReason = [&](const Physics::ColliderBuilder::BuildResult& build, const float3& scale)
+        -> std::optional<std::string>
+    {
+        constexpr float kMinScaleEpsilon = 1e-4f;
+        constexpr float kMinScaleRatio = 0.25f;
+        constexpr float kMaxScaleRatio = 3.0f;
+        constexpr float kMaxOffsetRatio = 0.75f;
+
+        if (!build.shapeConfig)
+        {
+            return std::string("shape-config-missing");
+        }
+
+        const float3 absScale{
+            std::max(std::abs(scale.x), kMinScaleEpsilon),
+            std::max(std::abs(scale.y), kMinScaleEpsilon),
+            std::max(std::abs(scale.z), kMinScaleEpsilon)
+        };
+
+        std::ostringstream reasons;
+        bool first = true;
+        const auto appendReason = [&](const std::string& reason)
+        {
+            if (!first)
+            {
+                reasons << ", ";
+            }
+            reasons << reason;
+            first = false;
+        };
+
+        const auto checkFinite = [&](float value, const char* label)
+        {
+            if (!IsFiniteFloat(value))
+            {
+                appendReason(std::string(label) + "-not-finite");
+                return false;
+            }
+            return true;
+        };
+
+        const float3 fullExtents{
+            build.halfExtents.x * 2.0f,
+            build.halfExtents.y * 2.0f,
+            build.halfExtents.z * 2.0f
+        };
+
+        if (checkFinite(fullExtents.x, "size-x") && checkFinite(fullExtents.y, "size-y") && checkFinite(fullExtents.z, "size-z"))
+        {
+            const float ratioX = std::abs(fullExtents.x) / absScale.x;
+            const float ratioY = std::abs(fullExtents.y) / absScale.y;
+            const float ratioZ = std::abs(fullExtents.z) / absScale.z;
+
+            if (ratioX < kMinScaleRatio || ratioX > kMaxScaleRatio)
+            {
+                appendReason("size-x-ratio=" + std::to_string(ratioX));
+            }
+            if (ratioY < kMinScaleRatio || ratioY > kMaxScaleRatio)
+            {
+                appendReason("size-y-ratio=" + std::to_string(ratioY));
+            }
+            if (ratioZ < kMinScaleRatio || ratioZ > kMaxScaleRatio)
+            {
+                appendReason("size-z-ratio=" + std::to_string(ratioZ));
+            }
+        }
+
+        const b2Vec2 offset = build.shapeConfig->offset;
+        if (checkFinite(offset.x, "offset-x") && checkFinite(offset.y, "offset-y"))
+        {
+            const float offsetRatioX = std::abs(offset.x) / absScale.x;
+            const float offsetRatioY = std::abs(offset.y) / absScale.y;
+            if (offsetRatioX > kMaxOffsetRatio)
+            {
+                appendReason("offset-x-ratio=" + std::to_string(offsetRatioX));
+            }
+            if (offsetRatioY > kMaxOffsetRatio)
+            {
+                appendReason("offset-y-ratio=" + std::to_string(offsetRatioY));
+            }
+        }
+
+        if (first)
+        {
+            return std::nullopt;
+        }
+
+        return reasons.str();
     };
 
     const float cakeScaleMultiplier = std::max(0.0f, 1.0f + data.fCakeSize);
@@ -2674,8 +2769,26 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
 
                 if (colliderReady)
                 {
-                    obj.physicsEntity->SetBoxColliderComponent(colliderBuild.collider);
-                    obj.physicsEntity->SetBox2DShapeConfig(colliderBuild.shapeConfig);
+                    const auto mismatchReason = buildColliderMismatchReason(colliderBuild, obj.transform.scale);
+                    if (mismatchReason)
+                    {
+                        DebugTrace(std::string(kLogPrefix)
+                            + "[StageColliders][Warning] cake collider rebuild mismatch; restoring scale/collider "
+                            + "(key='" + colliderRequest.key + "', model='" + obj.modelPath
+                            + "', scale=" + formatScale(obj.transform.scale)
+                            + ", offset=" + formatVec2(colliderBuild.shapeConfig->offset)
+                            + ", halfExtents=" + formatScale(colliderBuild.halfExtents)
+                            + ", reason='" + *mismatchReason + "').\n");
+                        obj.transform.scale = originalScale;
+                        obj.physicsEntity->SetScale(obj.transform.scale);
+                        obj.physicsEntity->SetBoxColliderComponent(originalCollider);
+                        obj.physicsEntity->SetBox2DShapeConfig(originalShapeConfig);
+                    }
+                    else
+                    {
+                        obj.physicsEntity->SetBoxColliderComponent(colliderBuild.collider);
+                        obj.physicsEntity->SetBox2DShapeConfig(colliderBuild.shapeConfig);
+                    }
                 }
                 else
                 {
