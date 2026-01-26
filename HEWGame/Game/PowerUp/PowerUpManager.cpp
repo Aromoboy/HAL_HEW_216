@@ -61,14 +61,6 @@ void PowerUpManager::AddNode(std::string name, std::string infomation, std::stri
 	
 }
 
-void PowerUpManager::LoadNodeData(Save& save)
-{
-	for (auto& it : m_nodes)
-	{
-		it.second->SetLevel(save.GetLevel(it.first));
-	}
-}
-
 void PowerUpManager::DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& camera)
 {
 	for (auto& it : m_nodes)
