@@ -3,12 +3,15 @@
 #include "DirectX.h"
 #include "Sprite.h"
 #include "Texture.h"
+#include "ShaderList.h"
+#include "DrawMatrix.h"
 
 #include <algorithm>
 #include <array>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+
 
 namespace
 {
@@ -180,6 +183,71 @@ void ResultRenderer::Draw(const ResultDisplayData& data)
     UpdateBitmap(data);
     UploadTexture();
     RenderFream(data);
+}
+
+void ResultRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size)
+{
+    float3 pos(0.0f, 0.0f, 1.0f);
+    float3 size(1.0f, 1.0f, 1.0f);
+
+
+    DirectX::XMFLOAT4X4 world;
+    DirectX::XMFLOAT4X4 view;
+    DirectX::XMFLOAT4X4 proj;
+
+    DrawMatrix::CreateWorldMatrix(world, pos, size, float3(0.0f, 0.0f, 0.0f), false);
+
+    DrawMatrix::CreateViewMatrix(view, float3(0.0f, 0.0f, -10.0f), float3(0.0f, 0.0f, 1000.0f), float3(0.0f, 1.0f, 0.0f));
+    DrawMatrix::CreateProjectionMatrix(proj, 60.0f, 16.0f / 9.0f, 0.0001f, 1000.0f);
+    DrawSprite(a_texture, world, view, proj, DrawSpriteData(float2(0.0f, 0.0f), float2(1.0f, 1.0f), a_pos, a_size));
+}
+
+void ResultRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
+{
+    // 各マトリクスと描画用のパラメーター
+    DirectX::XMFLOAT4X4 wvp[3];
+    DirectX::XMFLOAT4 param[3];
+
+    // 各マトリクスを設定
+    wvp[0] = worldMatrix;
+    wvp[1] = viewMatrix;
+    wvp[2] = projMatrix;
+
+
+    // ステータスを設定
+    param[0] = DirectX::XMFLOAT4(drawData.projOffset.x, drawData.projOffset.y, drawData.projScale.x, drawData.projScale.y);
+    param[1] = DirectX::XMFLOAT4(drawData.uvPos.x, drawData.uvPos.y, drawData.uvScale.x, drawData.uvScale.y);
+    param[2] = DirectX::XMFLOAT4(drawData.r, drawData.g, drawData.b, drawData.alpha);
+
+
+    // シェーダーをバインド
+    ShaderList::SetWVP(wvp);
+
+    vs->WriteBuffer(0, wvp);
+    vs->WriteBuffer(1, param);
+    vs->Bind();
+
+    ps->SetTexture(0, texture->Get());
+    ps->Bind();
+
+    // 描画
+    MeshDraw();
+
+}
+
+
+void ResultRenderer::MeshDraw()
+{
+    ID3D11DeviceContext* pContext = GetContext();
+    UINT offset = 0;
+
+    const Core::VertexBuffer& vertexBuffer = m_spriteMesh->GetVertexBuffer();
+    vertexBuffer.Bind(0, offset);
+
+    GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+    pContext->Draw(vertexBuffer.GetCount(), 0);
+
 }
 
 void ResultRenderer::UpdateBitmap(const ResultDisplayData& data)
