@@ -431,24 +431,7 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
     m_playerSpeedMultiplierBase = m_playerSpeedMultiplier;
-    m_playerPowerUpLoaded = m_playerData.LoadData();
-    if (m_playerPowerUpLoaded)
-    {
-        const auto& entries = m_playerData.GetEntries();
-        if (!entries.empty())
-        {
-            m_playerPowerUpData = entries.front();
-        }
-        else
-        {
-            m_playerPowerUpLoaded = false;
-            DebugTrace(std::string(kLogPrefix) + "[PlayerData] No entries found; using defaults.\n");
-        }
-    }
-    else
-    {
-        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Load failed; using defaults.\n");
-    }
+    LoadPlayerPowerUpData();
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
@@ -2448,7 +2431,7 @@ void SceneGame::ResetPlaySession()
 
 void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
 {
-    const float speedMultiplier = std::max(0.0f, 1.0f + data.fSpeed);
+    const float speedMultiplier = std::max(0.0f, m_playerSpeedMultiplierBase * (1.0f + data.fSpeed));
     m_playerSpeedMultiplierBase = speedMultiplier;
     m_playerSpeedMultiplier = speedMultiplier;
     if (player)
@@ -2489,6 +2472,28 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 }
             }
         }
+    }
+}
+
+void SceneGame::LoadPlayerPowerUpData()
+{
+    m_playerPowerUpLoaded = m_playerData.LoadData();
+    if (m_playerPowerUpLoaded)
+    {
+        const auto& entries = m_playerData.GetEntries();
+        if (!entries.empty())
+        {
+            m_playerPowerUpData = entries.front();
+        }
+        else
+        {
+            m_playerPowerUpLoaded = false;
+            DebugTrace(std::string(kLogPrefix) + "[PlayerData] No entries found; using defaults.\n");
+        }
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Load failed; using defaults.\n");
     }
 }
 

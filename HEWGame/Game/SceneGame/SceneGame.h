@@ -112,6 +112,7 @@ private:
     void ResetPlaySession();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
+    void LoadPlayerPowerUpData();
     void ApplyPowerUpEffects(const PlayerData::Data& data);
     int GetSweetsCount() const;
     int m_gameBGMHandle = -1;
