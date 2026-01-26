@@ -88,7 +88,7 @@ public:
 
 	bool m_cursorRegistered = false;
 	// 全てのノードとカーソルを描画
-	void DrawAll(TitleRenderer& TitleRenderer, const CameraSpace::ICamera& Camera);
+	void DrawAll(TitleRenderer& TitleRenderer);
 
 
 private:

@@ -157,7 +157,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
     }
 
     SetDepthTest(false);
-    SetBlendMode(BLEND_ALPHA);
+    //SetBlendMode(BLEND_ALPHA);
 
     ID3D11DeviceContext* context = GetContext();
     if (!context)

@@ -150,6 +150,7 @@ namespace SceneSpace
                         }
                 }
 
+
                 RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
 
                 if (m_powerUpManager)

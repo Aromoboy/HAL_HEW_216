@@ -23,8 +23,7 @@ struct VS_OUT {
 	float2 uv : TEXCOORD0;
 	float4 color : COLOR0;
 };
-cbuffer Matrix : 
-(b0) {
+cbuffer Matrix : register(b0) {
 	float4x4 world;
 	float4x4 view;
 	float4x4 proj;
@@ -90,20 +89,21 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 }
 
-void TitleRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size, const CameraSpace::ICamera& a_camera)
+void TitleRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size)
 {
-	float3 pos(a_pos.x, a_pos.y, 1.0f);
-	float3 size(a_size.x, a_size.y, 1.0f);
+	float3 pos(0.0f, 0.0f, 1.0f);
+	float3 size(1.0f, 1.0f, 1.0f);
 
 
 	DirectX::XMFLOAT4X4 world;
 	DirectX::XMFLOAT4X4 view;
 	DirectX::XMFLOAT4X4 proj;
 	
-	DrawMatrix::CreateWorldMatrix(world, pos, size, float3());
-	view = a_camera.GetView();
-	proj = a_camera.GetProjection();
-	DrawSprite(a_texture, world, view, proj, DrawSpriteData());
+	DrawMatrix::CreateWorldMatrix(world, pos, size, float3(0.01f, 0.01f, 0.01f), false);
+
+	DrawMatrix::CreateViewMatrix(view, float3(0.0f, 0.0f, -10.0f), float3(0.0f, 0.0f, 1000.0f), float3(0.0f, 1.0f, 0.0f));
+	DrawMatrix::CreateProjectionMatrix(proj, 60.0f, 16.0f / 9.0f, 0.0001f, 1000.0f);
+	DrawSprite(a_texture, world, view, proj, DrawSpriteData(float2(0.0f, 0.0f), float2(1.0f, 1.0f), a_pos, a_size));
 }
 
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)

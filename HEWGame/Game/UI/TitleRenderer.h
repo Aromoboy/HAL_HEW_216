@@ -56,7 +56,7 @@ public:
 		}
 	};
 
-	void Draw(std::shared_ptr<Texture2D> a_texture, float2 pos, float2 size, const CameraSpace::ICamera& camera);
+	void Draw(std::shared_ptr<Texture2D> a_texture, float2 pos, float2 size);
 	
 private:
 

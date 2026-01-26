@@ -18,17 +18,28 @@
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
+    , m_camera(nullptr)
 {
-    for (auto& item : m_menu)
-    {
-        item.red = nullptr;
-        item.green = nullptr;
-    }
+    
 }
 
 bool TitleScene::Load(Core::Input& input)
 {
     (void)input;
+    TitleCursor::NodeFormat format(2,2,3);
+
+    TextureCache& cache = TextureCache::Instance();
+
+    cache.Load("TitleCursor", GetDevice(),L"Assets/Texture/UI_whiteblock.png");
+    cache.Load("GameSceneNode", GetDevice(), L"Assets/Texture/STARTUI.png");
+    cache.Load("PowerUpSceneNode", GetDevice(), L"Assets/Texture/GREADUPUI.png");
+    cache.Load("GameEndNode", GetDevice(), L"Assets/Texture/ENDUI.png");
+    cache.Load("SelectGameSceneNode", GetDevice(), L"Assets/Texture/STARTUIselect.png");
+    cache.Load("SelectPowerUpSceneNode", GetDevice(), L"Assets/Texture/GREADUPUIselect.png");
+    cache.Load("SelectGameEndNode", GetDevice(), L"Assets/Texture/ENDUIselect.png");
+
+    m_renderer = std::make_unique<TitleRenderer>();
+    m_titleManager = std::make_unique<TitleManager>(&GetUpdateScheduler(), cache, format, input);
 
     return true;
 }
@@ -57,7 +68,7 @@ void TitleScene::OnEnter()
 {
     if (!m_camera)
     {
-        m_camera = std::make_shared<CameraSpace::PerspectiveCamera>();
+        m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
     }
 
     auto registeredCamera = AddCamera(m_camera);
@@ -107,6 +118,10 @@ void TitleScene::OnEnter()
             "Assets/Audio/BGM_Menu.wav", true, 0.5f);
     }
 
+    m_rig = std::make_unique<CameraRig>(m_camera);
+    m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
+
+    m_rig->Attach(m_target);
 }
 
 void TitleScene::OnExit()
@@ -128,6 +143,13 @@ void TitleScene::OnExit()
         }
         m_inputRegistered = false;
     }
+
+    if (m_titleManager)
+    {
+        Unregister(*m_titleManager);
+        m_titleManager->UnregisterCursor();
+    }
+
     UnregisterSceneUpdateNode();
 }
 
@@ -142,6 +164,17 @@ void TitleScene::ConfigureUpdates()
                 m_inputRegistered = true;
             }
         }
+    }
+
+    if (m_rig)
+    {
+        Register(*m_rig);
+    }
+
+    if (m_titleManager)
+    {
+        Register(*m_titleManager);
+        m_titleManager->RegisterCursor();
     }
 
     RegisterSceneUpdateNode(Core::UpdatePhase::Gameplay, 0);
@@ -216,51 +249,14 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
+ 
+
     if (m_background) m_background->Draw(0.0f, 1.0f);
 
-    (void)activeCamera;
+    m_titleManager->DrawAll(*m_renderer);
 
-    // エラー出ているのでコメントアウトした　ドロスより
-    /*auto drawUIButton = [](Texture& tex, float centerX, float centerY, float targetWidth, float targetHeight)
-        {
-            float texWidth = static_cast<float>(tex.GetWidth());
-            float texHeight = static_cast<float>(tex.GetHeight());
 
-            // 元画像比率に合わせてスケール
-            float scaleX = targetWidth / texWidth;
-            float scaleY = targetHeight / texHeight;
+ 
 
-            // 原点をテクスチャ中心に移動
-            DirectX::XMMATRIX centering = DirectX::XMMatrixTranslation(-texWidth * 0.5f, -texHeight * 0.5f, 0.0f);
-
-            // スケーリング
-            DirectX::XMMATRIX scaling = DirectX::XMMatrixScaling(scaleX, scaleY, 1.0f);
-
-            // 画面上の中心位置に移動
-            DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(centerX, centerY, 0.0f);
-
-            // 掛け順: 画面移動 * スケーリング * 原点補正
-            DirectX::XMMATRIX world = translation * scaling * centering;
-
-            DirectX::XMFLOAT4X4 worldFloat;
-            DirectX::XMStoreFloat4x4(&worldFloat, world);
-
-            Sprite::SetTexture(&tex);
-            Sprite::SetWorld(worldFloat);
-            Sprite::Draw();
-        };
-
-    // --- ボタン配置 ---
-    const float centerX = 640.0f;   // 画面中央
-    const float startY = 250.0f;    // 最初のボタン
-    const float spacing = 240.0f;   // ボタン間の縦間隔
-
-    const float buttonWidth = 600.0f;
-    const float buttonHeight = 220.0f;
-
-    // カーソルで色を切り替えて描画
-    drawUIButton(m_cursor == 0 ? m_texStartGreen : m_texStartRed, centerX, startY + spacing * 0, buttonWidth, buttonHeight);
-    drawUIButton(m_cursor == 1 ? m_texPowerUpGreen : m_texPowerUpRed, centerX, startY + spacing * 1, buttonWidth, buttonHeight);
-    drawUIButton(m_cursor == 2 ? m_texExitGreen : m_texExitRed, centerX, startY + spacing * 2, buttonWidth, buttonHeight);*/
-
+    
 }
