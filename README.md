@@ -668,43 +668,6 @@ Scene_SceneGame ..> Core_UpdateScheduler : registers nodes
 Scene_SceneGame ..> Sys_PhysicsBinder : contact handlers
 Scene_SceneGame ..> Sweets_Manager : forwards contacts
 
-%% =========================
-%% Power-up rules (spec summary)
-%% =========================
-全ての強化はレベル 0〜5。
-効果は以下の 4 種類に分かれる:
-- 初期値に加算（% か絶対値）
-- 獲得量に乗算（最終結果に掛ける）
-- 機能のオン/オフ（feature unlock）
-レベルは「値そのもの」ではなく、PowerUpType + Level -> 効果値 のマッピングが必要。
-価格ルール:
-- レベル 1 のコストがベース
-- 以降はレベルごとに固定加算で上昇
-
-1) 移動速度↑ (Move speed)
-- 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
-- 価格: ベース 100、各レベル +200
-
-2) 提供速度↑ (Replenish speed)
-- 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
-- 価格: ベース 100、各レベル +200
-
-3) フルーツ提供量↑ (Replenish count)
-- 効果: +0/2/3/4/5/6 (additive absolute, 初期値に加算)
-- 価格: ベース 500、各レベル +800
-
-4) ケーキ大きさ↑ (Cake size)
-- 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
-- 価格: ベース 300、各レベル +400
-
-5) もらえるポイント↑ (Score multiplier)
-- 効果: ×1.0/1.1/1.2/1.4/1.6/1.8 (multiplicative, 獲得量に乗算)
-- 価格: ベース 100、各レベル +500
-
-6) ホイップ追加 (Whip/Cream unlock)
-- 効果: Lv0=無, Lv1=有 (feature toggle). Lv2〜5 はなし
-- 価格: ベース 1000 (追加コストなし)
-
 クラス図ざっくりまとめ
 Core
 
