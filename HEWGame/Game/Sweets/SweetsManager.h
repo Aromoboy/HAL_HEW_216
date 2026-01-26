@@ -157,6 +157,7 @@ namespace SweetsSpace
         SweetsContacts m_contacts;
         SweetsLifecycle m_lifecycle;
         SweetsRenderer m_renderer;
+        bool m_creamEnabled{ true };
     };
 
 }

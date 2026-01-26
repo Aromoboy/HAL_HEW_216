@@ -14,7 +14,7 @@ public:
 	{
 		std::unordered_map<PowerUpType, int> levels;
 		float fSpeed = 0.0f;
-		bool bCream = false;
+		bool creamEnabled = false;
 		float fCakeSize = 0.0f;
 		float fReplenishSpeed = 0.0f;
 		int nReplenishCount = 0;

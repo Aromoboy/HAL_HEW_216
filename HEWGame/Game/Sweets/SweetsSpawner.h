@@ -39,6 +39,7 @@ namespace SweetsSpace
         void OffsetSpawnOriginsY(float deltaY);
         void SetSpawnIntervalMultiplier(float multiplier);
         void SetSpawnCountBonus(int bonusCount);
+        void SetCreamEnabled(bool enabled);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
@@ -132,5 +133,6 @@ namespace SweetsSpace
         std::unordered_set<std::string> m_warnedMissingFactoryPresetKinds;
         bool m_spawnPausedDueToLiveSweets{ false };
         int m_lastLiveSweetsCount{ 0 };
+        bool m_creamEnabled{ true };
     };
 }
