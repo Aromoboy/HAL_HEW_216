@@ -260,6 +260,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Guide\GuidelineActor.cpp" />
     <ClCompile Include="Game\Guide\GuidelineSystem.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpCursor.cpp" />
+    <ClCompile Include="Game\PowerUp\PowerUpEffectConfig.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpManager.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpNode.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpRenderer.cpp" />
@@ -401,6 +402,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Guide\GuidelineActor.h" />
     <ClInclude Include="Game\Guide\GuidelineSystem.h" />
     <ClInclude Include="Game\PowerUp\PowerUpCursor.h" />
+    <ClInclude Include="Game\PowerUp\PowerUpEffectConfig.h" />
     <ClInclude Include="Game\PowerUp\PowerUpManager.h" />
     <ClInclude Include="Game\PowerUp\PowerUpNode.h" />
     <ClInclude Include="Game\PowerUp\PowerUpRenderer.h" />
