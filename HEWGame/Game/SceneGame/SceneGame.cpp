@@ -2560,6 +2560,7 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 continue;
             }
 
+            const float3 originalScale = obj.transform.scale;
             obj.transform.scale.x *= cakeScaleMultiplier;
             obj.transform.scale.y *= cakeScaleMultiplier;
             obj.transform.scale.z *= cakeScaleMultiplier;
@@ -2580,7 +2581,8 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 colliderRequest.transform = obj.transform;
                 colliderRequest.offset = float3{ 0.0f, 0.0f, 0.0f };
                 colliderRequest.scaleOffset = false;
-                colliderRequest.allowFallback = false;
+                const bool isCake = IsCakeStageObject(obj);
+                colliderRequest.allowFallback = isCake;
 
                 const auto shapeConfig = obj.physicsEntity->GetBox2DShapeConfig();
                 if (shapeConfig)
@@ -2601,9 +2603,21 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 }
 
                 auto colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
-                const bool colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
+                auto colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
                     && colliderBuild.shapeConfig
                     && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+
+                if (!colliderReady && !colliderRequest.allowFallback)
+                {
+                    DebugTrace(std::string(kLogPrefix)
+                        + "[StageColliders] cake collider rebuild failed; retrying with fallback "
+                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath + "').\n");
+                    colliderRequest.allowFallback = true;
+                    colliderBuild = colliderBuilder.BuildFromRegistry(colliderRequest);
+                    colliderReady = colliderBuild.collider && !colliderBuild.collider->Empty()
+                        && colliderBuild.shapeConfig
+                        && colliderBuild.shapeConfig->type != Physics::Box2DShapeConfig::Type::None;
+                }
 
                 if (colliderReady)
                 {
@@ -2613,8 +2627,10 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 else
                 {
                     DebugTrace(std::string(kLogPrefix)
-                        + "[StageColliders] cake collider rebuild failed for model '"
-                        + obj.modelPath + "' (key='" + colliderRequest.key + "').\n");
+                        + "[StageColliders] cake collider rebuild failed; restoring scale "
+                        + "(key='" + colliderRequest.key + "', model='" + obj.modelPath + "').\n");
+                    obj.transform.scale = originalScale;
+                    obj.physicsEntity->SetScale(obj.transform.scale);
                 }
             }
         }
