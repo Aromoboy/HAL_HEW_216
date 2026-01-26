@@ -109,6 +109,7 @@ private:
     void OnStageStart();
     void OnStageClear();
     void OnStageFail();
+    void OnStageResult();
     void ResetPlaySession();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
