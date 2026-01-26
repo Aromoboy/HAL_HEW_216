@@ -112,6 +112,7 @@ private:
     void OnStageResult();
     bool EnsureResultSaved();
     void ResetPlaySession();
+    void ResetStageObjectsToInitial();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
     void LoadPlayerPowerUpData();
@@ -122,6 +123,7 @@ private:
 
 protected:
     std::vector<StageObject> m_stageObjects;
+    std::vector<StageObject> m_stageObjectsInitial;
     std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
@@ -163,6 +165,8 @@ protected:
     BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
     SweetsOutOfBoundsSettings m_sweetsOutOfBoundsSettings{};
+    std::vector<float3> m_spawnOriginsPrimaryInitial;
+    std::vector<float3> m_spawnOriginsSecondaryInitial;
     GameCameraConfig m_gameCameraConfig{};
     CameraRigSettings m_cameraRigSettings{};
     std::optional<float> m_stagePlaneZ = std::nullopt;

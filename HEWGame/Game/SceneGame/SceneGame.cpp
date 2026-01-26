@@ -444,6 +444,8 @@ bool SceneGame::Load(Core::Input& input)
     composer.ComposeEffect(*composition, m_manager->GetEffectRenderer(), m_manager->GetEffectManager());
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
+    m_spawnOriginsPrimaryInitial = m_stageData.GetSpawnPointsPrimary();
+    m_spawnOriginsSecondaryInitial = m_stageData.GetSpawnPointsSecondary();
     m_stagePlaneZ = std::nullopt;
     const float stagePlaneZ = m_stageData.GetPlaneZ();
     if (IsFiniteFloat(stagePlaneZ))
@@ -584,6 +586,7 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
     m_stageObjects = std::move(composition->stageObjects);
+    m_stageObjectsInitial = m_stageObjects;
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
     ApplyPowerUpEffects(m_playerPowerUpData);
 
@@ -2475,6 +2478,40 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     ::DebugTrace(oss.str());
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
 }
+
+void SceneGame::ResetStageObjectsToInitial()
+{
+    if (m_stageObjectsInitial.empty())
+    {
+        return;
+    }
+
+    if (m_stageObjects.size() != m_stageObjectsInitial.size())
+    {
+        m_stageObjects = m_stageObjectsInitial;
+    }
+    else
+    {
+        for (size_t index = 0; index < m_stageObjects.size(); ++index)
+        {
+            auto& obj = m_stageObjects[index];
+            const auto& initial = m_stageObjectsInitial[index];
+            obj.transform = initial.transform;
+            obj.baseY = initial.baseY;
+            obj.swaiTime = initial.swaiTime;
+            obj.currentRotation = initial.currentRotation;
+        }
+    }
+
+    for (auto& obj : m_stageObjects)
+    {
+        if (obj.physicsEntity)
+        {
+            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+        }
+    }
+}
+
 void SceneGame::ResetPlaySession()
 {
     if (m_physicsBinder)
@@ -2486,12 +2523,21 @@ void SceneGame::ResetPlaySession()
     if (m_sweetsManager)
     {
         m_sweetsManager->ClearAllSweets();
+        m_sweetsManager->SetSpawnOrigins(m_spawnOriginsPrimaryInitial, m_spawnOriginsSecondaryInitial);
         m_sweetsManager->ForceSpawnRefresh();
         m_sweetsManager->SeedInitialSpawns();
     }
     else
     {
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
+    }
+
+    ResetStageObjectsToInitial();
+
+    {
+        std::ostringstream resetLog;
+        resetLog << kLogPrefix << "[RetryReset] restored stage objects + spawn origins\n";
+        ::DebugTrace(resetLog.str());
     }
 
     if (player)
