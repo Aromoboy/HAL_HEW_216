@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -262,10 +263,12 @@ namespace SweetsSpace
         }
         const auto& config = m_spawnTuningConfig;
         const float interval = std::max(config.spawnIntervalSeconds, kMinimumSpawnIntervalSeconds);
+        const float intervalMultiplier = std::max(m_spawnIntervalMultiplier, 0.01f);
+        const float adjustedInterval = std::max(kMinimumSpawnIntervalSeconds, interval / intervalMultiplier);
         m_activeBurstInterval = std::max(config.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
 
-        const int batchTarget = std::max(1, config.simultaneousSpawnCount);
-        const int simultaneousTarget = std::max(1, config.simultaneousLiveTarget);
+        const int batchTarget = std::max(1, config.simultaneousSpawnCount + m_spawnCountBonus);
+        const int simultaneousTarget = std::max(1, config.simultaneousLiveTarget + m_spawnCountBonus);
 
         m_simultaneousLiveTarget = simultaneousTarget;
         m_batchStackTarget = batchTarget;
@@ -284,7 +287,7 @@ namespace SweetsSpace
         if (m_batchCoolingDown)
         {
             m_spawnTimer += deltaSeconds;
-            const float remainingCooldown = std::max(0.0f, interval - m_spawnTimer);
+            const float remainingCooldown = std::max(0.0f, adjustedInterval - m_spawnTimer);
             if (remainingCooldown > 0.0f)
             {
                 return;
@@ -573,8 +576,8 @@ namespace SweetsSpace
         m_batchInitialSpawnDone = false;
         m_batchCoolingDown = false;
         m_activeBurstInterval = std::max(m_spawnTuningConfig.burstIntervalSeconds, kMinimumBurstIntervalSeconds);
-        m_batchStackTarget = std::max(1, m_spawnTuningConfig.simultaneousSpawnCount);
-        m_simultaneousLiveTarget = std::max(1, m_spawnTuningConfig.simultaneousLiveTarget);
+        m_batchStackTarget = std::max(1, m_spawnTuningConfig.simultaneousSpawnCount + m_spawnCountBonus);
+        m_simultaneousLiveTarget = std::max(1, m_spawnTuningConfig.simultaneousLiveTarget + m_spawnCountBonus);
         m_pendingTopUpCount = 0;
         if (!m_spawnQueue.empty())
         {
@@ -652,6 +655,20 @@ namespace SweetsSpace
         }
         oss << "\n";
         DebugTrace(oss.str());
+    }
+
+    void SweetsSpawner::SetSpawnIntervalMultiplier(float multiplier)
+    {
+        m_spawnIntervalMultiplier = std::isfinite(multiplier) ? multiplier : 1.0f;
+        if (m_spawnIntervalMultiplier <= 0.0f)
+        {
+            m_spawnIntervalMultiplier = 1.0f;
+        }
+    }
+
+    void SweetsSpawner::SetSpawnCountBonus(int bonusCount)
+    {
+        m_spawnCountBonus = bonusCount;
     }
 
     void SweetsSpawner::SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees)

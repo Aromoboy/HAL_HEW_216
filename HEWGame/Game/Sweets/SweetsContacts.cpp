@@ -159,6 +159,11 @@ namespace SweetsSpace
             UpdateContactStateBegin(sweetsB, a);
         }
 
+        if (!m_creamEnabled)
+        {
+            return;
+        }
+
         if (sweetsA && sweetsB && !IsCreamTag(sweetsA->GetTag()) && !IsCreamTag(sweetsB->GetTag()))
         {
             const bool sweetsAHasCream = m_fruitToCreams.contains(sweetsA);
@@ -410,6 +415,11 @@ namespace SweetsSpace
             m_pendingGlue.erase(info.contactId);
         }
 
+    }
+
+    void SweetsContacts::SetCreamEnabled(bool enabled)
+    {
+        m_creamEnabled = enabled;
     }
 
     bool SweetsContacts::TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const

@@ -37,6 +37,8 @@ namespace SweetsSpace
             const std::vector<float3>& secondary,
             std::optional<float> spawnHeightOffset = std::nullopt);
         void OffsetSpawnOriginsY(float deltaY);
+        void SetSpawnIntervalMultiplier(float multiplier);
+        void SetSpawnCountBonus(int bonusCount);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
@@ -118,6 +120,8 @@ namespace SweetsSpace
         bool m_batchCoolingDown{ false };
         std::mt19937 m_random;
         int m_pendingTopUpCount{ 0 };
+        float m_spawnIntervalMultiplier{ 1.0f };
+        int m_spawnCountBonus{ 0 };
 
         float3 m_randomRotationMinDegrees{ 0.0f, 0.0f, 0.0f };
         float3 m_randomRotationMaxDegrees{ 0.0f, 0.0f, 0.0f };
