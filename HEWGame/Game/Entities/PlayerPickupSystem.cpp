@@ -1,4 +1,4 @@
-#include "Entities/PlayerPickupSystem.h"
+﻿#include "Entities/PlayerPickupSystem.h"
 
 #include "AABB.h"
 #include "Core/Input.h"
@@ -42,7 +42,7 @@ namespace
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
 
-    constexpr int kDefaultMaxCarry = 3;
+    constexpr int kDefaultMaxCarry = 1;
     constexpr float kDefaultPickupHalfExtent = 0.5f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
     constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();

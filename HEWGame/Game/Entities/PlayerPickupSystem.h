@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <optional>
@@ -62,7 +62,7 @@ namespace Entities
             float halfDepth = 0.05f;
             const char* source = "Unknown";
         };
-        //�͂ݔ���
+        //掴み判定
         struct  PickupBox
         {
             float3 center;
@@ -74,14 +74,14 @@ namespace Entities
         PickupOrigin ComputePickupOrigin(Player& player) const;
         void TryPickupNearest(Player& player);
         void DropCarriedSweets(Player& player);
-        //�͂ݔ���̘g
+        //掴み判定の枠
         PickupBox MakePickupBox(Player& player) const;
         bool IsInsidePickupBox(const PickupBox& box, const float3& pos) const;
 
         SweetsSpace::SweetsManager* m_sweetsManager = nullptr;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
         std::unordered_map<SweetsSpace::BaseSweets*, float3> m_carriedRotations;
-        int m_maxCarry = 3;
+        int m_maxCarry = 1;
         float m_pickupHalfWidth = 0.0f;
         float m_pickupHalfHeight = 0.0f;
         Stage::PickupOffset m_pickupOffset{};
