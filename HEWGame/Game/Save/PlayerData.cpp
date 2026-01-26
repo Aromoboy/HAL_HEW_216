@@ -1,7 +1,6 @@
 #include "PlayerData.h"
 
 #include <cerrno>
-#include <cmath>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
@@ -47,25 +46,6 @@ namespace
 		return result;
 	}
 
-	bool TryParseFloat(std::string_view token, float& outValue)
-	{
-		const std::string trimmed{ TrimView(token) };
-		if (trimmed.empty())
-		{
-			return false;
-		}
-
-		char* end = nullptr;
-		errno = 0;
-		const float parsed = std::strtof(trimmed.c_str(), &end);
-		if (end == trimmed.c_str() || *end != '\0' || errno == ERANGE || !std::isfinite(parsed))
-		{
-			return false;
-		}
-		outValue = parsed;
-		return true;
-	}
-
 	bool TryParseInt(std::string_view token, int& outValue)
 	{
 		const std::string trimmed{ TrimView(token) };
@@ -85,33 +65,71 @@ namespace
 		return true;
 	}
 
-	bool TryParseBool(std::string_view token, bool& outValue)
-	{
-		std::string trimmed{ TrimView(token) };
-		if (trimmed.empty())
-		{
-			return false;
-		}
-		for (char& ch : trimmed)
-		{
-			ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-		}
-		if (trimmed == "1" || trimmed == "true")
-		{
-			outValue = true;
-			return true;
-		}
-		if (trimmed == "0" || trimmed == "false")
-		{
-			outValue = false;
-			return true;
-		}
-		return false;
-	}
-
 	void LogParseError(std::size_t lineNumber, const std::string& message)
 	{
 		DebugLog::DebugMessage(std::string(kLogPrefix) + "Line " + std::to_string(lineNumber) + ": " + message + "\n");
+	}
+
+	void ApplyEffects(PlayerData::Data& entry)
+	{
+		entry.fSpeed = 0.0f;
+		entry.bCream = false;
+		entry.fCakeSize = 0.0f;
+		entry.fReplenishSpeed = 0.0f;
+		entry.nReplenishCount = 0;
+		entry.fPtMultipl = 1.0f;
+
+		for (const auto& item : PowerUpEffectConfig::Entries())
+		{
+			const auto it = entry.levels.find(item.type);
+			const int level = (it != entry.levels.end()) ? it->second : 0;
+			const PowerUpEffectResult effect = PowerUpEffectConfig::ComputeEffect(item.type, level);
+
+			switch (item.type)
+			{
+			case PowerUpType::SpeedUp:
+				entry.fSpeed = effect.value;
+				break;
+			case PowerUpType::SweetsSpawnSpeed:
+				entry.fReplenishSpeed = effect.value;
+				break;
+			case PowerUpType::SweetsSpawnQuantity:
+				entry.nReplenishCount = static_cast<int>(effect.value);
+				break;
+			case PowerUpType::CakeSize:
+				entry.fCakeSize = effect.value;
+				break;
+			case PowerUpType::PointAmount:
+				entry.fPtMultipl = effect.value;
+				break;
+			case PowerUpType::Whip:
+				entry.bCream = effect.enabled;
+				break;
+			case PowerUpType::Unknown:
+			default:
+				break;
+			}
+		}
+	}
+
+	bool TryParseLevelPair(std::string_view token, PowerUpType& outType, int& outLevel)
+	{
+		const std::string_view trimmed = TrimView(token);
+		const std::size_t separator = trimmed.find('=');
+		if (separator == std::string_view::npos)
+		{
+			return false;
+		}
+
+		const std::string_view key = TrimView(trimmed.substr(0, separator));
+		const std::string_view levelValue = TrimView(trimmed.substr(separator + 1));
+		const auto entry = PowerUpEffectConfig::FindByKey(key);
+		if (!entry)
+		{
+			return false;
+		}
+		outType = entry->type;
+		return TryParseInt(levelValue, outLevel);
 	}
 }
 
@@ -174,27 +192,44 @@ bool PlayerData::LoadData()
 		}
 
 		const std::vector<std::string_view> fields = SplitCsv(payload);
-		if (fields.size() != 7)
+		if (fields.size() < 2)
 		{
-			LogParseError(lineNumber, "Entry must have 7 fields.");
+			LogParseError(lineNumber, "Entry must have currency and level fields.");
 			hadError = true;
 			continue;
 		}
 
 		Data entry{};
-		if (!TryParseFloat(fields[0], entry.fSpeed)
-			|| !TryParseBool(fields[1], entry.bCream)
-			|| !TryParseFloat(fields[2], entry.fCakeSize)
-			|| !TryParseFloat(fields[3], entry.fReplenishSpeed)
-			|| !TryParseInt(fields[4], entry.nReplenishCount)
-			|| !TryParseFloat(fields[5], entry.fPtMultipl)
-			|| !TryParseInt(fields[6], entry.nPoints))
+		if (!TryParseInt(fields[0], entry.nPoints))
 		{
-			LogParseError(lineNumber, "Failed to parse entry values.");
+			LogParseError(lineNumber, "Failed to parse currency.");
 			hadError = true;
 			continue;
 		}
 
+		bool hasLevel = false;
+		for (std::size_t index = 1; index < fields.size(); ++index)
+		{
+			PowerUpType type = PowerUpType::Unknown;
+			int level = 0;
+			if (!TryParseLevelPair(fields[index], type, level))
+			{
+				LogParseError(lineNumber, "Failed to parse power-up level entry.");
+				hadError = true;
+				continue;
+			}
+			entry.levels[type] = level;
+			hasLevel = true;
+		}
+
+		if (!hasLevel)
+		{
+			LogParseError(lineNumber, "Entry must contain at least one power-up level.");
+			hadError = true;
+			continue;
+		}
+
+		ApplyEffects(entry);
 		m_entries.push_back(entry);
 		anyEntry = true;
 	}
@@ -219,14 +254,14 @@ bool PlayerData::SaveData() const
 	out << kSectionHeader << "\n";
 	for (const auto& entry : m_entries)
 	{
-		out << "entry="
-			<< entry.fSpeed << ","
-			<< (entry.bCream ? 1 : 0) << ","
-			<< entry.fCakeSize << ","
-			<< entry.fReplenishSpeed << ","
-			<< entry.nReplenishCount << ","
-			<< entry.fPtMultipl << ","
-			<< entry.nPoints << "\n";
+		out << "entry=" << entry.nPoints;
+		for (const auto& powerUpEntry : PowerUpEffectConfig::Entries())
+		{
+			const auto it = entry.levels.find(powerUpEntry.type);
+			const int level = (it != entry.levels.end()) ? it->second : 0;
+			out << "," << powerUpEntry.key << "=" << level;
+		}
+		out << "\n";
 	}
 
 	return true;
