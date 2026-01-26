@@ -2542,6 +2542,12 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
 
     m_gameplayRules.SetScoreMultiplier(data.fPtMultipl);
 
+    if (player)
+    {
+        const int carryBonus = std::max(0, data.nReplenishCount);
+        player->SetMaxCarry(1 + carryBonus);
+    }
+
     if (m_sweetsManager)
     {
         const float spawnMultiplier = std::max(0.01f, 1.0f + data.fReplenishSpeed);

@@ -156,6 +156,11 @@ namespace Entities
         m_pickupSystem.SetColliderFootprint(halfExtents, centerOffset);
     }
 
+    void Player::SetMaxCarry(int maxCarry)
+    {
+        m_pickupSystem.SetMaxCarry(maxCarry);
+    }
+
     const SweetsSpace::PickupQueryResult& Player::GetLastPickupResult() const noexcept
     {
         return m_pickupSystem.GetLastPickupResult();
