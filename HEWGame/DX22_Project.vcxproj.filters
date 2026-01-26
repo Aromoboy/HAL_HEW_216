@@ -897,6 +897,9 @@
     <ClCompile Include="Game\Save\Save.cpp">
       <Filter>Game\Save</Filter>
     </ClCompile>
+    <ClCompile Include="Game\Save\PlayerData.cpp">
+      <Filter>Game\Save</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\postprocess.hlsl">
@@ -915,6 +918,9 @@
       <Filter>Game\PowerUp</Filter>
     </ClInclude>
     <ClInclude Include="Game\Save\Save.h">
+      <Filter>Game\Save</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Save\PlayerData.h">
       <Filter>Game\Save</Filter>
     </ClInclude>
   </ItemGroup>
