@@ -11,7 +11,6 @@
 #include "TextureCache.h"
 #include "Vector.h"
 #include "PowerUpRenderer.h"
-#include "Save/Save.h"
 
 namespace Core
 {
@@ -70,7 +69,6 @@ public:
 
 	void AddNode(std::string name, std::string infomation, std::string key, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification);
 
-	void LoadNodeData(Save& save);
 	// 全てのノードを描画
 	void DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& Camera);
 

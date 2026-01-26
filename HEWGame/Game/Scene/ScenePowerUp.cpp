@@ -13,13 +13,26 @@
 
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
-#include "Save/Save.h"
 #include "Debug.h"
 
 
 #include <sstream>
 #include <string>
 #include <vector>
+
+namespace
+{
+        PlayerData::Data CreateDefaultPlayerEntry()
+        {
+                PlayerData::Data entry{};
+                entry.nPoints = 0;
+                for (const auto& powerUpEntry : PowerUpEffectConfig::Entries())
+                {
+                        entry.levels[powerUpEntry.type] = 0;
+                }
+                return entry;
+        }
+}
 
 namespace SceneSpace
 {
@@ -37,19 +50,14 @@ namespace SceneSpace
         {
                 (void)input;
 
-                Save& save = Save::Instance();
-                m_playerData.LoadData();
+                const bool loaded = m_playerData.LoadData();
                 m_playerEntries = m_playerData.GetEntries();
-                if (m_playerEntries.empty())
+                if (!loaded || m_playerEntries.empty())
                 {
-                        PlayerData::Data entry{};
-                        entry.nPoints = save.GetCost();
-                        for (const auto& powerUpEntry : PowerUpEffectConfig::Entries())
-                        {
-                                entry.levels[powerUpEntry.type] = save.GetLevel(powerUpEntry.key);
-                        }
-                        m_playerEntries.push_back(entry);
+                        m_playerEntries.clear();
+                        m_playerEntries.push_back(CreateDefaultPlayerEntry());
                         m_playerData.SetEntries(m_playerEntries);
+                        m_playerData.SaveData();
                 }
                 m_cost = m_playerEntries.front().nPoints;
 
@@ -146,16 +154,32 @@ namespace SceneSpace
         void ScenePowerUp::OnExit()
         {
 
-            Save& save = Save::Instance();
-            int index = m_powerUpManager->GetNodeCount();
-            for (int i = 0; i < index; i++)
+            if (m_playerEntries.empty())
             {
-                save.UpdatePowerUp(m_powerUpManager->GetName(i), m_powerUpManager->GetLevel(i));
+                m_playerEntries.push_back(CreateDefaultPlayerEntry());
             }
 
-            save.UpdateCost(m_cost);
-
-            save.FileSave();
+            PlayerData::Data& entry = m_playerEntries.front();
+            if (m_powerUpManager)
+            {
+                const int nodeCount = m_powerUpManager->GetNodeCount();
+                for (int i = 0; i < nodeCount; ++i)
+                {
+                    const std::string key = m_powerUpManager->GetName(i);
+                    const auto effectEntry = PowerUpEffectConfig::FindByKey(key);
+                    if (!effectEntry)
+                    {
+                        continue;
+                    }
+                    entry.levels[effectEntry->type] = m_powerUpManager->GetLevel(i);
+                }
+            }
+            entry.nPoints = m_cost;
+            m_playerData.SetEntries(m_playerEntries);
+            if (!m_playerData.SaveData())
+            {
+                DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to save player data on exit.\n");
+            }
 
                 ShutdownPowerUpSystems();
                 if (m_inputRegistered)

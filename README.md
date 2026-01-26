@@ -37,6 +37,15 @@ HAL_HEW_216
 - 効果: Lv0=無, Lv1=有 (feature toggle). Lv2〜5 はなし
 - 価格: ベース 1000 (追加コストなし)
 
+プレイヤーデータ（レベル/通貨の保存先）
+
+レベルと通貨（ポイント）は PlayerData で管理し、以下に保存します。
+
+HEWGame/Assets/Data/PlayerData.cfg の [PlayerData] セクション
+
+フォーマット例:
+entry=currency,SpeedUp=level,CakeSize=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
+
 
 本リポジトリは、DirectX 11 ベースの 2.5D ゲームです。
 更新は UpdateScheduler を中心にフェーズ駆動で行い、描画は Scene::RootDraw から別経路で実行します。
