@@ -9,7 +9,7 @@ constexpr float maxPowerUpSecond = 0.10f;
 constexpr float2 kCursorOffset = { 0.0015f, 0.014f };
 constexpr float kPowerUpInputDeadzone = 0.2f;
 
-PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input, EffectSystem& a_effectSystem)
+PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input, EffectSystem& a_effectSystem, std::function<void(int)> onPurchase)
 	:m_powerUpManager(a_powerUpManager)
 	, m_input(&input)
 	, m_index(0)
@@ -21,6 +21,7 @@ PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManage
 	, m_flicker(0.0f)
 	, m_alpha(0.0f)
 	, m_effectSystem(a_effectSystem)
+	, m_onPurchase(std::move(onPurchase))
 {
 }
 
@@ -53,7 +54,14 @@ void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 		std::optional<int> result = m_powerUpManager->GetCost(m_index);
 		if (result != std::nullopt && result <= m_cost)
 		{
-			if (m_powerUpManager->LevelUp(m_index)) m_cost -= result.value();
+			if (m_powerUpManager->LevelUp(m_index))
+			{
+				m_cost -= result.value();
+				if (m_onPurchase)
+				{
+					m_onPurchase(m_index);
+				}
+			}
 
 
 			std::optional<float2> result = m_powerUpManager->GetDrawPosition(m_index);

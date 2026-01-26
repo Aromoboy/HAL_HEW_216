@@ -3,6 +3,7 @@
 #include "DirectX.h"
 #include "PerspectiveCamera.h"
 #include "PowerUpManager.h"
+#include "PowerUpEffectConfig.h"
 #include "TitleScene.h"
 #include "TextureCache.h"
 #include "AppGame.h"
@@ -34,6 +35,22 @@ namespace SceneSpace
         {
                 (void)input;
 
+                Save& save = Save::Instance();
+                m_playerData.LoadData();
+                m_playerEntries = m_playerData.GetEntries();
+                if (m_playerEntries.empty())
+                {
+                        PlayerData::Data entry{};
+                        entry.nPoints = save.GetCost();
+                        for (const auto& powerUpEntry : PowerUpEffectConfig::Entries())
+                        {
+                                entry.levels[powerUpEntry.type] = save.GetLevel(powerUpEntry.key);
+                        }
+                        m_playerEntries.push_back(entry);
+                        m_playerData.SetEntries(m_playerEntries);
+                }
+                m_cost = m_playerEntries.front().nPoints;
+
                 TextureCache& cache = App::Game::Instance().GetTextureCache();
                 cache.Load("Star", GetDevice(), L"Assets/Texture/UI_Cakeblock_backeffect.png");
                 cache.Load("Cost", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
@@ -56,7 +73,27 @@ namespace SceneSpace
                 m_rig = std::make_unique<CameraRig>(m_camera);
                 m_powerUpManager = std::make_unique<PowerUpManager>(GetUpdateScheduler(), cache, PowerUpManager::NodeFormat(3, 2));
                 m_powerUpRenderer = std::make_unique<PowerUpRenderer>(cache);
-                m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input, *m_effectSystem);
+                auto onPurchase = [this](int index)
+                {
+                        if (!m_powerUpManager || m_playerEntries.empty())
+                        {
+                                return;
+                        }
+
+                        const std::string key = m_powerUpManager->GetName(index);
+                        const auto effectEntry = PowerUpEffectConfig::FindByKey(key);
+                        if (!effectEntry)
+                        {
+                                return;
+                        }
+
+                        PlayerData::Data& entry = m_playerEntries.front();
+                        entry.levels[effectEntry->type] = m_powerUpManager->GetLevel(index);
+                        entry.nPoints = m_cost;
+                        m_playerData.SetEntries(m_playerEntries);
+                        m_playerData.SaveData();
+                };
+                m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input, *m_effectSystem, std::move(onPurchase));
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
                 
@@ -102,10 +139,6 @@ namespace SceneSpace
                 {
                         SetActiveCamera(registeredCamera);
                 }
-
-                Save& save = Save::Instance();
-                m_cost = save.GetCost();
-                m_powerUpManager->LoadNodeData(save);
         }
 
         void ScenePowerUp::OnExit()
@@ -256,7 +289,20 @@ namespace SceneSpace
                                 const int costAdditional = std::stoi(tokens[5]);
                                 const float costMagnification = std::stof(tokens[6]);
 
-                                m_powerUpManager->AddNode(name, info, textureKey, 0, maxLevel, defaultCost, costAdditional, costMagnification);
+                                int currentLevel = 0;
+                                if (!m_playerEntries.empty())
+                                {
+                                        const auto effectEntry = PowerUpEffectConfig::FindByKey(textureKey);
+                                        if (effectEntry)
+                                        {
+                                                const auto levelIter = m_playerEntries.front().levels.find(effectEntry->type);
+                                                if (levelIter != m_playerEntries.front().levels.end())
+                                                {
+                                                        currentLevel = levelIter->second;
+                                                }
+                                        }
+                                }
+                                m_powerUpManager->AddNode(name, info, textureKey, currentLevel, maxLevel, defaultCost, costAdditional, costMagnification);
                                 ++loaded;
                         }
                         catch (const std::exception&)

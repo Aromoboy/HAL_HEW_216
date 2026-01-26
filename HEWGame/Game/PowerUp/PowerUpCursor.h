@@ -4,6 +4,7 @@
 #include "PowerUpManager.h"
 #include "PowerUpRenderer.h"
 #include "TextureDX.h"
+#include <functional>
 #include <memory>
 #include "EffectSystem.h"
 
@@ -17,7 +18,7 @@ namespace Core
 class PowerUpCursor : public Core::UpdateNode
 {
 public:
-	PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input, EffectSystem& a_effectSystem);
+	PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input, EffectSystem& a_effectSystem, std::function<void(int)> onPurchase);
 
 	void OnUpdate(const Core::UpdateContext& ctx) final;
 
@@ -37,6 +38,7 @@ private:
 	float m_flicker;
 	float m_alpha;
 	EffectSystem& m_effectSystem;
+	std::function<void(int)> m_onPurchase;
 
 	void MoveInput(Core::Input& input);
 };
