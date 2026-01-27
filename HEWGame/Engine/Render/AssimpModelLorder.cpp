@@ -834,7 +834,7 @@ AssimpModelLorder::MakeMaterial(
                 const std::string cacheKey = NormalizeForKey(textureDirectory + sanitizedFile);
 
                 if (isAbsoluteWindowsPath
-                    && (EqualsIgnoreCase(fileName, "texture.png") || EqualsIgnoreCase(fileName, "texture2.png")))
+                    && (EqualsIgnoreCase(fileName, "texture.png") || EqualsIgnoreCase(fileName, "texture2.png") || EqualsIgnoreCase(fileName, "Fairy_Texture")))
                 {
                     texFile = fileName;
                     textureDirectory = "Assets\\Texture\\";
