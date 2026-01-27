@@ -12,7 +12,6 @@
 #include "SceneManager.h"
 #include "SpriteRenderer.h"
 #include "EffectSystem.h"
-#include "VideoBackgroundRenderer.h"
 
 
 class PowerUpManager;
@@ -48,7 +47,6 @@ namespace SceneSpace
                 std::unique_ptr<PowerUpCursor> m_cursor;
                 std::unique_ptr<CameraRig> m_rig;
                 std::shared_ptr<PowerUpTarget> m_target;
-                std::unique_ptr<VideoBackgroundRenderer> m_videoBackground;
                 bool m_inputRegistered = false;
                 int m_cost;        
         };

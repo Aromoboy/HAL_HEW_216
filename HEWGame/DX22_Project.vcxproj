@@ -72,16 +72,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Render\VideoTexture;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Render\VideoTexture;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Render\VideoTexture;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Render\VideoTexture;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)Engine;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Core\Diagnostics;$(ProjectDir)Engine\Camera;$(ProjectDir)Engine\Render;$(ProjectDir)Engine\Render\Legacy;$(ProjectDir)Engine\Config;$(ProjectDir)Engine\Systems\Physics;$(ProjectDir)Engine\Systems\Physics\Collision;$(ProjectDir)Engine\Systems\Physics\Components;$(ProjectDir)Engine\Systems\Draw;$(ProjectDir)Game;$(ProjectDir)Game\Scene;$(ProjectDir)Game\SceneGame;$(ProjectDir)Game\Entities;$(ProjectDir)Game\Sweets;$(ProjectDir)Game\Stage;$(ProjectDir)Game\UI;$(ProjectDir)Game\GameFlow;$(ProjectDir)Game\Rules;$(ProjectDir)Game\Guide;$(ProjectDir)Game\PowerUp;$(ProjectDir)ThirdParty\Assimp\include;$(ProjectDir)DirectXTex;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -98,7 +98,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2dd.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;mf.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2dd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
@@ -124,7 +124,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2d.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;mf.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
@@ -147,7 +147,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2dd.lib;Effekseerd.lib;EffekseerRendererDX11d.lib;EffekseerSoundXAudio2d.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;mf.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2dd.lib;Effekseerd.lib;EffekseerRendererDX11d.lib;EffekseerSoundXAudio2d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
@@ -174,7 +174,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\lib;$(ProjectDir)DirectXTex\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Platform)\$(Configuration);$(ProjectDir)box2d\build\src\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>box2d.lib;Effekseer.lib;EffekseerRendererDX11.lib;EffekseerSoundXAudio2.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;mf.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>box2d.lib;Effekseer.lib;EffekseerRendererDX11.lib;EffekseerSoundXAudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>if not exist "$(OutDir)assets" mkdir "$(OutDir)assets"
@@ -239,9 +239,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Engine\Render\Texture.cpp" />
     <ClCompile Include="Engine\Render\TextureCache.cpp" />
     <ClCompile Include="Engine\Render\TextureDX.cpp" />
-    <ClCompile Include="Engine\Render\VideoTexture\dx11_basic.cpp" />
-    <ClCompile Include="Engine\Render\VideoTexture\SimpleMath.cpp" />
-    <ClCompile Include="Engine\Render\VideoTexture\video_texture.cpp" />
     <ClCompile Include="Engine\Systems\Draw\DrawSystem.cpp" />
     <ClCompile Include="Engine\Systems\Physics\Box2DContactListener.cpp" />
     <ClCompile Include="Engine\Systems\Physics\Box2DMeshBuilder.cpp" />
@@ -308,7 +305,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\UI\SceneGameUIOverlay.cpp" />
     <ClCompile Include="Game\UI\TimerDisplay.cpp" />
     <ClCompile Include="Game\UI\TitleRenderer.cpp" />
-    <ClCompile Include="Game\UI\VideoBackgroundRenderer.cpp" />
     <ClCompile Include="Game\UI\UIManager.cpp" />
     <ClCompile Include="SceneResult.cpp" />
     <ClInclude Include="Engine\Camera\BaseCamera.h" />
@@ -379,11 +375,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Engine\Render\Texture.h" />
     <ClInclude Include="Engine\Render\TextureCache.h" />
     <ClInclude Include="Engine\Render\TextureDX.h" />
-    <ClInclude Include="Engine\Render\VideoTexture\clock.h" />
-    <ClInclude Include="Engine\Render\VideoTexture\dx11_basic.h" />
-    <ClInclude Include="Engine\Render\VideoTexture\SimpleMath.h" />
-    <ClInclude Include="Engine\Render\VideoTexture\SimpleMath.inl" />
-    <ClInclude Include="Engine\Render\VideoTexture\video_texture.h" />
     <ClInclude Include="Engine\Systems\Draw\DrawSystem.h" />
     <ClInclude Include="Engine\Systems\Physics\Box2DContactListener.h" />
     <ClInclude Include="Engine\Systems\Physics\Box2DMeshBuilder.h" />
@@ -459,8 +450,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\UI\TimerDisplay.h" />
     <ClInclude Include="Game\UI\TitleRenderer.h" />
     <ClInclude Include="Game\UI\UIManager.h" />
-    <ClInclude Include="Game\UI\VideoBackgroundRenderer.h" />
-    <ClInclude Include="Game\UI\VideoTexturePlayer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SceneResult.h" />
@@ -471,8 +460,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
-    <None Include="shaders\common.hlsl" />
-    <None Include="shaders\solid.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\postprocess.hlsl">
@@ -486,18 +473,6 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
       <ShaderType>Pixel</ShaderType>
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>$(ProjectDir)Assets\\shaders\\postprocess_ps.cso</ObjectFileOutput>
-    </FxCompile>
-    <FxCompile Include="shaders\video.hlsl">
-      <EntryPointName>VS</EntryPointName>
-      <ShaderType>Vertex</ShaderType>
-      <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>$(ProjectDir)Assets\\shaders\\video_vs.cso</ObjectFileOutput>
-    </FxCompile>
-    <FxCompile Include="shaders\video.hlsl">
-      <EntryPointName>PS</EntryPointName>
-      <ShaderType>Pixel</ShaderType>
-      <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>$(ProjectDir)Assets\\shaders\\video_ps.cso</ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
 </Project>
