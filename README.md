@@ -25,15 +25,11 @@ HAL_HEW_216
 - 効果: +0/2/3/4/5/6 (additive absolute, 初期値に加算)
 - 価格: ベース 500、各レベル +800
 
-4) ケーキ大きさ↑ (Cake size)
-- 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
-- 価格: ベース 300、各レベル +400
-
-5) もらえるポイント↑ (Score multiplier)
+4) もらえるポイント↑ (Score multiplier)
 - 効果: ×1.0/1.1/1.2/1.4/1.6/1.8 (multiplicative, 獲得量に乗算)
 - 価格: ベース 100、各レベル +500
 
-6) ホイップ追加 (Whip/Cream unlock)
+5) ホイップ追加 (Whip/Cream unlock)
 - 効果: Lv0=無, Lv1=有 (feature toggle). Lv2〜5 はなし
 - 価格: ベース 1000 (追加コストなし)
 
@@ -48,7 +44,7 @@ HAL_HEW_216
 HEWGame/Assets/Data/PlayerData.cfg の [PlayerData] セクション
 
 フォーマット例:
-entry=currency,SpeedUp=level,CakeSize=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
+entry=currency,SpeedUp=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
 
 
 本リポジトリは、DirectX 11 ベースの 2.5D ゲームです。

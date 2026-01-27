@@ -19,9 +19,8 @@ namespace
 		const char* key;
 	};
 
-	constexpr std::array<KnownPowerUp, 6> kKnownPowerUps = {{
+	constexpr std::array<KnownPowerUp, 5> kKnownPowerUps = {{
 		{ PowerUpType::SpeedUp, "SpeedUp" },
-		{ PowerUpType::CakeSize, "CakeSize" },
 		{ PowerUpType::SweetsSpawnSpeed, "SweetsSpawnSpeed" },
 		{ PowerUpType::SweetsSpawnQuantity, "SweetsSpawnQuantity" },
 		{ PowerUpType::PointAmount, "PointAmount" },
