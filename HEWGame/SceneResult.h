@@ -63,6 +63,8 @@ namespace SceneSpace
         Texture m_texStartEffect;
         Texture m_texNumber[4];
 
+        std::shared_ptr<Texture2D> m_backTexture;
+
     };
 }
 
