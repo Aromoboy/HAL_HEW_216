@@ -11,8 +11,8 @@
 #include "ResultRenderer.h"
 #include "Sprite.h"
 #include "Texture.h"
-#include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
+#include "VideoBackgroundRenderer.h"
 
 
 namespace SceneSpace
@@ -53,7 +53,8 @@ namespace SceneSpace
         bool m_inputRegistered = false;
 
 
-        std::unique_ptr<BackgroundRenderer> m_background;
+        using VideoTexturePlayer = VideoBackgroundRenderer;
+        std::unique_ptr<VideoTexturePlayer> m_videoPlayer;
         Texture m_texStartRed;
         Texture m_texStartGreen;
         Texture m_texPowerUpRed;
@@ -63,8 +64,5 @@ namespace SceneSpace
         Texture m_texStartEffect;
         Texture m_texNumber[4];
 
-        std::shared_ptr<Texture2D> m_backTexture;
-
     };
 }
-

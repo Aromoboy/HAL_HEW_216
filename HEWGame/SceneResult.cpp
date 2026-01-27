@@ -37,9 +37,6 @@ namespace SceneSpace
 
         m_resultRenderer->Initialize(config);
 
-        TextureCache& cache = TextureCache::Instance();
-        m_backTexture = cache.Load("Back", GetDevice(), L"Assets/Texture/background_UI_remake.png");
-
         // UI テクスチャ
         const char* paths[3] =
         {
@@ -83,26 +80,13 @@ namespace SceneSpace
         }
         SetActiveCamera(registeredCamera);
 
-
-
-
-
-        BackgroundRendererConfig cfg{};
-        BackgroundRendererConfig::BackgroundLayer layer;
-            // BackgroundRenderer is created here; drawing happens in Draw/RootDraw.
-        layer.texturePath = "Assets/Texture/background_UI_remake.png";  // 背景画像
-        layer.parallaxFactor = 0.0f;
-        layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
-        layer.tintColor = DirectX::XMFLOAT4(1, 1, 1, 1);
-        cfg.layers.push_back(layer);
-
-        if (!cfg.layers.empty())
+        m_videoPlayer = std::make_unique<VideoTexturePlayer>();
+        VideoTexturePlayer::ShaderPaths shaderPaths{};
+        shaderPaths.vertexShader = "Assets/shaders/video_vs.cso";
+        shaderPaths.pixelShader = "Assets/shaders/video_ps.cso";
+        if (!m_videoPlayer->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Result.mp4"))
         {
-            m_background = std::make_unique<BackgroundRenderer>();
-            if (!m_background->Initialize(cfg))
-            {
-                m_background.reset();
-            }
+            m_videoPlayer.reset();
         }
         m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
         m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
@@ -146,6 +130,7 @@ namespace SceneSpace
         //m_cursor.reset();
         m_menuTextures = {};
         m_resultRenderer.reset();
+        m_videoPlayer.reset();
         m_rig.reset();
         m_camera.reset();
     }
@@ -176,8 +161,13 @@ namespace SceneSpace
         RootUpdate(timer, input);
     }
 
-    void SceneResult::Update(const Core::UpdateContext&)
+    void SceneResult::Update(const Core::UpdateContext& ctx)
     {
+        if (m_videoPlayer)
+        {
+            m_videoPlayer->Update(ctx.dt);
+        }
+
         Core::Input* input = GetInput();
         if (!input) return;
 
@@ -237,25 +227,13 @@ namespace SceneSpace
         Sprite::ScopedPassDefaults spritePass;
 
         {
-            //if (m_background)
-            //{
-            //    m_background->Draw(0.0f, 1.0f);
-            //}
+            if (m_videoPlayer)
+            {
+                m_videoPlayer->Draw();
+            }
 
-            // Background sprite pass (UI texture) is drawn here.
-            m_resultRenderer->Draw(m_backTexture, float2(0.0f, 0.0f), float2(7.0f, 7.0f));
-
-           
-            Sprite::ScopedPassDefaults spritePass;
-            // RootDraw handles BackgroundRenderer + 3D; UI sprites are drawn after this block.
-            // Video must render before UI to stay behind menus and overlays.
             RootDraw();   // ← Draw(const Camera&) が呼ばれる
         }
-        // background_UI_remake.png
-        Sprite::SetColor({ 1,1,1,1 });
-        Sprite::SetSize({ 1280.0f, 960.0f }); // ← UI用サイズ
-        Sprite::SetOffset({ 640.0f, 480.0f }); // ← 画面中央
-        Sprite::Draw();
         SetDepthTest(true);
     }
 
@@ -311,4 +289,3 @@ namespace SceneSpace
 }
     
     
-
