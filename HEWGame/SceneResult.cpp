@@ -127,6 +127,11 @@ namespace SceneSpace
         UnregisterSceneUpdateNode();
         UnregisterCameraUpdateNode();
 
+        if (m_videoPlayer)
+        {
+            m_videoPlayer->Shutdown();
+        }
+
         //m_cursor.reset();
         m_menuTextures = {};
         m_resultRenderer.reset();

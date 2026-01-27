@@ -132,6 +132,10 @@ namespace SceneSpace
 
             save.FileSave();
 
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Shutdown();
+                }
                 ShutdownPowerUpSystems();
                 if (m_inputRegistered)
                 {
@@ -289,10 +293,6 @@ namespace SceneSpace
                 if (m_powerUpRenderer)
                 {
                         m_powerUpRenderer->Shutdown();
-                }
-                if (m_videoBackground)
-                {
-                    m_videoBackground->Shutdown();
                 }
 
                 if (m_rig)

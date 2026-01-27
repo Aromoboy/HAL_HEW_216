@@ -3,8 +3,10 @@
 #include <array>
 #include <cassert>
 #include <cstring>
+#include <sstream>
 
 #include "DirectX.h"
+#include "Diagnostics/Logger.h"
 
 // MF API usage copied and adapted from mediafoundationsamples\MFMP4ToYUVWithoutMFT
 #include <mfapi.h>
@@ -23,6 +25,21 @@
 namespace
 {
     constexpr LONGLONG kMfTimeBase = 10000000;
+    constexpr const char* kLogPrefix = "[VideoBackgroundRenderer] ";
+
+    void LogVideoError(const char* step, HRESULT hr)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << step << " failed (hr=0x" << std::hex << static_cast<unsigned long>(hr) << ").";
+        Diagnostics::LogInfo(oss.str());
+    }
+
+    void LogVideoMessage(const char* message)
+    {
+        std::ostringstream oss;
+        oss << kLogPrefix << message;
+        Diagnostics::LogInfo(oss.str());
+    }
 
     struct MfState
     {
@@ -59,25 +76,31 @@ namespace
         bool ReadOutputMediaFormat()
         {
             assert(sourceReader);
-            HRESULT hr = S_OK;
             IMFMediaType* nativeType = nullptr;
-            if (FAILED(sourceReader->GetNativeMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM,
-                    MF_SOURCE_READER_CURRENT_TYPE_INDEX,
-                    &nativeType)))
+            HRESULT hr = sourceReader->GetNativeMediaType(
+                MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+                MF_SOURCE_READER_CURRENT_TYPE_INDEX,
+                &nativeType);
+            if (FAILED(hr))
             {
+                LogVideoError("GetNativeMediaType", hr);
                 SAFE_RELEASE(nativeType);
                 return false;
             }
 
             SAFE_RELEASE(firstOutputType);
-            if (FAILED(sourceReader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, &firstOutputType)))
+            hr = sourceReader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, &firstOutputType);
+            if (FAILED(hr))
             {
+                LogVideoError("GetCurrentMediaType", hr);
                 SAFE_RELEASE(nativeType);
                 return false;
             }
 
-            if (FAILED(MFGetAttributeSize(firstOutputType, MF_MT_FRAME_SIZE, &width, &height)))
+            hr = MFGetAttributeSize(firstOutputType, MF_MT_FRAME_SIZE, &width, &height);
+            if (FAILED(hr))
             {
+                LogVideoError("MFGetAttributeSize", hr);
                 SAFE_RELEASE(nativeType);
                 return false;
             }
@@ -104,6 +127,7 @@ namespace
             HRESULT hr = MFCreateSourceResolver(&sourceResolver);
             if (FAILED(hr))
             {
+                LogVideoError("MFCreateSourceResolver", hr);
                 return false;
             }
 
@@ -115,83 +139,97 @@ namespace
                 &source);
             if (FAILED(hr))
             {
+                LogVideoError("CreateObjectFromURL", hr);
                 return false;
             }
 
             hr = source->QueryInterface(IID_PPV_ARGS(&mediaSource));
             if (FAILED(hr))
             {
+                LogVideoError("QueryInterface mediaSource", hr);
                 return false;
             }
 
             hr = MFCreateAttributes(&readerAttributes, 2);
             if (FAILED(hr))
             {
+                LogVideoError("MFCreateAttributes", hr);
                 return false;
             }
 
             hr = readerAttributes->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
             if (FAILED(hr))
             {
+                LogVideoError("SetGUID MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE", hr);
                 return false;
             }
 
             hr = readerAttributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, 1);
             if (FAILED(hr))
             {
+                LogVideoError("SetUINT32 MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING", hr);
                 return false;
             }
 
             hr = readerAttributes->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_IYUV);
             if (FAILED(hr))
             {
+                LogVideoError("SetGUID MF_MT_SUBTYPE", hr);
                 return false;
             }
 
             hr = MFCreateSourceReaderFromMediaSource(mediaSource, readerAttributes, &sourceReader);
             if (FAILED(hr))
             {
+                LogVideoError("MFCreateSourceReaderFromMediaSource", hr);
                 return false;
             }
 
             hr = MFCreateMediaType(&readerOutputType);
             if (FAILED(hr))
             {
+                LogVideoError("MFCreateMediaType", hr);
                 return false;
             }
 
             hr = readerOutputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
             if (FAILED(hr))
             {
+                LogVideoError("SetGUID MF_MT_MAJOR_TYPE", hr);
                 return false;
             }
 
             hr = readerOutputType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_IYUV);
             if (FAILED(hr))
             {
+                LogVideoError("SetGUID MF_MT_SUBTYPE", hr);
                 return false;
             }
 
             hr = sourceReader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, nullptr, readerOutputType);
             if (FAILED(hr))
             {
+                LogVideoError("SetCurrentMediaType", hr);
                 return false;
             }
 
             if (!ReadOutputMediaFormat())
             {
+                LogVideoMessage("ReadOutputMediaFormat failed.");
                 return false;
             }
 
             hr = sourceReader->SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS, FALSE);
             if (FAILED(hr))
             {
+                LogVideoError("SetStreamSelection disable all", hr);
                 return false;
             }
 
             hr = sourceReader->SetStreamSelection(MF_SOURCE_READER_FIRST_VIDEO_STREAM, TRUE);
             if (FAILED(hr))
             {
+                LogVideoError("SetStreamSelection video", hr);
                 return false;
             }
 
@@ -230,12 +268,14 @@ bool VideoBackgroundRenderer::Initialize(ID3D11Device* device,
     m_context = context;
     if (!m_device || !m_context)
     {
+        LogVideoMessage("Initialize called with null device/context.");
         return false;
     }
 
     HRESULT hr = MFStartup(MF_VERSION);
     if (FAILED(hr))
     {
+        LogVideoError("MFStartup", hr);
         return false;
     }
     m_mfStarted = true;
@@ -243,18 +283,21 @@ bool VideoBackgroundRenderer::Initialize(ID3D11Device* device,
     m_decoder = std::make_unique<DecoderState>();
     if (!m_decoder->mf.Open(mp4Path))
     {
+        LogVideoMessage("Decoder open failed.");
         Shutdown();
         return false;
     }
 
     if (!LoadShaders(shader))
     {
+        LogVideoMessage("LoadShaders failed.");
         Shutdown();
         return false;
     }
 
     if (!CreateFullScreenQuad())
     {
+        LogVideoMessage("CreateFullScreenQuad failed.");
         Shutdown();
         return false;
     }
@@ -297,6 +340,7 @@ void VideoBackgroundRenderer::Update(float dt)
 
     if (FAILED(hr))
     {
+        LogVideoError("ReadSample", hr);
         mf.finished = true;
         SAFE_RELEASE(sample);
         return;
@@ -324,6 +368,7 @@ void VideoBackgroundRenderer::Update(float dt)
     {
         if (!mf.ReadOutputMediaFormat())
         {
+            LogVideoMessage("ReadOutputMediaFormat failed after media type change.");
             mf.finished = true;
         }
         else
