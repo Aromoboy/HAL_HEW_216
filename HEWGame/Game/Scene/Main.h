@@ -8,6 +8,5 @@ void Uninit();
 void Update();
 void Draw();
 HRESULT GetComInitResult();
-void NotifyViewportChanged(UINT width, UINT height);
 
 #endif

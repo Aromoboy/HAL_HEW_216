@@ -281,7 +281,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         break;
                 }
                 ResizeDirectX(width, height);
-                NotifyViewportChanged(width, height);
                 break;
         }
         case WM_SYSKEYDOWN:
