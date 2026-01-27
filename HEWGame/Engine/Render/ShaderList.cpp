@@ -248,8 +248,7 @@ VS_OUT main(VS_IN vin) {
 	vout.wPos = vout.pos;
 	vout.pos = mul(vout.pos, view);
 	vout.pos = mul(vout.pos, proj);
-	float3x3 normalMatrix = transpose(inverse((float3x3)world));
-	vout.normal = normalize(mul(vin.normal, normalMatrix));
+	vout.normal = normalize(mul(vin.normal, (float3x3)world));
 	vout.uv = vin.uv;
 	vout.color = vin.color;
 	return vout;
@@ -296,8 +295,9 @@ VS_OUT main(VS_IN vin) {
 	vout.wPos = vout.pos;
 	vout.pos = mul(vout.pos, view);
 	vout.pos = mul(vout.pos, proj);
-	float3x3 normalMatrix = transpose(inverse((float3x3)mul(anime, world)));
-	vout.normal = normalize(mul(vin.normal, normalMatrix));
+	vout.normal = vin.normal;
+	vout.normal = mul(vout.normal, (float3x3)anime);
+	vout.normal = mul(vout.normal, (float3x3)world);
 	vout.uv = vin.uv;
 	vout.color = vin.color;
 	return vout;
