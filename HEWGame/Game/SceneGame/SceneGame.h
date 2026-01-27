@@ -130,7 +130,7 @@ protected:
     std::unique_ptr<SoundManagerEX> m_pManager;
     std::unique_ptr<EffectSystem> m_effectSystem;
     Render::ModelRenderer* m_renderer = nullptr;
-    std::unique_ptr<Entities::Player> player;
+    std::unique_ptr<Entities::Player> m_player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
