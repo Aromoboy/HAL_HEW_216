@@ -622,6 +622,11 @@ AssimpModelLorder::MakeMesh(const aiScene* ptr, AABB& outBounds, bool& hasBounds
                 DirectX::XMFLOAT2(uv.x, uv.y),
                 DirectX::XMFLOAT4(col.r, col.g, col.b, col.a)
             };
+            for (int k = 0; k < MAX_WEIGHT; ++k)
+            {
+                vertices[j].weight[k] = 0.0f;
+                vertices[j].index[k] = 0;
+            }
 
             minBounds.x = std::min(minBounds.x, pos.x);
             minBounds.y = std::min(minBounds.y, pos.y);
@@ -1316,9 +1321,21 @@ void AssimpModelLorder::MakeVertexWeightFromNode(const void* scene, const void* 
         a_bones.resize(1);
         a_bones[0] = bone;
 
-        // 頂点すべてを割り当てたボーンに100%依存とする
-        for (auto vtxIt = a_vertices.begin(); vtxIt != a_vertices.end(); ++vtxIt)
+    }
+
+    // 頂点すべてを割り当てたボーンに100%依存とする
+    for (auto vtxIt = a_vertices.begin(); vtxIt != a_vertices.end(); ++vtxIt)
+    {
+        for (int i = 0; i < MAX_WEIGHT; ++i)
+        {
+            vtxIt->weight[i] = 0.0f;
+            vtxIt->index[i] = 0;
+        }
+        if (bone.nodeIndex != kNodeNone)
+        {
             vtxIt->weight[0] = 1.0f;
+            vtxIt->index[0] = 0;
+        }
     }
 }
 
@@ -1371,6 +1388,7 @@ void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, AssimpModelLord
     }
 
     // 取得してきた頂点ウェイトを頂点データに書き込み
+    int zeroWeightVertices = 0;
     for (int i = 0; i < weights.size(); ++i)
     {
         // プログラム側の割り当て数を超える場合の正規化処理
@@ -1395,6 +1413,24 @@ void AssimpModelLorder::MakeVertexWeightHasBone(const void* ptr, AssimpModelLord
             a_vertices[i].index[j] = weights[i][j].idx;
             a_vertices[i].weight[j] = weights[i][j].weight;
         }
+
+        float totalWeight = 0.0f;
+        for (int j = 0; j < MAX_WEIGHT; ++j)
+        {
+            totalWeight += a_vertices[i].weight[j];
+        }
+        if (totalWeight <= 0.0f)
+        {
+            ++zeroWeightVertices;
+            a_vertices[i].weight[0] = 1.0f;
+            a_vertices[i].index[0] = 0;
+        }
+    }
+    if (zeroWeightVertices > 0)
+    {
+        DebugLog::DebugMessage(
+            "[AssimpModelLoader][WARNING] Bone weight sum was zero for " + std::to_string(zeroWeightVertices)
+            + " vertices in mesh '" + std::string(assimpMesh->mName.C_Str()) + "'.");
     }
 }
 
