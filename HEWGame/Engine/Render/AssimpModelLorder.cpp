@@ -193,6 +193,7 @@ namespace
         addAlias("マスカット.png", "muscat.png");
         addAlias("メロン.png", "melon.png");
         addAlias("クリーム.png", "cream.png");
+        addAlias("Fairy_Texture", "Fairy_Texture.png");
 
         return aliases;
     }
@@ -834,9 +835,11 @@ AssimpModelLorder::MakeMaterial(
                 const std::string cacheKey = NormalizeForKey(textureDirectory + sanitizedFile);
 
                 if (isAbsoluteWindowsPath
-                    && (EqualsIgnoreCase(fileName, "texture.png") || EqualsIgnoreCase(fileName, "texture2.png") || EqualsIgnoreCase(fileName, "Fairy_Texture")))
+                    && (EqualsIgnoreCase(sanitizedFile, "texture.png")
+                        || EqualsIgnoreCase(sanitizedFile, "texture2.png")
+                        || EqualsIgnoreCase(sanitizedFile, "Fairy_Texture.png")))
                 {
-                    texFile = fileName;
+                    texFile = sanitizedFile;
                     textureDirectory = "Assets\\Texture\\";
                 }
 
