@@ -7,7 +7,6 @@
 #include "WindowManager.h"
 #include "FullscreenManager.h"
 
-#include <Windows.h>
 #include <WinUser.h>
 #include <mmsystem.h>
 #include <crtdbg.h>
