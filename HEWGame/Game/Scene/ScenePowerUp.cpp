@@ -65,7 +65,6 @@ namespace SceneSpace
                 cache.Load("Star", GetDevice(), L"Assets/Texture/UI_Cakeblock_backeffect.png");
                 cache.Load("Cost", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
                 cache.Load("SpeedUp", GetDevice(), L"Assets/Texture/upgrade_UI_MoveSpeed_icon.png");
-                cache.Load("CakeSize", GetDevice(), L"Assets/Texture/upgrade_UI_cakesizeUpai_icon.png");
                 cache.Load("Whip", GetDevice(), L"Assets/Texture/upgrade_UI_cream_plus_icon.png");
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("BackFrame", GetDevice(), L"Assets/Texture/UI_Cakeblock.png");

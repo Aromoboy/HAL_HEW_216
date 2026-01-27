@@ -5,7 +5,6 @@
 | `SpeedUp` | Additive % (base stat) | +0/10/20/30/40/50% |
 | `SweetsSpawnSpeed` | Additive % (base stat) | +0/10/20/30/40/50% |
 | `SweetsSpawnQuantity` | Additive absolute | +0/2/3/4/5/6 |
-| `CakeSize` | Additive % (base stat) | +0/10/20/30/40/50% |
 | `PointAmount` | Multiplicative final | ×1.0/1.1/1.2/1.4/1.6/1.8 |
 | `Whip` | Feature toggle | Lv0=off, Lv1+=on |
 
@@ -21,4 +20,4 @@ Notes:
 
 ### Fields derived from effects
 
-When loading, `PlayerData` resets the derived fields and applies effects in the order returned by `PowerUpEffectConfig::Entries()` (the same order as the config). Each effect writes a dedicated field, so the order is deterministic but non-overlapping: `SpeedUp` → `fSpeed`, `SweetsSpawnSpeed` → `fReplenishSpeed`, `SweetsSpawnQuantity` → `nReplenishCount`, `CakeSize` → `fCakeSize`, `PointAmount` → `fPtMultipl`, and `Whip` → `creamEnabled`. This matches the effect types configured under `[powerup.effects]` in `Assets/Config/gameplay.cfg`.【F:HEWGame/Game/Save/PlayerData.cpp†L51-L112】【F:HEWGame/Game/PowerUp/PowerUpEffectConfig.cpp†L239-L274】【F:HEWGame/Assets/Config/gameplay.cfg†L111-L119】
+When loading, `PlayerData` resets the derived fields and applies effects in the order returned by `PowerUpEffectConfig::Entries()` (the same order as the config). Each effect writes a dedicated field, so the order is deterministic but non-overlapping: `SpeedUp` → `fSpeed`, `SweetsSpawnSpeed` → `fReplenishSpeed`, `SweetsSpawnQuantity` → `nReplenishCount`, `PointAmount` → `fPtMultipl`, and `Whip` → `creamEnabled`. This matches the effect types configured under `[powerup.effects]` in `Assets/Config/gameplay.cfg`.【F:HEWGame/Game/Save/PlayerData.cpp†L51-L109】【F:HEWGame/Game/PowerUp/PowerUpEffectConfig.cpp†L237-L272】【F:HEWGame/Assets/Config/gameplay.cfg†L110-L117】

@@ -11,7 +11,6 @@ enum class PowerUpType
 	SpeedUp,
 	SweetsSpawnSpeed,
 	SweetsSpawnQuantity,
-	CakeSize,
 	PointAmount,
 	Whip,
 	Unknown

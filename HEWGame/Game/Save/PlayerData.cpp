@@ -74,7 +74,6 @@ namespace
 	{
 		entry.fSpeed = 0.0f;
 		entry.creamEnabled = false;
-		entry.fCakeSize = 0.0f;
 		entry.fReplenishSpeed = 0.0f;
 		entry.nReplenishCount = 0;
 		entry.fPtMultipl = 1.0f;
@@ -95,9 +94,6 @@ namespace
 				break;
 			case PowerUpType::SweetsSpawnQuantity:
 				entry.nReplenishCount = static_cast<int>(effect.value);
-				break;
-			case PowerUpType::CakeSize:
-				entry.fCakeSize = effect.value;
 				break;
 			case PowerUpType::PointAmount:
 				entry.fPtMultipl = effect.value;

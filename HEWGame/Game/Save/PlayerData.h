@@ -15,7 +15,6 @@ public:
 		std::unordered_map<PowerUpType, int> levels;
 		float fSpeed = 0.0f;
 		bool creamEnabled = false;
-		float fCakeSize = 0.0f;
 		float fReplenishSpeed = 0.0f;
 		int nReplenishCount = 0;
 		float fPtMultipl = 1.0f;
@@ -24,7 +23,7 @@ public:
 
 	// Storage format (INI-like):
 	// [PlayerData]
-	// entry=currency,SpeedUp=level,CakeSize=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
+	// entry=currency,SpeedUp=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
 	bool LoadData();
 	bool SaveData() const;
 
