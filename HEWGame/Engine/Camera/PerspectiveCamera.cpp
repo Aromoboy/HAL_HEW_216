@@ -1,7 +1,6 @@
 #include "PerspectiveCamera.h"
 
 #include "AppGame.h"
-#include "Defines.h"
 #include "DrawMatrix.h"
 
 #include <algorithm>
@@ -29,7 +28,7 @@ namespace
                         return width / height;
                 }
 
-                return static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
+                return 1.0f;
         }
 
         bool IsFinitePositive(float value)

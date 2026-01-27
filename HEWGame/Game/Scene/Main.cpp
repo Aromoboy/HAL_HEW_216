@@ -191,6 +191,29 @@ HRESULT GetComInitResult()
         return g_comInitResult;
 }
 
+void NotifyViewportChanged(UINT width, UINT height)
+{
+        if (!g_sceneManager || width == 0 || height == 0)
+        {
+                return;
+        }
+
+        auto* activeScene = dynamic_cast<SceneSpace::Scene*>(g_sceneManager->GetActiveScene());
+        if (!activeScene)
+        {
+                return;
+        }
+
+        auto activeCamera = activeScene->GetActiveCamera();
+        auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
+        if (!perspectiveCamera)
+        {
+                return;
+        }
+
+        perspectiveCamera->OnViewportChanged(static_cast<float>(width), static_cast<float>(height));
+}
+
 void Uninit()
 {
         g_input.Shutdown();
