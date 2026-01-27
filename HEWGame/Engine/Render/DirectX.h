@@ -80,7 +80,7 @@ struct PostProcessParams
 };
 
 void BindPostProcessParams(
-        float gamma = 2.2f,
+        float gamma = 1.0f,
         float saturation = 0.85f,
         float contrast = 1.1f,
         const DirectX::XMFLOAT4& fogColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),

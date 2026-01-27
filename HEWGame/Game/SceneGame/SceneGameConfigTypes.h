@@ -29,7 +29,7 @@ namespace SceneGameConfig
 
     struct RenderPostProcessSettings
     {
-        float gamma = 2.2f;
+        float gamma = 1.0f;
         float saturation = 0.85f;
         float contrast = 1.1f;
         float3 fogColor{ 1.0f, 1.0f, 1.0f };
