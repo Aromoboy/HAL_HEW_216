@@ -14,9 +14,6 @@
 
 namespace
 {
-	constexpr float2 kUnitDistanse = { 1.4f, -0.5f };
-	constexpr float2 kTitleNodeMagnification = { 0.01f, 0.01f };
-
 	float2 ResolveTitleNodeSize()
 	{
 		const Core::DXContext& dxContext = App::Game::Instance().GetDXContext();
@@ -32,6 +29,9 @@ namespace
 			resolvedHeight * kTitleNodeMagnification.y);
 	}
 }
+
+constexpr float2 kUnitDistanse = { 1.4f, -0.5f };
+constexpr float2 kTitleNodeMagnification = { 0.01f, 0.01f };
 
 TitleManager::TitleManager(Core::UpdateScheduler* a_scheduler, TextureCache& a_cache, const TitleCursor::NodeFormat& a_format, Core::Input& a_input)
 	:m_scheduler(a_scheduler)
