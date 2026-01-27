@@ -4,11 +4,17 @@
 #include "DirectX.h"
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
+
+#include "PerspectiveCamera.h"
+
+#include "ResultRenderer.h"
 #include "TitleScene.h"
 #include "SceneGame.h"
 #include "ScenePowerUp.h"
 #include "AppGame.h"
-
+#include "SceneManager.h"
+#include "TitleRenderer.h"
+#include "TitleScene.h"
 namespace SceneSpace
 {
     SceneResult::SceneResult(SceneManager& manager)
@@ -19,6 +25,15 @@ namespace SceneSpace
     bool SceneResult::Load(Core::Input& input)
     {
         (void)input;
+
+        TextureCache& cache = TextureCache::Instance();
+
+        cache.Load("ResultCursor", GetDevice(), L"Assets/Texture/basket_UI_remake2.png");
+        cache.Load("ResultSceneNode", GetDevice(), L"Assets/Texture/basket_UI_remake3.png");
+        cache.Load("resultSceneNode", GetDevice(), L"Assets/Texture/basket_UI_remake4.png");
+
+       
+
 
         // カメラ
         m_camera = std::make_shared<CameraSpace::BaseCamera>();
@@ -37,18 +52,18 @@ namespace SceneSpace
 
         m_resultRenderer->Initialize(config);
 
-        TextureCache& cache = TextureCache::Instance();
+      
         m_backTexture = cache.Load("Back", GetDevice(), L"Assets/Texture/background_UI_remake.png");
 
         // UI テクスチャ
-        const char* paths[3] =
+     /*   const char* paths[3] =
         {
             "Assets/Texture/basket_UI_remake2.png",
             "Assets/Texture/basket_UI_remake3.png",
             "Assets/Texture/basket_UI_remake4.png"
-        };
+        };*/
 
-        
+        /*
 
         for (int i = 0; i < 3; i++)
         {
@@ -56,7 +71,7 @@ namespace SceneSpace
             m_menuTextures[i]->Create(paths[i], true);
            
 
-        }
+        }*/
         // カーソル（PowerUpCursor流用）
        /* m_cursor = std::make_unique<PowerUpCursor>();*/
 
@@ -207,8 +222,11 @@ namespace SceneSpace
             }
         }
 
+       
         if (input->IsTrigger(Core::ActionId::Confirm))
         {
+           
+
             switch (m_cursorIndex)
             {
             case 0: // Retry
@@ -241,7 +259,7 @@ namespace SceneSpace
             //    m_background->Draw(0.0f, 1.0f);
             //}
 
-            m_resultRenderer->Draw(m_backTexture, float2(0.0f, 0.0f), float2(7.0f, 7.0f));
+            m_resultRenderer->Draw(m_backTexture, float2(0.0f, 0.0f), float2(19.0f, 15.0f));
 
            
             Sprite::ScopedPassDefaults spritePass;
@@ -255,7 +273,7 @@ namespace SceneSpace
         SetDepthTest(true);
     }
 
-    void SceneResult::Draw(const std::shared_ptr<CameraSpace::ICamera>&)
+    void SceneResult::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
     {
         // リザルト情報
         ResultDisplayData data{};
@@ -297,14 +315,20 @@ namespace SceneSpace
             }
 
             Sprite::Draw();
+            if (m_background) m_background->Draw(0.0f, 1.0f);
+
+           
+
         }
 
         
         
     }
-
     
-}
+    }
+
+   
+
     
     
 
