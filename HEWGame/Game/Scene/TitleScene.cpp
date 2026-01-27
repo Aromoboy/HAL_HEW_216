@@ -10,7 +10,6 @@
 #include "EffectTestScene.h"
 #include "DirectX.h"
 #include "SceneManager.h"
-#include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
 #include "SceneResult.h"
  
@@ -46,6 +45,11 @@ bool TitleScene::Load(Core::Input& input)
 
 void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 {
+    if (m_video)
+    {
+        m_video->Update(timer.DeltaTime());
+    }
+
     if (input.IsTrigger(Core::ActionId::Confirm))
     {
         if (m_manager)
@@ -61,6 +65,7 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 
 void TitleScene::Draw()
 {
+    // RootDraw triggers Draw(const Camera&) where the background is rendered.
     RootDraw();
 }
 
@@ -79,19 +84,15 @@ void TitleScene::OnEnter()
 
     SetActiveCamera(registeredCamera);
 
-    BackgroundRendererConfig cfg{};
-    BackgroundRendererConfig::BackgroundLayer layer;
-    layer.texturePath = "Assets/Texture/StartScreen.png";
-    layer.parallaxFactor = 0.0f;
-    layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
-    layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    cfg.layers.push_back(layer);
-    if (!cfg.layers.empty())
+    if (!m_video)
     {
-        m_background = std::make_unique<BackgroundRenderer>();
-        if (!m_background->Initialize(cfg))
+        VideoTexturePlayer::ShaderPaths shaderPaths;
+        shaderPaths.vertexShader = "Assets/shaders/video_vs.cso";
+        shaderPaths.pixelShader = "Assets/shaders/video_ps.cso";
+        m_video = std::make_unique<VideoTexturePlayer>();
+        if (!m_video->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Title.mp4"))
         {
-            m_background.reset();
+            m_video.reset();
         }
     }
 
@@ -133,8 +134,11 @@ void TitleScene::OnExit()
         m_titleBGMHandle = -1;
     }
 
-    if (m_background) m_background->Shutdown();
-    m_background.reset();
+    if (m_video)
+    {
+        m_video->Shutdown();
+        m_video.reset();
+    }
     if (m_inputRegistered)
     {
         if (auto* input = GetInput())
@@ -250,10 +254,15 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
  
-
-    if (m_background) m_background->Draw(0.0f, 1.0f);
-
-    m_titleManager->DrawAll(*m_renderer);
+    (void)activeCamera;
+    if (m_video)
+    {
+        m_video->Draw();
+    }
+    if (m_titleManager)
+    {
+        m_titleManager->DrawAll(*m_renderer);
+    }
 
 
  

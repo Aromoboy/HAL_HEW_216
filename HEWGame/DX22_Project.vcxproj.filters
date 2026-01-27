@@ -25,6 +25,9 @@
     <Filter Include="Engine\Render\Legacy">
       <UniqueIdentifier>{401D1ADA-EA04-4926-95A2-86C0BC0E0D6B}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Render\VideoTexture">
+      <UniqueIdentifier>{5E1E6B5F-FF5E-4D56-9D07-5D2D6C1C2E2E}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Engine\Systems">
       <UniqueIdentifier>{62FE4BB9-829F-49D1-B4AC-4B59FF035B35}</UniqueIdentifier>
     </Filter>
@@ -261,6 +264,15 @@
     <ClCompile Include="Engine\Render\TextureDX.cpp">
       <Filter>Engine\Render</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Render\VideoTexture\dx11_basic.cpp">
+      <Filter>Engine\Render\VideoTexture</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Render\VideoTexture\SimpleMath.cpp">
+      <Filter>Engine\Render\VideoTexture</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Render\VideoTexture\video_texture.cpp">
+      <Filter>Engine\Render\VideoTexture</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\Systems\Draw\DrawSystem.cpp">
       <Filter>Engine\Systems\Draw</Filter>
     </ClCompile>
@@ -451,6 +463,9 @@
       <Filter>Game\UI</Filter>
     </ClCompile>
     <ClCompile Include="Game\UI\TitleRenderer.cpp">
+      <Filter>Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\UI\VideoBackgroundRenderer.cpp">
       <Filter>Game\UI</Filter>
     </ClCompile>
     <ClCompile Include="Game\UI\UIManager.cpp">
@@ -659,6 +674,21 @@
     </ClInclude>
     <ClInclude Include="Engine\Render\TextureDX.h">
       <Filter>Engine\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Render\VideoTexture\clock.h">
+      <Filter>Engine\Render\VideoTexture</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Render\VideoTexture\dx11_basic.h">
+      <Filter>Engine\Render\VideoTexture</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Render\VideoTexture\SimpleMath.h">
+      <Filter>Engine\Render\VideoTexture</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Render\VideoTexture\SimpleMath.inl">
+      <Filter>Engine\Render\VideoTexture</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Render\VideoTexture\video_texture.h">
+      <Filter>Engine\Render\VideoTexture</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Systems\Draw\DrawSystem.h">
       <Filter>Engine\Systems\Draw</Filter>
@@ -876,6 +906,12 @@
     <ClInclude Include="Game\UI\UIManager.h">
       <Filter>Game\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Game\UI\VideoBackgroundRenderer.h">
+      <Filter>Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\UI\VideoTexturePlayer.h">
+      <Filter>Game\UI</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.h">
       <Filter>ThirdParty\Effekseer</Filter>
     </ClInclude>
@@ -891,10 +927,13 @@
     <None Include="cpp.hint">
       <Filter>_Unsorted</Filter>
     </None>
+    <None Include="shaders\common.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\solid.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
     <ClCompile Include="Game\Title\TitleCursor.cpp">
-      <Filter>Game\Title</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Title\TitleManager.cpp">
       <Filter>Game\Title</Filter>
     </ClCompile>
     <ClCompile Include="SceneResult.cpp">
@@ -905,6 +944,8 @@
     </ClCompile>
     <ClCompile Include="Game\Save\PlayerData.cpp">
       <Filter>Game\Save</Filter>
+    <ClCompile Include="Game\Title\TitleManager.cpp">
+      <Filter>Game\Title</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -912,12 +953,14 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\postprocess.hlsl" />
+    <FxCompile Include="shaders\postprocess.hlsl" />
+    <FxCompile Include="shaders\video.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\video.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Title\TitleCursor.h">
-      <Filter>Game\Title</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Title\TitleManager.h">
       <Filter>Game\Title</Filter>
     </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpNode.h">
@@ -935,4 +978,8 @@
     <Filter>Game\UI</Filter>
   </ClInclude>
 </ItemGroup>
+    <ClInclude Include="Game\Title\TitleManager.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
