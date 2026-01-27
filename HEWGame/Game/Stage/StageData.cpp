@@ -175,6 +175,11 @@ namespace Stage
         return m_guidelineStep;
     }
 
+    float StageData::GetGuidelinePlayerMaxYOffset() const noexcept
+    {
+        return m_guidelinePlayerMaxYOffset;
+    }
+
     float StageData::GetGuidelineThicknessPixels() const noexcept
     {
         return m_guidelineThicknessPixels;
@@ -264,6 +269,7 @@ namespace Stage
         m_pickupOffset = normalized.pickupOffset;
         m_guidelineHeight = normalized.guidelineHeight;
         m_guidelineStep = normalized.guidelineStep;
+        m_guidelinePlayerMaxYOffset = normalized.guidelinePlayerMaxYOffset;
         m_guidelineThicknessPixels = normalized.guidelineThicknessPixels;
         m_guidelineThicknessWorld = normalized.guidelineThicknessWorld;
         m_guidelineWidthPaddingWorld = normalized.guidelineWidthPaddingWorld;
@@ -301,6 +307,7 @@ namespace Stage
             << ',' << m_pickupOffset.localOffset.y << ',' << m_pickupOffset.localOffset.z << ')'
             << " guidelineHeight=" << m_guidelineHeight
             << " guidelineStep=" << m_guidelineStep
+            << " guidelinePlayerMaxYOffset=" << m_guidelinePlayerMaxYOffset
             << " guidelineThicknessPixels=" << m_guidelineThicknessPixels
             << " guidelineThicknessWorld=" << m_guidelineThicknessWorld
             << " guidelineWidthPaddingWorld=" << m_guidelineWidthPaddingWorld

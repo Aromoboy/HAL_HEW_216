@@ -232,6 +232,7 @@ namespace Stage
         float3 pickupOffsetLocalCells = parsed.pickupOffsetLocalCells;
         float guidelineHeight = parsed.guidelineHeight;
         float guidelineStep = parsed.guidelineStep;
+        float guidelinePlayerMaxYOffset = parsed.guidelinePlayerMaxYOffset;
         float guidelineThicknessPixels = parsed.guidelineThicknessPixels;
         float guidelineThicknessWorld = parsed.guidelineThicknessWorld;
         float guidelineWidthPaddingWorld = parsed.guidelineWidthPaddingWorld;
@@ -279,6 +280,13 @@ namespace Stage
             guidelineStep = StageConfigDefaults::kDefaultGuidelineStep;
             std::ostringstream oss;
             oss << kLogPrefix << "guidelineStep not specified; defaulting to " << guidelineStep << "\n";
+        }
+        if (!parsed.guidelinePlayerMaxYOffsetSet)
+        {
+            guidelinePlayerMaxYOffset = StageConfigDefaults::kDefaultGuidelinePlayerMaxYOffset;
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelinePlayerMaxYOffset not specified; defaulting to "
+                << guidelinePlayerMaxYOffset << "\n";
         }
         if (!parsed.guidelineThicknessSet)
         {
@@ -834,6 +842,13 @@ namespace Stage
             oss << kLogPrefix << "guidelineStep value " << guidelineStep
                 << " invalid; keeping parsed value.\n";
         }
+        if (!std::isfinite(guidelinePlayerMaxYOffset) || guidelinePlayerMaxYOffset < 0.0f)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "guidelinePlayerMaxYOffset value " << guidelinePlayerMaxYOffset
+                << " invalid; using default " << StageConfigDefaults::kDefaultGuidelinePlayerMaxYOffset << "\n";
+            guidelinePlayerMaxYOffset = StageConfigDefaults::kDefaultGuidelinePlayerMaxYOffset;
+        }
         if (!std::isfinite(guidelineThicknessPixels) || guidelineThicknessPixels <= 0.0f)
         {
             std::ostringstream oss;
@@ -959,6 +974,7 @@ namespace Stage
         normalized.pickupOffset = pickupOffset;
         normalized.guidelineHeight = guidelineHeight;
         normalized.guidelineStep = guidelineStep;
+        normalized.guidelinePlayerMaxYOffset = guidelinePlayerMaxYOffset;
         normalized.guidelineThicknessPixels = guidelineThicknessPixels;
         normalized.guidelineThicknessWorld = guidelineThicknessWorld;
         normalized.guidelineWidthPaddingWorld = guidelineWidthPaddingWorld;
@@ -1008,6 +1024,7 @@ namespace Stage
         };
         normalized.guidelineHeight = StageConfigDefaults::kDefaultGuidelineHeight;
         normalized.guidelineStep = StageConfigDefaults::kDefaultGuidelineStep;
+        normalized.guidelinePlayerMaxYOffset = StageConfigDefaults::kDefaultGuidelinePlayerMaxYOffset;
         normalized.guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
         normalized.guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
         normalized.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
