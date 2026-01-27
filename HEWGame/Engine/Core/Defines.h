@@ -33,7 +33,7 @@ static const float GRAVITY = 0.98f;
 // タイトル
 static const wchar_t* APP_TITLE = L"HEW_Team216";
 
-// 画面サイズ
+// 画面サイズ（フォールバック用）
 static const int SCREEN_WIDTH	= 1280;
 static const int SCREEN_HEIGHT	= 720;
 
@@ -46,4 +46,3 @@ static const float DEG_TO_RAD = PI / 180.0f;
 static const float RAD_TO_DEG = 180.0f / PI;
 
 #endif // __DEFINES_H__
-
