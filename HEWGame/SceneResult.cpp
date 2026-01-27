@@ -189,13 +189,13 @@ namespace SceneSpace
                 m_cursorIndex++;
                 if (m_cursorIndex >= kMenuCount) m_cursorIndex = 0;
 
-
                 inputLock = true;
             }
-            if (std::abs(vertical) < 0.2f)
-            {
-                inputLock = false;
-            }
+
+        }
+        if (std::abs(vertical) < 0.2f)
+        {
+            inputLock = false;
         }
 
         if (input->IsTrigger(Core::ActionId::Confirm))
