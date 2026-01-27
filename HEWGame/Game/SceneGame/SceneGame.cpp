@@ -27,6 +27,7 @@
 #include "UIManager.h"
 #include "PlayerController.h"
 #include "AppGame.h"
+#include "Systems/Physics/ColliderBuilder.h"
 #include "CameraMath.h"
 #include "AnimationCache.h"
 #include "AssimpModelLorder.h"
@@ -34,8 +35,10 @@
 #include "ShaderCache.h"
 #include <cassert>
 #include <algorithm>
+#include <cctype>
 #include <initializer_list>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -47,6 +50,7 @@
 #include <string>
 #include <utility>
 #include <iterator>
+#include <box2d/box2d.h>
 #include <DirectXMath.h>
 #include "Physical.h"
 #include "ColliderRegistry.h"
@@ -82,6 +86,7 @@ namespace
         constexpr float kDefaultPlaySeconds = 30.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
+        constexpr float kScoreToPointsMultiplier = 1.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
@@ -113,6 +118,59 @@ namespace
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
             return a.min.x <= b.max.x && a.max.x >= b.min.x;
+        }
+
+        int ConvertScoreToPoints(int score)
+        {
+            const float rawPoints = static_cast<float>(score) * kScoreToPointsMultiplier;
+            return std::max(0, static_cast<int>(std::lround(rawPoints)));
+        }
+
+        std::string NormalizeStageKey(std::string value)
+        {
+            std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch)
+                {
+                    return static_cast<char>(std::tolower(ch));
+                });
+            return value;
+        }
+
+        std::string BuildStageColliderKey(const StageObject& obj)
+        {
+            if (!obj.colliderPresetId.empty())
+            {
+                return NormalizeStageKey(obj.colliderPresetId);
+            }
+
+            std::string key = obj.modelPath;
+            try
+            {
+                key = std::filesystem::path(obj.modelPath).stem().string();
+            }
+            catch (...)
+            {
+                // fallback to model path as-is
+            }
+
+            return NormalizeStageKey(key);
+        }
+
+        bool IsCakeStageObject(const StageObject& obj)
+        {
+            const std::string materialKey = NormalizeStageKey(obj.materialKey);
+            if (materialKey == "cake")
+            {
+                return true;
+            }
+
+            const std::string colliderKey = NormalizeStageKey(obj.colliderPresetId);
+            if (colliderKey == "cake")
+            {
+                return true;
+            }
+
+            const std::string modelPath = NormalizeStageKey(obj.modelPath);
+            return modelPath.find("cake") != std::string::npos;
         }
 
         float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
@@ -387,6 +445,8 @@ bool SceneGame::Load(Core::Input& input)
     composer.ComposeEffect(*composition, m_manager->GetEffectRenderer(), m_manager->GetEffectManager());
     m_playerSpawnTransform = composition->playerSpawnTransform;
     m_stageData = std::move(composition->stageData);
+    m_spawnOriginsPrimaryInitial = m_stageData.GetSpawnPointsPrimary();
+    m_spawnOriginsSecondaryInitial = m_stageData.GetSpawnPointsSecondary();
     m_stagePlaneZ = std::nullopt;
     const float stagePlaneZ = m_stageData.GetPlaneZ();
     if (IsFiniteFloat(stagePlaneZ))
@@ -402,6 +462,8 @@ bool SceneGame::Load(Core::Input& input)
     m_playerPickupMaxDistance = composition->playerPickupMaxDistance;
     m_playerPickupDepthThreshold = composition->playerPickupDepthThreshold;
     m_playerSpeedMultiplier = composition->playerSpeedMultiplier;
+    m_playerSpeedMultiplierBase = m_playerSpeedMultiplier;
+    LoadPlayerPowerUpData();
     m_renderPostProcessSettings = composition->renderPostProcessSettings;
     m_lightingSettings = composition->lightingSettings;
     m_blobShadowSettings = composition->blobShadowSettings;
@@ -444,7 +506,8 @@ bool SceneGame::Load(Core::Input& input)
     m_effectSystem = std::move(composition->effectSystem);
 
     GameplayRulesSystem::Config gameplayRulesConfig{};
-    gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
+    const int timerLevel = std::max(0, m_playerPowerUpData.timerLevel);
+    gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds + static_cast<float>(timerLevel) * 5.0f;
     gameplayRulesConfig.countdownLogIntervalSeconds = kCountdownLogIntervalSeconds;
     gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
     m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);
@@ -520,12 +583,14 @@ bool SceneGame::Load(Core::Input& input)
         }
     }
     m_playerModel = std::move(loaderResult.playerModel);
-    player = std::move(loaderResult.player);
+    m_player = std::move(loaderResult.player);
     m_playerPickupBoxWidth = loaderResult.playerPickupBoxWidth;
     m_playerPickupBoxHeight = loaderResult.playerPickupBoxHeight;
     m_playerPickupOriginOffset = loaderResult.playerPickupOriginOffset;
     m_stageObjects = std::move(composition->stageObjects);
+    m_stageObjectsInitial = m_stageObjects;
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    ApplyPowerUpEffects(m_playerPowerUpData);
 
 #if defined(_DEBUG)
     {
@@ -562,9 +627,9 @@ bool SceneGame::Load(Core::Input& input)
         auto baseCamera = std::static_pointer_cast<CameraSpace::BaseCamera>(m_gameCamera);
         m_cameraRig = std::make_unique<CameraRig>(baseCamera);
         ConfigureCamera(cameraSettings, m_gameCameraConfig);
-        if (player)
+        if (m_player)
         {
-            m_cameraRig->Attach(player.get());
+            m_cameraRig->Attach(m_player.get());
         }
     }
 
@@ -835,9 +900,9 @@ void SceneGame::OnExit()
     }
 
     // --- Player ---
-    if (player)
+    if (m_player)
     {
-        Unregister(*player);
+        Unregister(*m_player);
     }
 
     // --- Effect ---
@@ -948,13 +1013,13 @@ SceneGame::~SceneGame()
         m_sweetsRegistered = false;
     }
 
-    if (player)
+    if (m_player)
     {
         if (m_drawSystem)
         {
-            m_drawSystem->UnregisterRenderable(*player);
+            m_drawSystem->UnregisterRenderable(*m_player);
         }
-        Unregister(*player);
+        Unregister(*m_player);
     }
 
     if (m_drawSystem)
@@ -1036,35 +1101,35 @@ void SceneGame::ConfigureUpdates()
         }
 
 
-        if (player)
+        if (m_player)
         {
-                Register(*player);
+                Register(*m_player);
 
                 if (m_physicsBinder)
                 {
-                        m_physicsBinder->RegisterPhysicsBody(*player);
+                        m_physicsBinder->RegisterPhysicsBody(*m_player);
                         std::ostringstream oss;
-                        const bool isKinematic = player->IsKinematic();
+                        const bool isKinematic = m_player->IsKinematic();
                         oss << kLogPrefix << "ConfigureUpdates ensured player body is registered (kinematic="
                             << std::boolalpha << isKinematic << ").\n";
                         ::DebugTrace(oss.str());
                 }
 
-                const int playerFixtureCount = player->GetBoxColliderComponent()
-                    ? player->GetBoxColliderComponent()->createdFixtureCount
+                const int playerFixtureCount = m_player->GetBoxColliderComponent()
+                    ? m_player->GetBoxColliderComponent()->createdFixtureCount
                     : 0;
-                if (!player->HasBox2DBody() || playerFixtureCount <= 0)
+                if (!m_player->HasBox2DBody() || playerFixtureCount <= 0)
                 {
                         DebugTrace(std::string(kLogPrefix) + "Player Box2D body missing after registration; attempting repair.\n");
                         if (m_physicsBinder)
                         {
-                            m_physicsBinder->RegisterPhysicsBody(*player);
+                            m_physicsBinder->RegisterPhysicsBody(*m_player);
                         }
 
-                        const int repairedFixtures = player->GetBoxColliderComponent()
-                            ? player->GetBoxColliderComponent()->createdFixtureCount
+                        const int repairedFixtures = m_player->GetBoxColliderComponent()
+                            ? m_player->GetBoxColliderComponent()->createdFixtureCount
                             : 0;
-                        if (!player->HasBox2DBody() || repairedFixtures <= 0)
+                        if (!m_player->HasBox2DBody() || repairedFixtures <= 0)
                         {
                                 DebugTrace(std::string(kLogPrefix) + "[Fatal] Player physics body unavailable; pickup input may fail.\n");
                         }
@@ -1161,7 +1226,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }
 
     m_playerController.UpdatePlayerBounds({
-        player.get(),
+        m_player.get(),
         m_gameCamera.get(),
         m_sweetsManager.get(),
         ctx.dt,
@@ -1220,12 +1285,17 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         {
             PlayerController::SpeedInput speedInput{
                 *input,
-                player.get(),
+                m_player.get(),
                 m_playerBaseHorizontalSpeed,
                 m_playerBaseVerticalSpeed,
                 m_playerSpeedMultiplier
             };
             m_playerSpeedMultiplier = m_playerController.HandleSpeedInput(speedInput).speedMultiplier;
+            if (m_playerSpeedMultiplier < m_playerSpeedMultiplierBase)
+            {
+                m_playerSpeedMultiplier = m_playerSpeedMultiplierBase;
+                m_player->SetSpeedMultiplier(m_playerSpeedMultiplier);
+            }
         }
 
         const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
@@ -1306,9 +1376,14 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             SetStageState(StageState::Playing);
             return;
         case PlayerController::PostGameAction::GoToPowerUp:
+            if (m_manager && EnsureResultSaved())
+            {
+                m_manager->RequestSceneChange(
+                    std::make_unique<TitleScene>(*m_manager));
+            }
             return;
         case PlayerController::PostGameAction::GoToTitle:
-            if (m_manager)
+            if (m_manager && EnsureResultSaved())
             {
                 m_manager->RequestSceneChange(
                     std::make_unique<TitleScene>(*m_manager));
@@ -1338,9 +1413,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.hud.sweetsCount = GetSweetsCount();
         uiData.hud.timeUp = isTimeUp;
         uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
-        if (player)
+        if (m_player)
         {
-            uiData.hud.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+            uiData.hud.moveSpeedUnitsPerSecond = m_player->GetMoveSpeed();
         }
         if (g_DebugDrawEnabled && m_sweetsManager)
         {
@@ -1364,9 +1439,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.result.sweetsCount = GetSweetsCount();
         uiData.result.timeUp = isTimeUp;
         uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
-        if (player)
+        if (m_player)
         {
-            uiData.result.moveSpeedUnitsPerSecond = player->GetMoveSpeed();
+            uiData.result.moveSpeedUnitsPerSecond = m_player->GetMoveSpeed();
         }
 
         uiData.showHud = g_DebugDrawEnabled && !isTimeUp;
@@ -1399,7 +1474,7 @@ void SceneGame::ResetGuidelineHeight()
 void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
 {
         (void)ctx;
-        if (!player)
+        if (!m_player)
         {
                 return;
         }
@@ -1499,12 +1574,12 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
                 return;
         }
 
-        Entities::TranslatePhysicalEntity(*player, delta);
+        Entities::TranslatePhysicalEntity(*m_player, delta);
 
-        const auto& transform = player->GetTransform();
+        const auto& transform = m_player->GetTransform();
 
-        player->SyncColliderBounds();
-        const AABB bounds = player->GetAABB();
+        m_player->SyncColliderBounds();
+        const AABB bounds = m_player->GetAABB();
         std::ostringstream oss;
         oss << kLogPrefix << "[ColliderDebug] Nudged player by (" << delta.x << ',' << delta.y << ',' << delta.z << ")"
             << " newPos=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ")"
@@ -1555,7 +1630,7 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
 
     if (g_DrawColliders)
     {
-        drawEntity(player.get());
+        drawEntity(m_player.get());
 
         if (m_sweetsManager)
         {
@@ -1573,10 +1648,10 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
             drawState(SweetsSpace::SweetsState::Carried);
         }
 
-        if (player)
+        if (m_player)
         {
             //プレイヤーの描画用トランスドームを取得
-            const Transform tf = player->GetRenderTransform();
+            const Transform tf = m_player->GetRenderTransform();
             const float3 basePos = tf.position;
             //掴み枠の位置
             constexpr float kPickupForwardOffset = 0.9f;
@@ -1587,7 +1662,7 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
 
             //プレイヤーの向き
             const float facingSign =
-                player->GetFacingSign();
+                m_player->GetFacingSign();
  
             //掴み判定ボックスの中心座標を計算
             //X方向のみ向きに応じて反転
@@ -1624,11 +1699,11 @@ void SceneGame::DrawPhysicsDebugOverlay(const std::shared_ptr<::CameraSpace::ICa
     if (activeCamera)
     {
         auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera);
-        if (perspectiveCamera && player)
+        if (perspectiveCamera && m_player)
         {
             const float comfortZoneTopPercentY = std::clamp(m_gameCameraConfig.comfortZoneTopPercentY, 0.0f, 1.0f);
             const float comfortZoneBottomPercentY = std::clamp(m_gameCameraConfig.comfortZoneBottomPercentY, 0.0f, 1.0f);
-            float3 targetPosition = player->GetTransform().position;
+            float3 targetPosition = m_player->GetTransform().position;
 
             const DirectX::XMFLOAT4X4& view = activeCamera->GetView();
             DirectX::XMMATRIX viewMatrix = DirectX::XMLoadFloat4x4(&view);
@@ -1770,9 +1845,9 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 if (viewportHeight > 0.0f)
                 {
                     float3 planeSample{ 0.0f, 0.0f, 0.0f };
-                    if (player)
+                    if (m_player)
                     {
-                        planeSample = player->GetTransform().position;
+                        planeSample = m_player->GetTransform().position;
                     }
                     if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
                     {
@@ -1898,10 +1973,10 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 return std::make_pair(receiverY, ComputeReceiverHeightFromBounds(bounds, receiverY));
             };
 
-            if (player)
+            if (m_player)
             {
-                const auto [receiverY, receiverHeight] = resolveShadowReceiver(*player);
-                m_blobShadowRenderer->DrawShadow(*player, *activeCamera, receiverY, receiverZ, receiverHeight);
+                const auto [receiverY, receiverHeight] = resolveShadowReceiver(*m_player);
+                m_blobShadowRenderer->DrawShadow(*m_player, *activeCamera, receiverY, receiverZ, receiverHeight);
             }
             if (m_sweetsManager)
             {
@@ -2023,9 +2098,9 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     float3 targetPosition{ 0.0f, 0.0f, 0.0f };
     bool hasTarget = false;
-    if (player)
+    if (m_player)
     {
-        targetPosition = player->GetTransform().position;
+        targetPosition = m_player->GetTransform().position;
         if (!resolvedSettings.fixedPosition)
         {
             targetPosition.y += gameCameraConfig.offsetY;
@@ -2207,9 +2282,9 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
 
     const bool shouldClampY = visualMinY || visualMaxY;
     std::optional<float> halfViewHeightWorld = std::nullopt;
-    if (m_gameCamera && player)
+    if (m_gameCamera && m_player)
     {
-        float3 planeSample = player->GetTransform().position;
+        float3 planeSample = m_player->GetTransform().position;
         if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
         {
             planeSample.z = *m_stagePlaneZ;
@@ -2282,6 +2357,9 @@ void SceneGame::SetStageState(StageState newState)
     case StageState::TimeUp:
         OnStageFail();
         break;
+    case StageState::ShowingResult:
+        OnStageResult();
+        break;
     default:
         break;
     }
@@ -2290,6 +2368,8 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
+    m_resultFinalized = false;
+    m_resultSaved = false;
 
     // カウントダウン開始
     m_startCountdownNumber = 3;   // 秒数
@@ -2329,6 +2409,68 @@ void SceneGame::OnStageFail()
     ::DebugTrace(oss.str());
 }
 
+void SceneGame::OnStageResult()
+{
+    if (m_resultFinalized)
+    {
+        return;
+    }
+
+    m_resultFinalized = true;
+    const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+    const int earnedPoints = ConvertScoreToPoints(score);
+    const int currentPoints = std::max(0, m_playerPowerUpData.nPoints);
+    const int updatedPoints = currentPoints + earnedPoints;
+
+    PlayerData::Data updatedEntry = m_playerPowerUpData;
+    updatedEntry.nPoints = updatedPoints;
+
+    std::vector<PlayerData::Data> entries = m_playerData.GetEntries();
+    if (entries.empty())
+    {
+        entries.push_back(updatedEntry);
+    }
+    else
+    {
+        entries.front() = updatedEntry;
+    }
+    m_playerData.SetEntries(entries);
+    m_resultSaved = m_playerData.SaveData();
+    if (!m_resultSaved)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Failed to save points.\n");
+    }
+    m_playerPowerUpData = updatedEntry;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Result] score=" << score
+        << " earnedPoints=" << earnedPoints
+        << " totalPoints=" << updatedPoints << "\n";
+    ::DebugTrace(oss.str());
+}
+
+bool SceneGame::EnsureResultSaved()
+{
+    if (!m_resultFinalized)
+    {
+        OnStageResult();
+        return m_resultSaved;
+    }
+
+    if (m_resultSaved)
+    {
+        return true;
+    }
+
+    m_resultSaved = m_playerData.SaveData();
+    if (!m_resultSaved)
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Failed to save points.\n");
+    }
+
+    return m_resultSaved;
+}
+
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
 {
     std::ostringstream oss;
@@ -2338,6 +2480,40 @@ void SceneGame::BroadcastPhaseAdvance(int newPhase)
     ::DebugTrace(oss.str());
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
 }
+
+void SceneGame::ResetStageObjectsToInitial()
+{
+    if (m_stageObjectsInitial.empty())
+    {
+        return;
+    }
+
+    if (m_stageObjects.size() != m_stageObjectsInitial.size())
+    {
+        m_stageObjects = m_stageObjectsInitial;
+    }
+    else
+    {
+        for (size_t index = 0; index < m_stageObjects.size(); ++index)
+        {
+            auto& obj = m_stageObjects[index];
+            const auto& initial = m_stageObjectsInitial[index];
+            obj.transform = initial.transform;
+            obj.baseY = initial.baseY;
+            obj.swaiTime = initial.swaiTime;
+            obj.currentRotation = initial.currentRotation;
+        }
+    }
+
+    for (auto& obj : m_stageObjects)
+    {
+        if (obj.physicsEntity)
+        {
+            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+        }
+    }
+}
+
 void SceneGame::ResetPlaySession()
 {
     if (m_physicsBinder)
@@ -2349,6 +2525,7 @@ void SceneGame::ResetPlaySession()
     if (m_sweetsManager)
     {
         m_sweetsManager->ClearAllSweets();
+        m_sweetsManager->SetSpawnOrigins(m_spawnOriginsPrimaryInitial, m_spawnOriginsSecondaryInitial);
         m_sweetsManager->ForceSpawnRefresh();
         m_sweetsManager->SeedInitialSpawns();
     }
@@ -2357,25 +2534,39 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession could not clear sweets: manager missing.\n");
     }
 
-    if (player)
-    {
-        player->ClearCarriedSweets();
-        if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
-        {
-            m_playerSpeedMultiplier = 1.0f;
-            player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
-            player->SetSpeedMultiplier(m_playerSpeedMultiplier);
-        }
+    ResetStageObjectsToInitial();
 
-        player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
-        player->SetPickupMaxDistance(m_playerPickupMaxDistance);
-        player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
-        player->SetPickupOriginOffset(m_playerPickupOriginOffset);
+    {
+        std::ostringstream resetLog;
+        resetLog << kLogPrefix << "[RetryReset] restored stage objects + spawn origins\n";
+        ::DebugTrace(resetLog.str());
     }
 
-    if (player && m_cameraRig)
+    if (m_player)
     {
-        m_cameraRig->ResetVerticalScroll(player->GetTransform().position);
+        m_player->ClearCarriedSweets();
+        if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
+        {
+            m_playerSpeedMultiplier = m_playerSpeedMultiplierBase;
+            m_player->SetBaseMoveSpeed(m_playerBaseHorizontalSpeed, m_playerBaseVerticalSpeed);
+            m_player->SetSpeedMultiplier(m_playerSpeedMultiplier);
+        }
+
+        m_player->SetPickupArea(m_playerPickupBoxWidth, m_playerPickupBoxHeight, m_playerPickupOffset);
+        m_player->SetPickupMaxDistance(m_playerPickupMaxDistance);
+        m_player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
+        m_player->SetPickupOriginOffset(m_playerPickupOriginOffset);
+
+        const Transform& spawnTransform = m_playerSpawnTransform.transform;
+        m_player->SetTransformViaPhysics(spawnTransform.position, spawnTransform.rotation);
+        m_player->SetScale(spawnTransform.scale);
+        m_player->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+        m_player->SetAngularVelocity(0.0f);
+    }
+
+    if (m_player && m_cameraRig)
+    {
+        m_cameraRig->ResetVerticalScroll(m_playerSpawnTransform.transform.position);
     }
     else if (!m_cameraRig)
     {
@@ -2393,6 +2584,56 @@ void SceneGame::ResetPlaySession()
     ::DebugTrace(oss.str());
 }
 
+void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
+{
+    const float speedMultiplier = std::max(0.0f, m_playerSpeedMultiplierBase * (1.0f + data.fSpeed));
+    m_playerSpeedMultiplierBase = speedMultiplier;
+    m_playerSpeedMultiplier = speedMultiplier;
+    if (m_player)
+    {
+        m_player->SetSpeedMultiplier(speedMultiplier);
+    }
+
+    m_gameplayRules.SetScoreMultiplier(data.fPtMultipl);
+
+    if (m_player)
+    {
+        const int carryBonus = std::max(0, data.nReplenishCount);
+        m_player->SetMaxCarry(1 + carryBonus);
+    }
+
+    if (m_sweetsManager)
+    {
+        const float spawnMultiplier = std::max(0.01f, 1.0f + data.fReplenishSpeed);
+        m_sweetsManager->SetSpawnIntervalMultiplier(spawnMultiplier);
+        m_sweetsManager->SetSpawnCountBonus(std::max(0, data.nReplenishCount));
+        m_sweetsManager->SetCreamEnabled(data.creamEnabled);
+    }
+
+}
+
+void SceneGame::LoadPlayerPowerUpData()
+{
+    m_playerPowerUpLoaded = m_playerData.LoadData();
+    if (m_playerPowerUpLoaded)
+    {
+        const auto& entries = m_playerData.GetEntries();
+        if (!entries.empty())
+        {
+            m_playerPowerUpData = entries.front();
+        }
+        else
+        {
+            m_playerPowerUpLoaded = false;
+            DebugTrace(std::string(kLogPrefix) + "[PlayerData] No entries found; using defaults.\n");
+        }
+    }
+    else
+    {
+        DebugTrace(std::string(kLogPrefix) + "[PlayerData] Load failed; using defaults.\n");
+    }
+}
+
 
 
 void SceneGame::ToggleGameplaySystems(bool enabled)
@@ -2405,9 +2646,9 @@ void SceneGame::ToggleGameplaySystems(bool enabled)
     {
         m_sweetsManager->Enable(enabled);
     }
-    if (player)
+    if (m_player)
     {
-        player->Enable(enabled);
+        m_player->Enable(enabled);
     }
 }
 

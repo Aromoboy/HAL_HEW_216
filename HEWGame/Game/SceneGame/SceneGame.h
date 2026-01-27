@@ -28,6 +28,7 @@
 #include "SceneGameConfigTypes.h"
 #include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
+#include "Save/PlayerData.h"
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -108,22 +109,28 @@ private:
     void OnStageStart();
     void OnStageClear();
     void OnStageFail();
+    void OnStageResult();
+    bool EnsureResultSaved();
     void ResetPlaySession();
+    void ResetStageObjectsToInitial();
     void ResetGuidelineHeight();
     void ToggleGameplaySystems(bool enabled);
+    void LoadPlayerPowerUpData();
+    void ApplyPowerUpEffects(const PlayerData::Data& data);
     int GetSweetsCount() const;
     int m_gameBGMHandle = -1;
     void Initialize(const Stage::StageData& stageData);
 
 protected:
     std::vector<StageObject> m_stageObjects;
+    std::vector<StageObject> m_stageObjectsInitial;
     std::vector<std::shared_ptr<Entities::PhysicalEntity>> m_stagePhysicsEntities;
     std::shared_ptr<CameraSpace::PerspectiveCamera> m_gameCamera;
     std::unique_ptr<CameraRig> m_cameraRig;
     std::unique_ptr<SoundManagerEX> m_pManager;
     std::unique_ptr<EffectSystem> m_effectSystem;
     Render::ModelRenderer* m_renderer = nullptr;
-    std::unique_ptr<Entities::Player> player;
+    std::unique_ptr<Entities::Player> m_player;
     std::unique_ptr<Systems::IPhysicsBinder> m_physicsBinder;
     std::unique_ptr<Systems::DrawSystem> m_drawSystem;
     std::unique_ptr<SweetsSpace::SweetsManager> m_sweetsManager;
@@ -146,6 +153,8 @@ protected:
     void BroadcastPhaseAdvance(int newPhase);
     StageState m_stageState = StageState::Intro;
     PlayerController::ResultScreenState m_resultState;
+    bool m_resultFinalized = false;
+    bool m_resultSaved = false;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
     std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
@@ -156,6 +165,8 @@ protected:
     BlobShadowSettings m_blobShadowSettings{};
     MaterialTuningSettings m_materialTuningSettings{};
     SweetsOutOfBoundsSettings m_sweetsOutOfBoundsSettings{};
+    std::vector<float3> m_spawnOriginsPrimaryInitial;
+    std::vector<float3> m_spawnOriginsSecondaryInitial;
     GameCameraConfig m_gameCameraConfig{};
     CameraRigSettings m_cameraRigSettings{};
     std::optional<float> m_stagePlaneZ = std::nullopt;
@@ -168,6 +179,10 @@ protected:
     float m_playerPickupDepthThreshold = std::numeric_limits<float>::infinity();
     float3 m_playerPickupOriginOffset{ 0.0f, 0.0f, 0.0f };
     float m_playerSpeedMultiplier = 1.0f;
+    float m_playerSpeedMultiplierBase = 1.0f;
+    PlayerData m_playerData;
+    PlayerData::Data m_playerPowerUpData{};
+    bool m_playerPowerUpLoaded = false;
     Core::Input* m_inputService = nullptr;
     bool m_playerColliderMismatchLogged = false;
     bool m_pendingRetryReset = false;

@@ -24,6 +24,7 @@ namespace GameplayRules
     {
         GameFlow::PhaseManager* phaseManager = nullptr;
         float baseScorePerMeter = 0.0f;
+        float pointMultiplier = 1.0f;
         LogFn log;
         const char* logPrefix = "";
     };

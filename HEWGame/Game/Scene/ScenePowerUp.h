@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "BaseCamera.h"
 #include "CameraRig.h"
@@ -12,6 +13,7 @@
 #include "SceneManager.h"
 #include "SpriteRenderer.h"
 #include "EffectSystem.h"
+#include "Save/PlayerData.h"
 
 
 class PowerUpManager;
@@ -48,6 +50,8 @@ namespace SceneSpace
                 std::unique_ptr<CameraRig> m_rig;
                 std::shared_ptr<PowerUpTarget> m_target;
                 bool m_inputRegistered = false;
-                int m_cost;        
+                int m_cost;
+                PlayerData m_playerData;
+                std::vector<PlayerData::Data> m_playerEntries;
         };
 }

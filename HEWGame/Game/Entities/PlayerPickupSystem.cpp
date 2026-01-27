@@ -1,4 +1,4 @@
-#include "Entities/PlayerPickupSystem.h"
+﻿#include "Entities/PlayerPickupSystem.h"
 
 #include "AABB.h"
 #include "Core/Input.h"
@@ -42,7 +42,7 @@ namespace
     constexpr float kCarryVerticalOffset = 1.0f;
     constexpr float kCarryForwardOffset = 0.5f;
 
-    constexpr int kDefaultMaxCarry = 3;
+    constexpr int kDefaultMaxCarry = 1;
     constexpr float kDefaultPickupHalfExtent = 0.5f;
     constexpr float kDefaultPickupMaxDistance = 0.5f;
     constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
@@ -230,6 +230,21 @@ namespace Entities
 
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "ピックアップ深度しきい値を " << m_pickupDepthThreshold << " に設定しました \n";
+        PlayerDebugTrace(oss.str());
+    }
+
+    void PlayerPickupSystem::SetMaxCarry(int maxCarry)
+    {
+        const int sanitizedMaxCarry = std::max(1, maxCarry);
+        if (m_maxCarry == sanitizedMaxCarry)
+        {
+            return;
+        }
+
+        m_maxCarry = sanitizedMaxCarry;
+
+        std::ostringstream oss;
+        oss << kPlayerLogPrefix << "最大保持数を " << m_maxCarry << " に設定しました \n";
         PlayerDebugTrace(oss.str());
     }
 

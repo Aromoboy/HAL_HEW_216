@@ -260,6 +260,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Guide\GuidelineActor.cpp" />
     <ClCompile Include="Game\Guide\GuidelineSystem.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpCursor.cpp" />
+    <ClCompile Include="Game\PowerUp\PowerUpEffectConfig.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpManager.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpNode.cpp" />
     <ClCompile Include="Game\PowerUp\PowerUpRenderer.cpp" />
@@ -268,6 +269,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Rules\GameplayRulesSystem.cpp" />
     <ClCompile Include="Game\Rules\PlayerController.cpp" />
     <ClCompile Include="Game\Save\Save.cpp" />
+    <ClCompile Include="Game\Save\PlayerData.cpp" />
     <ClCompile Include="Game\Scene\EffectTestScene.cpp" />
     <ClCompile Include="Game\Scene\ISceneServices.cpp" />
     <ClCompile Include="Game\Scene\Main.cpp" />
@@ -400,6 +402,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Guide\GuidelineActor.h" />
     <ClInclude Include="Game\Guide\GuidelineSystem.h" />
     <ClInclude Include="Game\PowerUp\PowerUpCursor.h" />
+    <ClInclude Include="Game\PowerUp\PowerUpEffectConfig.h" />
     <ClInclude Include="Game\PowerUp\PowerUpManager.h" />
     <ClInclude Include="Game\PowerUp\PowerUpNode.h" />
     <ClInclude Include="Game\PowerUp\PowerUpRenderer.h" />
@@ -408,6 +411,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Rules\GameplayRulesSystem.h" />
     <ClInclude Include="Game\Rules\PlayerController.h" />
     <ClInclude Include="Game\Save\Save.h" />
+    <ClInclude Include="Game\Save\PlayerData.h" />
     <ClInclude Include="Game\Scene\EffectTestScene.h" />
     <ClInclude Include="Game\Scene\ISceneServices.h" />
     <ClInclude Include="Game\Scene\Main.h" />

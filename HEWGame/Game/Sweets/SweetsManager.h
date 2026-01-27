@@ -100,6 +100,8 @@ namespace SweetsSpace
             const std::vector<float3>& secondary,
             std::optional<float> spawnHeightOffset = std::nullopt);
         void OffsetSpawnOriginsY(float deltaY);
+        void SetSpawnIntervalMultiplier(float multiplier);
+        void SetSpawnCountBonus(int bonusCount);
         void SetRandomRotationRangeDegrees(const float3& minDegrees, const float3& maxDegrees);
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
@@ -136,6 +138,7 @@ namespace SweetsSpace
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
         bool IsAnchoredToCake(const ActiveSweets& sweets) const;
+        void SetCreamEnabled(bool enabled);
         int GetSweetsCount() const;
         void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
         bool GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const;
@@ -154,6 +157,7 @@ namespace SweetsSpace
         SweetsContacts m_contacts;
         SweetsLifecycle m_lifecycle;
         SweetsRenderer m_renderer;
+        bool m_creamEnabled{ true };
     };
 
 }
