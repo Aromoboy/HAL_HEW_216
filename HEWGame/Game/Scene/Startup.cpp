@@ -1,7 +1,5 @@
-#include <windows.h>
-
-#include "ConfigSectionReader.h"
 #include "Defines.h"
+#include "ConfigSectionReader.h"
 #include "Main.h"
 #include "DebugConsole.h"
 #include "Diagnostics/Logger.h"
