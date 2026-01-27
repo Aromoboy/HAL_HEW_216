@@ -83,7 +83,7 @@ namespace
         constexpr const char* kLogPrefix = "[SceneComposer] ";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr bool kEnableStageModelVerboseLogging = false;
-        constexpr float kDefaultPlaySeconds = 30.0f;
+        constexpr float kDefaultPlaySeconds = 60.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kScoreToPointsMultiplier = 1.0f;
