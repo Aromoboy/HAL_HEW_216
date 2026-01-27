@@ -1,7 +1,5 @@
 #include "PerspectiveCamera.h"
 
-#include "AppGame.h"
-#include "Defines.h"
 #include "DrawMatrix.h"
 
 #include <algorithm>
@@ -21,14 +19,6 @@ namespace
 
         float DefaultAspectRatio()
         {
-                const Core::DXContext& dxContext = App::Game::Instance().GetDXContext();
-                const float width = static_cast<float>(dxContext.GetWidth());
-                const float height = static_cast<float>(dxContext.GetHeight());
-                if (width > 0.0f && height > 0.0f)
-                {
-                        return width / height;
-                }
-
                 return static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
         }
 

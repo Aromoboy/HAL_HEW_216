@@ -4,9 +4,7 @@
 #include <sstream>
 #include <string>
 
-#include "AppGame.h"
 #include "Core/IUpdatable.h"
-#include "PerspectiveCamera.h"
 
 #if defined(_WIN32)
 #       ifndef NOMINMAX
@@ -110,17 +108,6 @@ namespace CameraSpace
                         return;
                 }
 
-                const Core::DXContext& dxContext = App::Game::Instance().GetDXContext();
-                const float width = static_cast<float>(dxContext.GetWidth());
-                const float height = static_cast<float>(dxContext.GetHeight());
-                if (width > 0.0f && height > 0.0f)
-                {
-                        if (auto perspectiveCamera = std::dynamic_pointer_cast<PerspectiveCamera>(active))
-                        {
-                                perspectiveCamera->OnViewportChanged(width, height);
-                        }
-                }
-
                 (void)active->GetView();
                 (void)active->GetProjection();
         }
@@ -149,3 +136,4 @@ namespace CameraSpace
                         });
         }
 }
+

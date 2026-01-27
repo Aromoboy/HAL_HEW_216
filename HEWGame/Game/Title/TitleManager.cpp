@@ -4,31 +4,15 @@
 #include "PowerUpNode.h"
 #include "SpriteRenderer.h"
 #include "ICamera.h"
-#include "AppGame.h"
 #include "Defines.h"
 #include "Debug.h"
 #include "TitleRenderer.h"
 #include "DrawMatrix.h"
+#include "Defines.h"
+
 #include <cassert>
 #include <utility>
 
-namespace
-{
-	float2 ResolveTitleNodeSize()
-	{
-		const Core::DXContext& dxContext = App::Game::Instance().GetDXContext();
-		const float width = static_cast<float>(dxContext.GetWidth());
-		const float height = static_cast<float>(dxContext.GetHeight());
-		const float fallbackWidth = static_cast<float>(SCREEN_WIDTH);
-		const float fallbackHeight = static_cast<float>(SCREEN_HEIGHT);
-
-		const float resolvedWidth = width > 0.0f ? width : fallbackWidth;
-		const float resolvedHeight = height > 0.0f ? height : fallbackHeight;
-
-		return float2(resolvedWidth * kTitleNodeMagnification.x,
-			resolvedHeight * kTitleNodeMagnification.y);
-	}
-}
 
 constexpr float2 kUnitDistanse = { 1.4f, -0.5f };
 constexpr float2 kTitleNodeMagnification = { 0.01f, 0.01f };
@@ -42,14 +26,14 @@ TitleManager::TitleManager(Core::UpdateScheduler* a_scheduler, TextureCache& a_c
 		a_format,
 		a_input))
 	, m_nodes(
-		TitleNode(a_cache.Get("GameSceneNode"), float2(3.0f, 0.0f), ResolveTitleNodeSize()),
-		TitleNode(a_cache.Get("PowerUpSceneNode"), float2(-2.5f, 0.0f), ResolveTitleNodeSize()),
-		TitleNode(a_cache.Get("GameEndNode"), float2(-2.5f, 0.0f), ResolveTitleNodeSize())
+		TitleNode(a_cache.Get("GameSceneNode"), float2(3.0f, 0.0f), float2(SCREEN_WIDTH * kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("PowerUpSceneNode"), float2(-2.5f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("GameEndNode"), float2(-2.5f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y))
 	)
 	, m_selectNodes(
-		TitleNode(a_cache.Get("SelectGameSceneNode"), float2(0.0f, 0.0f), ResolveTitleNodeSize()),
-		TitleNode(a_cache.Get("SelectPowerUpSceneNode"), float2(0.0f, 0.0f), ResolveTitleNodeSize()),
-		TitleNode(a_cache.Get("SelectGameEndNode"), float2(0.0f, 0.0f), ResolveTitleNodeSize())
+		TitleNode(a_cache.Get("SelectGameSceneNode"), float2(0.0f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("SelectPowerUpSceneNode"), float2(0.0f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("SelectGameEndNode"), float2(0.0f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y))
 	)
 {
 }
@@ -116,18 +100,13 @@ void TitleManager::SetFormat(const TitleCursor::NodeFormat& a_format)
 void TitleManager::DrawAll(TitleRenderer& a_titleRenderer)
 {
 	SetDepthTest(false);
-	const float2 nodeSize = ResolveTitleNodeSize();
-	for (auto& node : m_nodes)
+	for (auto it : m_nodes)
 	{
-		node.size = nodeSize;
-		a_titleRenderer.Draw(node.nodeTexture, node.pos, node.size);
+		a_titleRenderer.Draw(it.nodeTexture, it.pos, it.size);
 	}
 
-	for (auto& node : m_selectNodes)
-	{
-		node.size = nodeSize;
-	}
-
+	
 	//a_titleRenderer.Draw(m_selectNodes.at(m_cursor->GetCursorNum()).nodeTexture, m_selectNodes.at(m_cursor->GetCursorNum()).pos, m_selectNodes.at(m_cursor->GetCursorNum()).size, camera);
 	SetDepthTest(true);
 }
+
