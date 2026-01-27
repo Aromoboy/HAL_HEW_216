@@ -6,11 +6,33 @@
 | `SweetsSpawnSpeed` | Additive % (base stat) | +0/10/20/30/40/50% |
 | `SweetsSpawnQuantity` | Additive absolute | +0/2/3/4/5/6 |
 | `PointAmount` | Multiplicative final | ×1.0/1.1/1.2/1.4/1.6/1.8 |
+| `Timer` | Additive absolute | +0/5/10/15/20/25 seconds |
 | `Whip` | Feature toggle | Lv0=off, Lv1+=on |
 
 Notes:
 - Additive % values are stored as ratios (e.g. 0.10 = +10%).
 - Feature toggles use `enabled=true` when level >= 1.
+
+## Power-up menu configuration ([powerups])
+
+The power-up menu reads `[powerups]` in `Assets/Config/gameplay.cfg` to determine max levels and pricing. Each entry is:
+
+`entry=<name>,<info>,<PowerUpKey>,<maxLevel>,<defaultCost>,<costAdditional>,<costMagnification>`
+
+The UI cost formula is:
+
+`cost = defaultCost * max(level * costMagnification, 1) + level * costAdditional`
+
+Current config values:
+
+| Power-up key | Max level | defaultCost | costAdditional | costMagnification |
+| --- | --- | --- | --- | --- |
+| `SpeedUp` | 10 | 200 | 0 | 1.2 |
+| `SweetsSpawnSpeed` | 10 | 200 | 0 | 1.2 |
+| `SweetsSpawnQuantity` | 5 | 150 | 10 | 2.0 |
+| `PointAmount` | 1 | 2000 | -2000 | 0.0 |
+| `Timer` | 5 | 300 | 300 | 1.0 |
+| `Whip` | 1 | 1000 | -1000 | 0.0 |
 
 ## SaveData + PowerUpEffects
 
@@ -20,4 +42,4 @@ Notes:
 
 ### Fields derived from effects
 
-When loading, `PlayerData` resets the derived fields and applies effects in the order returned by `PowerUpEffectConfig::Entries()` (the same order as the config). Each effect writes a dedicated field, so the order is deterministic but non-overlapping: `SpeedUp` → `fSpeed`, `SweetsSpawnSpeed` → `fReplenishSpeed`, `SweetsSpawnQuantity` → `nReplenishCount`, `PointAmount` → `fPtMultipl`, and `Whip` → `creamEnabled`. This matches the effect types configured under `[powerup.effects]` in `Assets/Config/gameplay.cfg`.【F:HEWGame/Game/Save/PlayerData.cpp†L51-L109】【F:HEWGame/Game/PowerUp/PowerUpEffectConfig.cpp†L237-L272】【F:HEWGame/Assets/Config/gameplay.cfg†L110-L117】
+When loading, `PlayerData` resets the derived fields and applies effects in the order returned by `PowerUpEffectConfig::Entries()` (the same order as the config). Each effect writes a dedicated field, so the order is deterministic but non-overlapping: `SpeedUp` → `fSpeed`, `SweetsSpawnSpeed` → `fReplenishSpeed`, `SweetsSpawnQuantity` → `nReplenishCount`, `PointAmount` → `fPtMultipl`, `Timer` → `timerLevel`, and `Whip` → `creamEnabled`. This matches the effect types configured under `[powerup.effects]` in `Assets/Config/gameplay.cfg`, and the timer level is later converted into a playtime bonus (`defaultPlaySeconds = base + level * 5`).【F:HEWGame/Game/Save/PlayerData.cpp†L51-L109】【F:HEWGame/Game/PowerUp/PowerUpEffectConfig.cpp†L237-L272】【F:HEWGame/Assets/Config/gameplay.cfg†L110-L117】【F:HEWGame/Game/SceneGame/SceneGame.cpp†L507-L511】

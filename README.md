@@ -3,39 +3,48 @@ HAL_HEW_216
 %% =========================
 %% Power-up rules (spec summary)
 %% =========================
-全ての強化はレベル 0〜5。
+効果値の定義はレベル 0〜5 のテーブル／カーブで行う（0〜5 以外は 5 の値を使用）。
+最大レベルは `Assets/Config/gameplay.cfg` の `[powerups]` にある maxLevel を参照する。
 効果は以下の 4 種類に分かれる:
 - 初期値に加算（% か絶対値）
 - 獲得量に乗算（最終結果に掛ける）
 - 機能のオン/オフ（feature unlock）
 レベルは「値そのもの」ではなく、PowerUpType + Level -> 効果値 のマッピングが必要。
 価格ルール:
-- レベル 1 のコストがベース
-- 以降はレベルごとに固定加算で上昇
+- `Assets/Config/gameplay.cfg` の `[powerups]` エントリにある
+  `defaultCost` / `costAdditional` / `costMagnification` を使用。
+- 実際の計算式は以下の通り:
+  `cost = defaultCost * max(level * costMagnification, 1) + level * costAdditional`
 
 1) 移動速度↑ (Move speed)
 - 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
-- 価格: ベース 100、各レベル +200
+- 最大レベル: 10
+- 価格設定: defaultCost=200, costAdditional=0, costMagnification=1.2
 
 2) 提供速度↑ (Replenish speed)
 - 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
-- 価格: ベース 100、各レベル +200
+- 最大レベル: 10
+- 価格設定: defaultCost=200, costAdditional=0, costMagnification=1.2
 
 3) フルーツ提供量↑ (Replenish count)
 - 効果: +0/2/3/4/5/6 (additive absolute, 初期値に加算)
-- 価格: ベース 500、各レベル +800
+- 最大レベル: 5
+- 価格設定: defaultCost=150, costAdditional=10, costMagnification=2.0
 
 4) もらえるポイント↑ (Score multiplier)
 - 効果: ×1.0/1.1/1.2/1.4/1.6/1.8 (multiplicative, 獲得量に乗算)
-- 価格: ベース 100、各レベル +500
+- 最大レベル: 1
+- 価格設定: defaultCost=2000, costAdditional=-2000, costMagnification=0.0
 
 5) ホイップ追加 (Whip/Cream unlock)
 - 効果: Lv0=無, Lv1=有 (feature toggle). Lv2〜5 はなし
-- 価格: ベース 1000 (追加コストなし)
+- 最大レベル: 1
+- 価格設定: defaultCost=1000, costAdditional=-1000, costMagnification=0.0
 
 6) タイマー強化 (Timer bonus)
 - 効果: +0/5/10/15/20/25 seconds (additive absolute, 初期値に加算)
-- 価格: ベース 300、各レベル +300
+- 最大レベル: 5
+- 価格設定: defaultCost=300, costAdditional=300, costMagnification=1.0
 
 持ち上げ可能数（max carry）ルール:
 - 強化なし: 1
