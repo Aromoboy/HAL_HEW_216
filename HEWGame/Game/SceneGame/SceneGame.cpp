@@ -50,6 +50,7 @@
 #include <string>
 #include <utility>
 #include <iterator>
+#include <box2d/box2d.h>
 #include <DirectXMath.h>
 #include "Physical.h"
 #include "ColliderRegistry.h"
@@ -2763,13 +2764,65 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
             return std::string("Unknown");
         }
     };
+    const auto countActiveContacts = [](Entities::PhysicalEntity* entity) -> int
+    {
+        if (!entity)
+        {
+            return 0;
+        }
+
+        const b2BodyId bodyId = entity->GetBox2DBodyId();
+        if (!b2Body_IsValid(bodyId))
+        {
+            return 0;
+        }
+
+        const int capacity = b2Body_GetContactCapacity(bodyId);
+        if (capacity <= 0)
+        {
+            return 0;
+        }
+
+        std::vector<b2ContactData> contacts(static_cast<size_t>(capacity));
+        const int written = b2Body_GetContactData(bodyId, contacts.data(), capacity);
+        return std::max(0, written);
+    };
 
     const float cakeScaleMultiplier = std::max(0.0f, 1.0f + data.fCakeSize);
     if (cakeScaleMultiplier != 1.0f)
     {
+        Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
+        Core::IUpdatable* contactNode = physicsMachine ? physicsMachine->GetContactDispatchNode() : nullptr;
+        const bool physicsWasEnabled = physicsMachine ? physicsMachine->IsEnabled() : false;
+        const bool contactWasEnabled = contactNode ? contactNode->IsEnabled() : false;
+        int activeContactsBefore = 0;
+
+        for (const auto& obj : m_stageObjects)
+        {
+            if (!IsCakeStageObject(obj))
+            {
+                continue;
+            }
+            activeContactsBefore += countActiveContacts(obj.physicsEntity.get());
+        }
+
         if (m_physicsBinder)
         {
-            m_physicsBinder->Enable(true);
+            if (contactNode)
+            {
+                contactNode->Enable(false);
+            }
+            if (physicsMachine)
+            {
+                physicsMachine->Enable(false);
+            }
+
+            std::ostringstream pauseLog;
+            pauseLog << kLogPrefix << "[StageColliders] rebuild pause"
+                << " physicsEnabled=" << std::boolalpha << physicsWasEnabled
+                << " contactDispatchEnabled=" << contactWasEnabled
+                << " activeContacts=" << activeContactsBefore << "\n";
+            DebugTrace(pauseLog.str());
         }
 
         for (auto& obj : m_stageObjects)
@@ -2802,6 +2855,20 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                         << " shapeType=" << formatShapeType(shapeConfig) << "\n";
                     DebugTrace(log.str());
                 };
+                const auto logContactState = [&](const char* phase)
+                {
+                    const int activeContacts = countActiveContacts(obj.physicsEntity.get());
+                    std::ostringstream log;
+                    log << kLogPrefix << "[StageColliders] " << phase
+                        << " model='" << obj.modelPath << "'"
+                        << " activeContacts=" << activeContacts;
+                    if (activeContacts > 0)
+                    {
+                        log << " [Warning: rebuild while contacts active]";
+                    }
+                    log << "\n";
+                    DebugTrace(log.str());
+                };
                 const auto applyColliderState = [&](std::optional<Physics::BoxColliderComponent> collider,
                     std::optional<Physics::Box2DShapeConfig> shapeConfig)
                 {
@@ -2816,6 +2883,7 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
                 const auto originalShapeConfig = obj.physicsEntity->GetBox2DShapeConfig();
                 obj.physicsEntity->SetScale(obj.transform.scale);
 
+                logContactState("rebuild-contacts");
                 logColliderState("rebuild-before");
 
                 Physics::ColliderBuilder colliderBuilder(
@@ -2902,6 +2970,24 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
 
                 logColliderState("rebuild-after");
             }
+        }
+
+        if (m_physicsBinder)
+        {
+            if (physicsMachine && physicsWasEnabled)
+            {
+                physicsMachine->Enable(true);
+            }
+            if (contactNode && contactWasEnabled)
+            {
+                contactNode->Enable(true);
+            }
+
+            std::ostringstream resumeLog;
+            resumeLog << kLogPrefix << "[StageColliders] rebuild resume"
+                << " physicsEnabled=" << std::boolalpha << physicsWasEnabled
+                << " contactDispatchEnabled=" << contactWasEnabled << "\n";
+            DebugTrace(resumeLog.str());
         }
     }
 }
