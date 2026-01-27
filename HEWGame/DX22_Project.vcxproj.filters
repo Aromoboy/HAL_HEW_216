@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Engine">
@@ -944,6 +944,7 @@
     </ClCompile>
     <ClCompile Include="Game\Save\PlayerData.cpp">
       <Filter>Game\Save</Filter>
+	</ClCompile>
     <ClCompile Include="Game\Title\TitleManager.cpp">
       <Filter>Game\Title</Filter>
     </ClCompile>
@@ -973,13 +974,12 @@
       <Filter>Game\Save</Filter>
     </ClInclude>
   </ItemGroup>
-<ItemGroup>
-  <ClInclude Include="SceneResult.h">
-    <Filter>Game\UI</Filter>
-  </ClInclude>
-</ItemGroup>
-    <ClInclude Include="Game\Title\TitleManager.h">
-      <Filter>Game\Title</Filter>
-    </ClInclude>
-  </ItemGroup>
+	<ItemGroup>
+		<ClInclude Include="SceneResult.h">
+			<Filter>Game\UI</Filter>
+		</ClInclude>
+		<ClInclude Include="Game\Title\TitleManager.h">
+			<Filter>Game\Title</Filter>
+		</ClInclude>
+	</ItemGroup>
 </Project>
