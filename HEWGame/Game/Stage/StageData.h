@@ -52,6 +52,7 @@ namespace Stage
         const PickupOffset& GetPickupOffset() const noexcept;
         float GetGuidelineHeight() const noexcept;
         float GetGuidelineStep() const noexcept;
+        float GetGuidelinePlayerMaxYOffset() const noexcept;
         float GetGuidelineThicknessPixels() const noexcept;
         float GetGuidelineThicknessWorld() const noexcept;
         float GetGuidelineWidthPaddingWorld() const noexcept;
@@ -94,6 +95,7 @@ namespace Stage
         PickupOffset m_pickupOffset;
         float m_guidelineHeight;
         float m_guidelineStep;
+        float m_guidelinePlayerMaxYOffset;
         float m_guidelineThicknessPixels;
         float m_guidelineThicknessWorld;
         float m_guidelineWidthPaddingWorld;

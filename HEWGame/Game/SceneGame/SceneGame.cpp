@@ -1226,12 +1226,15 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         }
     }
 
+    const float guidelineMaxY = m_guidelineSystem.GetHeightMeters()
+        + m_stageData.GetGuidelinePlayerMaxYOffset();
     m_playerController.UpdatePlayerBounds({
         m_player.get(),
         m_gameCamera.get(),
         m_sweetsManager.get(),
         ctx.dt,
-        stageFloorY
+        stageFloorY,
+        guidelineMaxY
     });
 
     switch (m_stageState)
