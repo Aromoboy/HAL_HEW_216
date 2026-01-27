@@ -61,6 +61,7 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 
 void TitleScene::Draw()
 {
+    // RootDraw triggers Draw(const Camera&) where the background is rendered.
     RootDraw();
 }
 
@@ -88,6 +89,7 @@ void TitleScene::OnEnter()
     cfg.layers.push_back(layer);
     if (!cfg.layers.empty())
     {
+        // BackgroundRenderer is created here and drawn during RootDraw().
         m_background = std::make_unique<BackgroundRenderer>();
         if (!m_background->Initialize(cfg))
         {

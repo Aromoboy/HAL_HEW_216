@@ -204,6 +204,7 @@ namespace SceneSpace
                 {
                         return;
                 }
+                // Background is rendered via PowerUpRenderer::DrawBackground().
                 m_powerUpRenderer->DrawBackground(*activeCamera, m_backUVProgress);
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpRenderer->DrawCost(m_cost, *activeCamera);
