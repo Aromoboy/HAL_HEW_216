@@ -194,6 +194,8 @@ namespace
         addAlias("メロン.png", "melon.png");
         addAlias("クリーム.png", "cream.png");
         addAlias("Fairy_Texture", "Fairy_Texture.png");
+        addAlias("Fairy_Texture2", "Fairy_Texture.png");
+        addAlias("Fairy_Texture2.png", "Fairy_Texture.png");
 
         return aliases;
     }
@@ -837,7 +839,9 @@ AssimpModelLorder::MakeMaterial(
                 if (isAbsoluteWindowsPath
                     && (EqualsIgnoreCase(sanitizedFile, "texture.png")
                         || EqualsIgnoreCase(sanitizedFile, "texture2.png")
-                        || EqualsIgnoreCase(sanitizedFile, "Fairy_Texture.png")))
+                        || EqualsIgnoreCase(sanitizedFile, "Fairy_Texture.png")
+                        || EqualsIgnoreCase(sanitizedFile, "Fairy_Texture2.png")
+                        || EqualsIgnoreCase(sanitizedFile, "Fairy_Texture2")))
                 {
                     texFile = sanitizedFile;
                     textureDirectory = "Assets\\Texture\\";
