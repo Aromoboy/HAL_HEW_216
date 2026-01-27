@@ -39,7 +39,8 @@ namespace
 
     constexpr const char* kPlayerLogPrefix = "[Player] ";
 
-    constexpr float kCarryVerticalOffset = 1.0f;
+    constexpr float kCarryHorizontalOffset = 1.0f;
+    constexpr float kCarryVerticalOffset = -0.2f;
     constexpr float kCarryForwardOffset = 0.5f;
 
     constexpr int kDefaultMaxCarry = 1;
@@ -94,7 +95,7 @@ namespace Entities
         m_maxCarry = kDefaultMaxCarry;
         m_pickupMaxDistance = kDefaultPickupMaxDistance;
         m_pickupDepthThreshold = kDefaultPickupDepthThreshold;
-        m_carryOffset = float3{ 0.0f, kCarryVerticalOffset, kCarryForwardOffset };
+        m_carryOffset = float3{ kCarryHorizontalOffset, kCarryVerticalOffset, kCarryForwardOffset };
         m_lastCarryInputLoggedCount = m_carrieds.size();
     }
 
@@ -289,14 +290,17 @@ namespace Entities
 
     float3 PlayerPickupSystem::ComputeCarryAnchor(Player& player) const
     {
+        float sign;
+        sign = std::signbit(player.GetTransform().rotation.y) ? -1.0f : 1.0f;
+
         if (player.HasBox2DBody())
         {
             const float3 position = Player::ToWorldPosition(b2Body_GetPosition(player.GetBox2DBodyId()));
-            return float3{ position.x + m_carryOffset.x, position.y + m_carryOffset.y, position.z + m_carryOffset.z };
+            return float3{ position.x + m_carryOffset.x * sign, position.y + m_carryOffset.y, position.z + m_carryOffset.z };
         }
 
         return float3{
-            player.m_transform.position.x + m_carryOffset.x,
+            player.m_transform.position.x + m_carryOffset.x * sign,
             player.m_transform.position.y + m_carryOffset.y,
             player.m_transform.position.z + m_carryOffset.z };
     }
@@ -309,6 +313,7 @@ namespace Entities
             ? Player::ToWorldPosition(b2Body_GetPosition(player.GetBox2DBodyId()))
             : player.m_transform.position;
 
+        float sign = std::signbit(player.GetTransform().rotation.y) ? -1.0f : 1.0f;
         origin.center = float3{ basePosition.x + m_pickupOriginOffset.x + 0.8f * m_facingSign, basePosition.y + m_pickupOriginOffset.y, basePosition.z + m_pickupOriginOffset.z };
         origin.halfDepth = 0.05f;
         origin.source = "TransformOffset";
@@ -687,6 +692,7 @@ namespace Entities
         default:
             break;
         }
+
 
         PickupBox box;
         box.halfWidth = clampPickupExtent(m_pickupHalfWidth);

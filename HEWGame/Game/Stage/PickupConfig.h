@@ -13,7 +13,7 @@ namespace Stage
 
     struct PickupOffset
     {
-        PickupOffsetMode mode{ PickupOffsetMode::WorldX };
+        PickupOffsetMode mode{ PickupOffsetMode::FacingDirection };
         float3 localOffset{ 0.0f, 0.0f, 0.0f };
     };
 }

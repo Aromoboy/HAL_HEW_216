@@ -72,7 +72,7 @@ namespace Stage
         static constexpr float kDefaultPickupBoxHeightCells = 5.0f;
         static constexpr float kDefaultPickupMaxDistance = 0.5f;
         static constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
-        static constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::WorldX;
+        static constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::FacingDirection;
         static constexpr float kDefaultGuidelineHeight = 2.0f;
         static constexpr float kDefaultGuidelineStep = 1.0f;
         static constexpr float kDefaultGuidelinePlayerMaxYOffset = 0.0f;
