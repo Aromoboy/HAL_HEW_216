@@ -12,6 +12,7 @@ enum class PowerUpType
 	SweetsSpawnSpeed,
 	SweetsSpawnQuantity,
 	PointAmount,
+	Timer,
 	Whip,
 	Unknown
 };

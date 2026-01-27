@@ -33,6 +33,10 @@ HAL_HEW_216
 - 効果: Lv0=無, Lv1=有 (feature toggle). Lv2〜5 はなし
 - 価格: ベース 1000 (追加コストなし)
 
+6) タイマー強化 (Timer bonus)
+- 効果: +0/5/10/15/20/25 seconds (additive absolute, 初期値に加算)
+- 価格: ベース 300、各レベル +300
+
 持ち上げ可能数（max carry）ルール:
 - 強化なし: 1
 - 強化あり: 1 より大きい（強化効果に応じて増加）
@@ -44,7 +48,7 @@ HAL_HEW_216
 HEWGame/Assets/Data/PlayerData.cfg の [PlayerData] セクション
 
 フォーマット例:
-entry=currency,SpeedUp=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
+entry=currency,SpeedUp=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Timer=level,Whip=level
 
 
 本リポジトリは、DirectX 11 ベースの 2.5D ゲームです。

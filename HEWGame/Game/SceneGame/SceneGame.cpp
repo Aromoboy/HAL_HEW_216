@@ -506,7 +506,8 @@ bool SceneGame::Load(Core::Input& input)
     m_effectSystem = std::move(composition->effectSystem);
 
     GameplayRulesSystem::Config gameplayRulesConfig{};
-    gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds;
+    const int timerLevel = std::max(0, m_playerPowerUpData.timerLevel);
+    gameplayRulesConfig.defaultPlaySeconds = kDefaultPlaySeconds + static_cast<float>(timerLevel) * 5.0f;
     gameplayRulesConfig.countdownLogIntervalSeconds = kCountdownLogIntervalSeconds;
     gameplayRulesConfig.baseScorePerMeter = kBaseScorePerMeter;
     m_gameplayRules.Configure(gameplayRulesConfig, DebugTrace, kLogPrefix);

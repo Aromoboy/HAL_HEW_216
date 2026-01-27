@@ -18,12 +18,13 @@ public:
 		float fReplenishSpeed = 0.0f;
 		int nReplenishCount = 0;
 		float fPtMultipl = 1.0f;
+		int timerLevel = 0;
 		int nPoints = 0;
 	};
 
 	// Storage format (INI-like):
 	// [PlayerData]
-	// entry=currency,SpeedUp=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Whip=level
+	// entry=currency,SpeedUp=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Timer=level,Whip=level
 	bool LoadData();
 	bool SaveData() const;
 
