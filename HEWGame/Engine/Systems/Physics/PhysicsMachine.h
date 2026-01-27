@@ -70,7 +70,7 @@ namespace Systems
         void SetSubStepCount(int subStepCount);
         SystemPtr GetSystem() const;
         std::shared_ptr<Box2DPhysicsSystem> GetBox2DSystem() const;
-        Core::IUpdatable* GetContactDispatchNode() const;
+        Core::UpdateNode* GetContactDispatchNode() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
         const PhysicsTuningParameters& GetTuningParameters() const;
 
