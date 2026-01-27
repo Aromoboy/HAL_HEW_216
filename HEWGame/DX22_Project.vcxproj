@@ -460,6 +460,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\UI\TitleRenderer.h" />
     <ClInclude Include="Game\UI\UIManager.h" />
     <ClInclude Include="Game\UI\VideoBackgroundRenderer.h" />
+    <ClInclude Include="Game\UI\VideoTexturePlayer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SceneResult.h" />
