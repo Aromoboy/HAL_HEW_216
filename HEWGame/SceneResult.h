@@ -41,7 +41,7 @@ namespace SceneSpace
         std::unique_ptr<CameraRig> m_rig;
 
         std::unique_ptr<ResultRenderer> m_resultRenderer;
-
+        std::unique_ptr<ResultRenderer> m_renderer;
         std::array<std::unique_ptr<Texture>, 3> m_menuTextures;
        
 
