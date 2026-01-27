@@ -1,4 +1,4 @@
-﻿#include "Defines.h"
+#include "Defines.h"
 #include "ConfigSectionReader.h"
 #include "Main.h"
 #include "DebugConsole.h"
@@ -7,8 +7,6 @@
 #include "WindowManager.h"
 #include "FullscreenManager.h"
 
-#include <WinUser.h>
-#include <mmsystem.h>
 #include <crtdbg.h>
 #include <cctype>
 #include <cstdlib>
