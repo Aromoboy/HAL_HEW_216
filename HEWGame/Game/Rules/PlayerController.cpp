@@ -46,6 +46,18 @@ PlayerController::SpeedResult PlayerController::HandleSpeedInput(const SpeedInpu
         return result;
     }
 
+    const float horizontalInput =
+        input.input.GetAxis(Core::ActionId::MoveX);
+
+    if (horizontalInput > 0.01f)
+    {
+        input.player->SetFacingSign(1.0f);
+    }
+    else if (horizontalInput < -0.01f)
+    {
+        input.player->SetFacingSign(-1.0f);
+    }
+
     const auto adjustMoveSpeed = [&](float requestedMultiplier, const char* reason)
     {
         if (!(input.baseHorizontalSpeed > 0.0f) && !(input.baseVerticalSpeed > 0.0f))
@@ -163,6 +175,51 @@ PlayerController::PostGameAction PlayerController::HandlePostGameInput(Core::Inp
         return PostGameAction::RetryIgnored;
     }
 
+    return PostGameAction::None;
+}
+
+PlayerController::PostGameAction PlayerController::HandlePostGameMenuInput(Core::Input& input, float peakHeight, int score, ResultScreenState& state) const
+{
+    const float menuMove = input.GetAxis(Core::ActionId::MoveMenu);
+
+    if (input.IsTrigger(Core::ActionId::UP))
+    {
+        state.MoveUp();
+        return PostGameAction::None;
+    }
+    
+    else if (input.IsTrigger(Core::ActionId::DOWN))
+    {
+        state.MoveDown();
+        return PostGameAction::None;
+    }
+
+    // Œˆ’è
+    if (input.IsTrigger(Core::ActionId::Confirm))
+    {
+        std::ostringstream oss;
+        oss << m_logPrefix << "[Result] Menu Confirm option="
+            << static_cast<int>(state.currentOption)
+            << " peakTop=" << std::fixed << std::setprecision(2)
+            << peakHeight << "m score=" << score << "\n";
+
+        if (m_log)
+        {
+            m_log(oss.str());
+        }
+
+        switch (state.currentOption)
+        {
+        case ResultScreenOption::Retry:
+            return PostGameAction::RetryGame;
+
+        case ResultScreenOption::PowerUp:
+            return PostGameAction::GoToPowerUp;
+
+        case ResultScreenOption::ReturnTitle:
+            return PostGameAction::GoToTitle;
+        }
+    }
     return PostGameAction::None;
 }
 

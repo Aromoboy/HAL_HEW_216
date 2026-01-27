@@ -1,5 +1,56 @@
 HAL_HEW_216
 
+%% =========================
+%% Power-up rules (spec summary)
+%% =========================
+全ての強化はレベル 0〜5。
+効果は以下の 4 種類に分かれる:
+- 初期値に加算（% か絶対値）
+- 獲得量に乗算（最終結果に掛ける）
+- 機能のオン/オフ（feature unlock）
+レベルは「値そのもの」ではなく、PowerUpType + Level -> 効果値 のマッピングが必要。
+価格ルール:
+- レベル 1 のコストがベース
+- 以降はレベルごとに固定加算で上昇
+
+1) 移動速度↑ (Move speed)
+- 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
+- 価格: ベース 100、各レベル +200
+
+2) 提供速度↑ (Replenish speed)
+- 効果: +0/10/20/30/40/50% (additive, 初期値に加算)
+- 価格: ベース 100、各レベル +200
+
+3) フルーツ提供量↑ (Replenish count)
+- 効果: +0/2/3/4/5/6 (additive absolute, 初期値に加算)
+- 価格: ベース 500、各レベル +800
+
+4) もらえるポイント↑ (Score multiplier)
+- 効果: ×1.0/1.1/1.2/1.4/1.6/1.8 (multiplicative, 獲得量に乗算)
+- 価格: ベース 100、各レベル +500
+
+5) ホイップ追加 (Whip/Cream unlock)
+- 効果: Lv0=無, Lv1=有 (feature toggle). Lv2〜5 はなし
+- 価格: ベース 1000 (追加コストなし)
+
+6) タイマー強化 (Timer bonus)
+- 効果: +0/5/10/15/20/25 seconds (additive absolute, 初期値に加算)
+- 価格: ベース 300、各レベル +300
+
+持ち上げ可能数（max carry）ルール:
+- 強化なし: 1
+- 強化あり: 1 より大きい（強化効果に応じて増加）
+
+プレイヤーデータ（レベル/通貨の保存先）
+
+レベルと通貨（ポイント）は PlayerData で管理し、以下に保存します。
+
+HEWGame/Assets/Data/PlayerData.cfg の [PlayerData] セクション
+
+フォーマット例:
+entry=currency,SpeedUp=level,SweetsSpawnSpeed=level,SweetsSpawnQuantity=level,PointAmount=level,Timer=level,Whip=level
+
+
 本リポジトリは、DirectX 11 ベースの 2.5D ゲームです。
 更新は UpdateScheduler を中心にフェーズ駆動で行い、描画は Scene::RootDraw から別経路で実行します。
 

@@ -16,10 +16,11 @@ constexpr float2 kIconPositionOffset = { -0.18f, -0.008f };
 constexpr float2 kFramePositionOffset = { -0.18f, -0.008f };
 constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
 constexpr float2 kCostIconPositionOffset = { 0.10f,  -0.050f };
-constexpr float2 kNamePositionOffset = { 0.30f,  0.05f };
-constexpr float2 kInfomationPositionOffset = { 0.210f,  0.000f };
+constexpr float2 kNamePositionOffset = { 0.31f,  0.05f };
+constexpr float2 kInfomationPositionOffset = { 0.170f,  0.000f };
 constexpr float2 kLevelPositionOffset = { 0.50f,  0.045f };
 constexpr float2 kCostPositionOffset = { 0.50f,  -0.060f }; 
+constexpr float2 kCostNumberPositionOffset = { 0.68f,  0.290f };
 constexpr float kIconScaleOffset = 0.5f;
 constexpr float kFrameScaleOffset = 0.5f;
 constexpr float kBackFrameScaleOffset = 1.8f;
@@ -27,8 +28,17 @@ constexpr float kCostIconScaleOffset = 0.3f;
 constexpr float kNameScaleOffset = 0.08f;
 constexpr float kInfomationScaleOffset = 0.05f;
 constexpr float kLevelScaleOffset = 0.06f;
-constexpr float kCostScaleOffset = 0.07f;
+constexpr float kCostScaleOffset = 0.05f;
+constexpr float kCostNumberScaleOffset = 0.08f;
+
+constexpr float kNodeNameCharCount = 5.0f * 3.0f;
+constexpr float kInfoCharCount = 15.0f * 3.0f;
+
+constexpr float kCostNumberInterval = 0.06f;
+// 背景のY移動に対してXの移動する割合
+constexpr float kUVMoveRatioX = 2.0f / 2.0f;
 // テクスチャ名
+constexpr const char* kNumberTextureName = "Number";
 constexpr const char* kCostTextureName = "Cost";
 constexpr const char* kFrameTextureName = "Frame";
 constexpr const char* kBackFrameTexturenName = "BackFrame";
@@ -116,6 +126,7 @@ float4 main(PS_IN pin) : SV_TARGET {
 	ps = std::make_shared <PixelShader>();
 	ps->Compile(PS);
 
+	m_number = a_cache.Get(kNumberTextureName);
 	m_cost = a_cache.Get(kCostTextureName);
 	m_iconFrame = a_cache.Get(kFrameTextureName);
 	m_backFrame = a_cache.Get(kBackFrameTexturenName);
@@ -149,8 +160,6 @@ bool PowerUpRenderer::Initialize(const PowerUpHudLayoutConfig& config)
 	m_textureDirty = false;
 	return true;
 
-
-
 }
 
 void PowerUpRenderer::Shutdown()
@@ -163,10 +172,28 @@ void PowerUpRenderer::Shutdown()
 }
 
 
+void PowerUpRenderer::DrawCost(int cost, const CameraSpace::ICamera& camera)
+{
+	const DirectX::XMFLOAT4X4& view = camera.GetView();
+	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
+
+	int count  = 0;
+	while (cost)
+	{
+		float3 pos(kCostNumberPositionOffset.x - kCostNumberInterval * count, kCostNumberPositionOffset.y, 1.0f);
+		float3 scale(kCostNumberScaleOffset, kCostNumberScaleOffset, 1.0f);
+		DirectX::XMFLOAT4X4 world;
+		DrawMatrix::CreateWorldMatrix(world, pos, scale, float3());
+
+		int drawNum = cost % 10;
+		DrawSprite(m_number, world, view, proj, DrawSpriteData(float2(0.1f * drawNum, 0.0f), float2(0.1f, 1.0f)));
+		cost /= 10;
+		count++;
+	}
+}
+
 void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 {
-	
-
 	const DirectX::XMFLOAT4X4& view = camera.GetView();
 	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
 
@@ -191,7 +218,7 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	DrawSprite(m_cost, world, view, proj);
 }
 
-void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera)
+void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera, float a_alpha)
 {
 	const DirectX::XMFLOAT4X4& view = camera.GetView();
 	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
@@ -212,7 +239,9 @@ void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_
 
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
-	DrawSprite(a_texture, world, view, proj);
+	DrawSpriteData data;
+	data.alpha = a_alpha;
+	DrawSprite(a_texture, world, view, proj, data);
 }
 
 
@@ -308,7 +337,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
-	RenderString(data, world, view, proj, NodeName);
+	float nameSize = std::min(float(kNodeNameCharCount / (float)data.powerUpName.size()), 1.0f);
+	RenderString(data, world, view, proj, NodeName, nameSize);
 
 	// 説明描画
 	offset.x = kInfomationPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
@@ -322,9 +352,8 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
-	
-
-	RenderString(data, world, view, proj, NodeInfomation);
+	float infoSize = std::min(float(kInfoCharCount  / (float)data.powerUpInfomation.size()), 1.0f);
+	RenderString(data, world, view, proj, NodeInfomation, infoSize);
 
 
 	// コスト描画
@@ -339,7 +368,7 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
-	RenderString(data, world, view, proj, NodeLevel);
+	RenderString(data, world, view, proj, NodeLevel, 1.0f);
 
 	offset.x = kCostPositionOffset.x * data.drawScale.x * kBackFrameScaleOffset;
 	offset.y = kCostPositionOffset.y * data.drawScale.y * kBackFrameScaleOffset;
@@ -352,7 +381,56 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
-	RenderString(data, world, view, proj, NodeCost);
+	RenderString(data, world, view, proj, NodeCost, 1.0f);
+}
+
+void PowerUpRenderer::DrawBackground(const CameraSpace::ICamera& camera, float uvProgress)
+{
+	if (!m_background)
+	{
+		return;
+	}
+
+	SetSamplerState(SAMPLER_LINEAR);
+	const DirectX::XMFLOAT4X4& view = camera.GetView();
+	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
+
+	DirectX::XMFLOAT4X4 world;
+	float3 position;
+	float3 scale;
+
+	// 画面中央・最背面
+	position = { 0.0f, 0.0f, 2.4f };
+	scale = { 3.6f, 2.0f, 1.0f };
+
+	DrawMatrix::CreateWorldMatrix(
+		world,
+		position,
+		scale,
+		float3{ 0.0f, 0.0f, 0.0f }
+	);
+	DrawSpriteData data;
+	data.uvPos.x = uvProgress * kUVMoveRatioX;
+	data.uvPos.y = uvProgress * -1.0f;
+	DrawSprite(m_background, world, view, proj, data);
+}
+
+const std::wstring PowerUpRenderer::UTF8toWString(const std::string srcUTF8) const
+{
+	//Unicodeへ変換後の文字列長を得る
+	int lenghtUnicode = MultiByteToWideChar(CP_UTF8, 0, srcUTF8.c_str(), srcUTF8.size() + 1, NULL, 0);
+
+	//必要な分だけUnicode文字列のバッファを確保
+	wchar_t* bufUnicode = new wchar_t[lenghtUnicode];
+
+	//UTF8からUnicodeへ変換
+	MultiByteToWideChar(CP_UTF8, 0, srcUTF8.c_str(), srcUTF8.size() + 1, bufUnicode, lenghtUnicode);
+
+	std::wstring strSJis(bufUnicode);
+
+	delete[] bufUnicode;
+
+	return strSJis;
 }
 
 void PowerUpRenderer::DrawBackground(const CameraSpace::ICamera& camera)
@@ -641,7 +719,7 @@ void PowerUpRenderer::UpdateBitmap(const NodeRenderData& data)
 
 	PatBlt(m_memoryDC, 0, 0, static_cast<int>(data.stringTexture->GetWidth()), static_cast<int>(data.stringTexture->GetHeight()), BLACKNESS);
 
-	const std::string hudText = BuildHudString(data);
+	const std::wstring hudText = BuildHudString(data);
 
 	RECT textRect = {};
 	textRect.left = static_cast<LONG>(m_config.innerPaddingPixels);
@@ -656,10 +734,10 @@ void PowerUpRenderer::UpdateBitmap(const NodeRenderData& data)
 	shadowRect.bottom += static_cast<LONG>(m_config.shadowOffsetY);
 
 	SetTextColor(m_memoryDC, RGB(0, 0, 0));
-	DrawTextA(m_memoryDC, hudText.c_str(), -1, &shadowRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
+	DrawText(m_memoryDC, hudText.c_str(), -1, &shadowRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
 
 	SetTextColor(m_memoryDC, RGB(255, 255, 255));
-	DrawTextA(m_memoryDC, hudText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
+	DrawText(m_memoryDC, hudText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
 
 	GdiFlush();
 	m_textureDirty = true;
@@ -677,7 +755,7 @@ void PowerUpRenderer::UpdateBitmap(const NodeRenderData& data)
 #endif
 }
 
-void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, int uvNum)
+void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, int uvNum, float size)
 {
 	float viewportWidth = 0.0f;
 	float viewportHeight = 0.0f;
@@ -685,7 +763,6 @@ void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XM
 	{
 		return;
 	}
-
 
 	float2 scale = data.stringTexture->GetScale();
 	UVRegion region = ComputeUV(data.stringTexture->GetBound(), data.stringTexture->GetHeight());
@@ -700,10 +777,13 @@ void PowerUpRenderer::RenderString(const NodeRenderData& data, const DirectX::XM
 	float2 uvSize = float2{ 1.0f, height};
 
 	float width = static_cast<float>(scale.x / scale.y);
+
+	float2 pos(0.0f, 0.0f);
+	pos.x -= (width - width * size) / 2;
 	
 	SetBlendMode(BLEND_ALPHA);
 
-	DrawSprite(data.stringTexture, worldMatrix, viewMatrix, projMatrix, DrawSpriteData(uvStart, uvSize, float2{ 0.0f, 0.0f }, float2{ width,1.0f }, float3{0.0f, 0.0f, 0.0f}));
+	DrawSprite(data.stringTexture, worldMatrix, viewMatrix, projMatrix, DrawSpriteData(uvStart, uvSize, pos, float2{ width * size, size }, float3{0.0f, 0.0f, 0.0f}));
 
 }
 
@@ -757,19 +837,36 @@ bool PowerUpRenderer::TryGetViewportSize(float& width, float& height) const
 	height = static_cast<float>(rtv->GetHeight());
 	return width > 0.0f && height > 0.0f;
 }
-std::string PowerUpRenderer::BuildHudString(const NodeRenderData& data) const
+std::wstring PowerUpRenderer::BuildHudString(const NodeRenderData& data) const
 {
 
-	std::ostringstream stream;
-	stream << 'l' << '\n';
+	std::wostringstream stream;
+	// ダミーとして出来るだけ開始位置の高い文字を置いておく
+	stream << L"ピポ弩" << '\n';
 
-	stream << data.powerUpName << '\n';
+	stream << UTF8toWString(data.powerUpName) << '\n';
 
-	stream << data.powerUpInfomation << '\n';
+	stream << UTF8toWString(data.powerUpInfomation) << '\n';
 
-	stream << "Lv." << data.level << '\n';
 
-	stream << data.cost << '\n';
+	if (data.level == data.maxLevel)
+	{
+		std::wstring level = L"Max";
+		stream << "Lv." << level << '\n';
+		stream << '\n';
+	}
+	else if(data.level == 0)
+	{
+		stream << L"未開放" << '\n';
+		stream << data.cost << '\n';
+	}
+	else
+	{
+		std::wstring level = std::to_wstring((int)data.level);
+		stream << "Lv." << level << '\n';
+		stream << data.cost << '\n';
+	}
+	
 
 	return stream.str();
 }

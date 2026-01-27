@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <optional>
@@ -43,11 +43,12 @@ namespace Entities
         void SetPickupOriginOffset(const float3& offset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
         void SetFacingSign(float facingSign);
+        void SetMaxCarry(int maxCarry);
 
         const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
 
         void HandleCarryInput(Player& player, PlayerModel& model, const Core::UpdateContext& ctx, Core::Input& input);
-        void UpdateCarriedSweets(Player& player);
+        void UpdateCarriedSweets(Player& player); 
 
     private:
         struct ColliderFootprint
@@ -62,16 +63,26 @@ namespace Entities
             float halfDepth = 0.05f;
             const char* source = "Unknown";
         };
+        //掴み判定
+        struct  PickupBox
+        {
+            float3 center;
+            float halfWidth;
+            float halfHeight;
+        };
 
         float3 ComputeCarryAnchor(Player& player) const;
         PickupOrigin ComputePickupOrigin(Player& player) const;
         void TryPickupNearest(Player& player);
         void DropCarriedSweets(Player& player);
+        //掴み判定の枠
+        PickupBox MakePickupBox(Player& player) const;
+        bool IsInsidePickupBox(const PickupBox& box, const float3& pos) const;
 
         SweetsSpace::SweetsManager* m_sweetsManager = nullptr;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
         std::unordered_map<SweetsSpace::BaseSweets*, float3> m_carriedRotations;
-        int m_maxCarry = 3;
+        int m_maxCarry = 1;
         float m_pickupHalfWidth = 0.0f;
         float m_pickupHalfHeight = 0.0f;
         Stage::PickupOffset m_pickupOffset{};

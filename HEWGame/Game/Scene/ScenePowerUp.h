@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 #include "BaseCamera.h"
 #include "CameraRig.h"
@@ -10,6 +12,9 @@
 #include "Scene.h"
 #include "SceneManager.h"
 #include "SpriteRenderer.h"
+#include "EffectSystem.h"
+#include "Save/PlayerData.h"
+
 
 class PowerUpManager;
 
@@ -33,16 +38,20 @@ namespace SceneSpace
 
         private:
                 bool LoadPowerUpFile();
-                bool GetValue(std::string& a_outValue, std::string status, const char*checkKey);
                 void ShutdownPowerUpSystems();
 
+                float m_backUVProgress;
                 SceneManager* m_manager = nullptr;
                 std::unique_ptr<PowerUpManager> m_powerUpManager;
                 std::unique_ptr<PowerUpRenderer> m_powerUpRenderer;
                 std::shared_ptr<CameraSpace::BaseCamera> m_camera;
+                std::unique_ptr<EffectSystem> m_effectSystem;
                 std::unique_ptr<PowerUpCursor> m_cursor;
                 std::unique_ptr<CameraRig> m_rig;
                 std::shared_ptr<PowerUpTarget> m_target;
                 bool m_inputRegistered = false;
-                int m_cost = 9999;        };
+                int m_cost;
+                PlayerData m_playerData;
+                std::vector<PlayerData::Data> m_playerEntries;
+        };
 }

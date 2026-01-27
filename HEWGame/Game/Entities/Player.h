@@ -70,8 +70,14 @@ namespace Entities
         void SetPickupDepthThreshold(float depthThreshold);
         void SetPickupOriginOffset(const float3& offset);
         void SetColliderFootprint(const float3& halfExtents, const float3& centerOffset);
+        void SetMaxCarry(int maxCarry);
 
         const SweetsSpace::PickupQueryResult& GetLastPickupResult() const noexcept;
+
+        //プレイヤーの向き
+        float GetFacingSign() const ;
+        void  SetFacingSign(float sign);
+ 
 
         Transform GetRenderTransform() const override;
 
@@ -86,5 +92,7 @@ namespace Entities
         PlayerPickupSystem m_pickupSystem;
         PlayerPhysicsBinder m_physicsBinder;
         Core::Input* m_input = nullptr;
+
+        float m_facingSign;
     };
 }

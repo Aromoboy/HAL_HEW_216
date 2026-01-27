@@ -6,6 +6,7 @@
 
 
 
+
 constexpr float kBackScale = 1.8f;
 constexpr float kFrameScale = 0.5f;
 constexpr float kIconScale = 0.5f;
@@ -48,11 +49,18 @@ float2 PowerUpNode::GetDrawScale()
 	return ret;
 }
 
+
+void PowerUpNode::SetLevel(int level)
+{
+	m_level = level;
+	UpdateCost();
+}
+
 void PowerUpNode::Draw(PowerUpRenderer& render, const CameraSpace::ICamera& camera)
 {
 
 	// 描画用データを作成
-	PowerUpRenderer::NodeRenderData data(m_texture, m_stringTexture,m_drawPos, m_drawScale, m_dirty, m_nameText, m_infomationText, m_level, m_levelUpCost);
+	PowerUpRenderer::NodeRenderData data(m_texture, m_stringTexture,m_drawPos, m_drawScale, m_dirty, m_nameText, m_infomationText, m_level, m_maxLevel, m_levelUpCost);
 
 	// 描画
 	render.DrawNode(data, camera);
@@ -68,6 +76,7 @@ void PowerUpNode::UpdateCost()
 
 	m_dirty = true;
 }
+
 
 PowerUpNode::PowerUpNode(std::shared_ptr<Texture2D> a_texture, std::string a_nameText, std::string a_infomationText, float2 a_drawPos, float2 a_drawScale, int a_level, int a_maxLevel, int a_defaultLevelUpCost, int a_costAdditional, float a_costMagnification)
 	: m_texture(a_texture)

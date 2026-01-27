@@ -1,4 +1,5 @@
 #include "Core/Gamepad.h"
+#include <algorithm>
 
 namespace
 {

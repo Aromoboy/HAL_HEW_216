@@ -7,7 +7,9 @@
 #include <array> 
 #include <memory>
 #include "TitleRenderer.h"
-
+#include "Title/TitleManager.h"
+#include "PowerUpTarget.h"
+#include "CameraRig.h"
 
 
 namespace CameraSpace
@@ -30,13 +32,6 @@ class TitleScene : public SceneSpace::Scene, public SceneSpace::IScene
         PowerUp,
         Exit,
         Max
-    };
-
-    enum class TitleState
-    {
-        Idle,       // タイトル待機
-        CountDown,  // 暗転＋カウントダウン
-        StartEffect // START表示
     };
 
 public:
@@ -62,28 +57,14 @@ private:
 private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;
-    TitleState m_titleState = TitleState::Idle;
-    int m_count = 3;
-    float m_countTimer = 0.0f;
-    float m_startTimer = 0.0f;
-    float m_deltaTime = 0.0f;
-    float m_fadeAlpha = 0;
-    Texture m_texStartRed;
-    Texture m_texStartGreen;
-    Texture m_texPowerUpRed;
-    Texture m_texPowerUpGreen;
-    Texture m_texExitRed;
-    Texture m_texExitGreen;
-    Texture m_texStartEffect;
-
-    struct MenuItem
-    {
-        std::unique_ptr<TitleRenderer> red;
-        std::unique_ptr<TitleRenderer> green;
-    };
-    std::array<Texture, 4> m_texNumber;
-    std::array<MenuItem, static_cast<int>(TitleMenu::Max)> m_menu;
     std::unique_ptr<BackgroundRenderer> m_background;
+
+    std::unique_ptr<TitleRenderer> m_renderer;
+    std::unique_ptr<TitleManager> m_titleManager;
+
+    std::unique_ptr<CameraRig> m_rig;
+    std::shared_ptr<PowerUpTarget> m_target;
+
 
     int m_titleBGMHandle = -1;
 };

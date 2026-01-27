@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -302,6 +303,7 @@ namespace Entities
         m_visual.position = player.m_transform.position;
         m_visual.rotation = player.m_transform.rotation;
         m_visual.scale = player.m_transform.scale;
+        m_visual.scale.x = std::abs(m_visual.scale.x) * player.GetFacingSign();
         RefreshRenderTransform();
     }
 
@@ -315,6 +317,7 @@ namespace Entities
         m_visual.position = player.m_transform.position;
         m_visual.rotation = player.m_transform.rotation;
         m_visual.scale = player.m_transform.scale;
+        m_visual.scale.x = std::abs(m_visual.scale.x) * player.GetFacingSign();
         RefreshRenderTransform();
     }
 

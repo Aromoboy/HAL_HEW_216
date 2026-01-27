@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 namespace GameplayConfig
 {
@@ -22,6 +22,7 @@ namespace GameplayConfig
     inline constexpr const char* kSectionSpawnLimits = "spawn.limits";
     inline constexpr const char* kSectionSpawnTuning = "spawn.tuning";
     inline constexpr const char* kSectionPowerUps = "powerups";
+    inline constexpr const char* kSectionPowerUpEffects = "powerup.effects";
     inline constexpr const char* kSectionSweetsLifecycle = "sweets.lifecycle";
     inline constexpr const char* kSectionSweetsManifest = "sweets.manifest";
     inline constexpr const char* kSectionColliderRegistry = "colliders.registry";

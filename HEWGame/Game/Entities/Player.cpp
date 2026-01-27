@@ -9,6 +9,7 @@ namespace Entities
         , m_pickupSystem(sweetsManager)
         , m_physicsBinder(kinematic)
         , m_input(input)
+        , m_facingSign(1.0f) //プレイヤーの向き
     {
         m_modelSystem.Initialize(*this, m_model);
     }
@@ -155,8 +156,24 @@ namespace Entities
         m_pickupSystem.SetColliderFootprint(halfExtents, centerOffset);
     }
 
+    void Player::SetMaxCarry(int maxCarry)
+    {
+        m_pickupSystem.SetMaxCarry(maxCarry);
+    }
+
     const SweetsSpace::PickupQueryResult& Player::GetLastPickupResult() const noexcept
     {
         return m_pickupSystem.GetLastPickupResult();
     }
+    //プレイヤーの向き
+    float Player::GetFacingSign() const
+    {
+        return m_facingSign;
+    }
+    void Player::SetFacingSign(float sign)
+    {
+        m_facingSign = sign;
+    }
+
+
 }

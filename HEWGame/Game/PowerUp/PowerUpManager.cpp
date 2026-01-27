@@ -61,6 +61,14 @@ void PowerUpManager::AddNode(std::string name, std::string infomation, std::stri
 	
 }
 
+void PowerUpManager::LoadNodeData(Save& save)
+{
+	for (auto& it : m_nodes)
+	{
+		it.second->SetLevel(save.GetLevel(it.first));
+	}
+}
+
 void PowerUpManager::DrawAll(PowerUpRenderer& powerUpRenderer, const CameraSpace::ICamera& camera)
 {
 	for (auto& it : m_nodes)
@@ -80,6 +88,12 @@ int PowerUpManager::GetLevel(int num)
 int PowerUpManager::GetNodeCount()
 {
 	return m_nodes.size();
+}
+
+std::string PowerUpManager::GetName(int num)
+{
+	if (num >= m_nodes.size()) return "";
+	return m_nodes.at(num).first;
 }
 
 std::optional<float2> PowerUpManager::GetDrawPosition(int a_index)
