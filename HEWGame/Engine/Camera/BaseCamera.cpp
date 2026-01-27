@@ -22,7 +22,7 @@ namespace
                         return width / height;
                 }
 
-                return static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
+                return 1.0f;
         }
 
         bool AreFloat3Equal(const float3& lhs, const float3& rhs)
