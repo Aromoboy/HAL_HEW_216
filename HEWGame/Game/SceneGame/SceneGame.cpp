@@ -2555,11 +2555,17 @@ void SceneGame::ResetPlaySession()
         m_player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         m_player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         m_player->SetPickupOriginOffset(m_playerPickupOriginOffset);
+
+        const Transform& spawnTransform = m_playerSpawnTransform.transform;
+        m_player->SetTransformViaPhysics(spawnTransform.position, spawnTransform.rotation);
+        m_player->SetScale(spawnTransform.scale);
+        m_player->SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+        m_player->SetAngularVelocity(0.0f);
     }
 
     if (m_player && m_cameraRig)
     {
-        m_cameraRig->ResetVerticalScroll(m_player->GetTransform().position);
+        m_cameraRig->ResetVerticalScroll(m_playerSpawnTransform.transform.position);
     }
     else if (!m_cameraRig)
     {
