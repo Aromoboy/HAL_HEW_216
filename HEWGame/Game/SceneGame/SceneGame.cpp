@@ -1155,8 +1155,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
+    const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
     const GameplayRulesSystem::UpdateInput rulesInput{
-        m_stageState == StageState::Playing,
+        isPlaying,
         ctx.dt,
         m_sweetsManager.get(),
         &m_phaseManager,
@@ -1269,17 +1270,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
             return; // カウントダウン中はここで Update を終了
         }
-
-        // --- ゲーム本編更新（カウントダウン終了後） ---
-        const GameplayRulesSystem::UpdateInput rulesInput{
-            true, // ゲーム本編が始まったときだけ true
-            ctx.dt,
-            m_sweetsManager.get(),
-            &m_phaseManager,
-            m_clearPhaseCount
-        };
-        const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
-
 
         if (input)
         {
