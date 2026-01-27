@@ -1,5 +1,6 @@
 #include "BaseCamera.h"
 
+#include "AppGame.h"
 #include "Defines.h"
 #include "DrawMatrix.h"
 
@@ -10,6 +11,19 @@ namespace
         constexpr float kMaxCoordinateMagnitude = 100000.0f;
         constexpr float kMaxRotationMagnitude = DirectX::XM_PI * 16.0f;
         constexpr int kMaxPriorityMagnitude = 1000;
+
+        float ResolveDefaultAspectRatio()
+        {
+                const Core::DXContext& dxContext = App::Game::Instance().GetDXContext();
+                const float width = static_cast<float>(dxContext.GetWidth());
+                const float height = static_cast<float>(dxContext.GetHeight());
+                if (width > 0.0f && height > 0.0f)
+                {
+                        return width / height;
+                }
+
+                return static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
+        }
 
         bool AreFloat3Equal(const float3& lhs, const float3& rhs)
         {
@@ -52,7 +66,7 @@ namespace CameraSpace
         BaseCamera::BaseCamera(const float3& position, const float3& rotation)
                 : m_priority(0)
                 , m_fovYDegrees(60.0f)
-                , m_aspect(static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT))
+                , m_aspect(ResolveDefaultAspectRatio())
                 , m_nearPlane(CMETER(30.0f))
                 , m_farPlane(METER(1000.0f))
                 , m_viewDirty(true)

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BaseCamera.h"
-#include "Defines.h"
 
 namespace CameraSpace
 {
@@ -10,7 +9,7 @@ namespace CameraSpace
         public:
                 PerspectiveCamera(
                         float verticalFovDegrees = 60.0f,
-                        float aspectRatio = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT),
+                        float aspectRatio = 0.0f,
                         float nearPlane = 0.1f,
                         float farPlane = 1000.0f);
 
