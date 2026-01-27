@@ -2792,7 +2792,7 @@ void SceneGame::ApplyPowerUpEffects(const PlayerData::Data& data)
     if (cakeScaleMultiplier != 1.0f)
     {
         Systems::PhysicsMachine* physicsMachine = m_physicsBinder ? m_physicsBinder->GetPhysicsMachine() : nullptr;
-        Core::IUpdatable* contactNode = physicsMachine ? physicsMachine->GetContactDispatchNode() : nullptr;
+        Core::UpdateNode* contactNode = physicsMachine ? physicsMachine->GetContactDispatchNode() : nullptr;
         const bool physicsWasEnabled = physicsMachine ? physicsMachine->IsEnabled() : false;
         const bool contactWasEnabled = contactNode ? contactNode->IsEnabled() : false;
         int activeContactsBefore = 0;

@@ -32,7 +32,6 @@
 #   include <windows.h>
 #endif
 
-#include "Core/IUpdatable.h"
 #include "Core/StepTimer.h"
 
 namespace
@@ -262,7 +261,7 @@ namespace Systems
         return m_box2dSystem;
     }
 
-    Core::IUpdatable* PhysicsMachine::GetContactDispatchNode() const
+    Core::UpdateNode* PhysicsMachine::GetContactDispatchNode() const
     {
         return m_contactDispatchNode.get();
     }
