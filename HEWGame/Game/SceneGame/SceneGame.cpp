@@ -1,5 +1,4 @@
-﻿//なんでマージしないのー？
-#include "Transform.h"
+﻿#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
@@ -786,10 +785,13 @@ void SceneGame::OnEnter()
         m_countdownTextures[i] = std::make_shared<Texture>();
     }
 
-    m_countdownTextures[0]->Create("Assets/Texture/start.png", true);
+    m_countdownTextures[0]->Create("Assets/Texture/start_remake.png", true);
     m_countdownTextures[1]->Create("Assets/Texture/1-1.png", true);
     m_countdownTextures[2]->Create("Assets/Texture/2-1.png", true);
     m_countdownTextures[3]->Create("Assets/Texture/3-1.png", true);
+    m_finishTexture = std::make_shared<Texture>();
+    m_finishTexture->Create("Assets/Texture/Finish_remake.png", true);
+
 }
 
 void SceneGame::OnExit()
@@ -1155,31 +1157,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
-    const GameplayRulesSystem::UpdateInput rulesInput{
-        isPlaying,
-        ctx.dt,
-        m_sweetsManager.get(),
-        &m_phaseManager,
-        m_clearPhaseCount
-    };
-    const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
-    if (rulesResult.timeUp && m_stageState == StageState::Playing)
-    {
-        SetStageState(StageState::TimeUp);
 
-     
-       
-        return;
-
-
-
-    }
-    if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
-    {
-        UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
-        BroadcastPhaseAdvance(rulesResult.currentPhase);
-    }
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
@@ -1245,7 +1223,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         Core::Input* input = GetInput();
 
-        // --- カウントダウン処理 ---
+        // カウントダウン処理
         if (!m_gameStarted)
         {
             m_startCountdownTimer += ctx.dt;
@@ -1274,6 +1252,32 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             return; // カウントダウン中はここで Update を終了
         }
 
+        // ゲーム本編更新（カウントダウン終了後）
+    const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
+    const GameplayRulesSystem::UpdateInput rulesInput{
+        isPlaying,
+        ctx.dt,
+        m_sweetsManager.get(),
+        &m_phaseManager,
+        m_clearPhaseCount
+    };
+    const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
+    if (rulesResult.timeUp && m_stageState == StageState::Playing)
+    {
+        SetStageState(StageState::TimeUp);
+
+     
+       
+        return;
+
+
+
+    }
+    if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
+    {
+        UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
+        BroadcastPhaseAdvance(rulesResult.currentPhase);
+    }
         if (input)
         {
             PlayerController::SpeedInput speedInput{
@@ -1342,6 +1346,17 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     }
     case StageState::TimeUp:
+        SetStageState(StageState::Finish);
+        m_finishTimer = 0.0f;   // Finish演出用タイマー初期化
+        break;
+    case StageState::Finish:
+        m_finishTimer += ctx.dt;
+        // FINISHを表示してからリザルトへ
+        if (m_finishTimer >= 2.0f)
+        {
+            SetStageState(StageState::ShowingResult);
+        }
+        break;
     case StageState::Cleared:
         SetStageState(StageState::ShowingResult);
         break;
@@ -1369,11 +1384,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             SetStageState(StageState::Playing);
             return;
         case PlayerController::PostGameAction::GoToPowerUp:
-            if (m_manager && EnsureResultSaved())
-            {
-                m_manager->RequestSceneChange(
-                    std::make_unique<TitleScene>(*m_manager));
-            }
+
             return;
         case PlayerController::PostGameAction::GoToTitle:
             if (m_manager && EnsureResultSaved())
@@ -2027,10 +2038,23 @@ void SceneGame::DrawOverlay()
         Sprite::SetOffset({ 0.0f, 0.0f }); 
         Sprite::SetSize({ 1.0f, 1.0f });   
         Sprite::SetColor({ 1,1,1,1 });
-
         Sprite::Draw();
     }
-    
+
+    // FINISH表示
+    if (m_stageState == StageState::Finish)
+    {
+        Sprite::ScopedPassDefaults guard;
+
+        Sprite::SetTexture(m_finishTexture.get());
+
+        // 画面中央に表示
+        Sprite::SetOffset({ 0.0f, 0.0f });
+        Sprite::SetSize({ 1.0f, 1.0f }); 
+        Sprite::SetColor({ 1,1,1,1 });
+        Sprite::Draw();
+    }
+
 #if defined(_DEBUG)
 #endif
 }

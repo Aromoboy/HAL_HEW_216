@@ -19,7 +19,7 @@ public:
 	}
 	void DrawHud(const CameraSpace::ICamera& camera);
 private:
-	// Še•¶š—ñ‚ÌƒeƒNƒXƒ`ƒƒƒTƒCƒY
+	// ï¿½eï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìƒeï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½Tï¿½Cï¿½Y
 	float2 m_stringTextureScale;
 
 	
@@ -56,17 +56,17 @@ public:
 		}
 	};
 
-	void Draw(std::shared_ptr<Texture2D> a_texture, float2 pos, float2 size);
+	void Draw(std::shared_ptr<Texture2D> a_texture, float2 pos, float2 size, const CameraSpace::ICamera& camera);
 	
 private:
 
-	// ƒXƒvƒ‰ƒCƒg•`‰æ—pŠÖ”
+	// ï¿½Xï¿½vï¿½ï¿½ï¿½Cï¿½gï¿½`ï¿½ï¿½pï¿½Öï¿½
 	void DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData);
 
 
 	void MeshDraw();
 
-	// ”Â‚Æ‚µ‚Ä•`‰æ‚·‚é‚½‚ß‚ÌƒƒbƒVƒ…‹y‚ÑƒVƒF[ƒ_[AƒRƒ“ƒXƒgƒ‰ƒNƒ^‚Å©ì‚·‚éB
+	// ï¿½Â‚Æ‚ï¿½ï¿½Ä•`ï¿½æ‚·ï¿½é‚½ï¿½ß‚Ìƒï¿½ï¿½bï¿½Vï¿½ï¿½ï¿½yï¿½ÑƒVï¿½Fï¿½[ï¿½_ï¿½[ï¿½Aï¿½Rï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½Nï¿½^ï¿½Åï¿½ï¿½ì‚·ï¿½ï¿½B
 	std::shared_ptr<MeshDX> m_spriteMesh;
 	std::shared_ptr<Shader> vs;
 	std::shared_ptr<Shader> ps;

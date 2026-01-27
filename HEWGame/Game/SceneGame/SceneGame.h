@@ -67,6 +67,7 @@ public:
         TimeUp,
         Cleared,
         ShowingResult,
+        Finish,
     };
 
     using PlayerColliderTuning = SceneGameConfig::PlayerColliderTuning;
@@ -199,7 +200,12 @@ protected:
     float m_startCountdownTimer = 0.0f;
     bool m_showStartImage = false;
     bool  m_gameStarted = false; 
+    bool  m_showFinishImage = false;
+    float m_finishTimer = 0.0f;
+    bool  m_finishDone = false;
+
     std::shared_ptr<Texture> m_countdownTextures[4]; // 0～3秒
+    std::shared_ptr<Texture> m_finishTexture;
     SceneSpace::SceneManager* m_manager = nullptr;
 };
 
