@@ -1,17 +1,17 @@
 #ifndef __DEFINES_H__
 #define __DEFINES_H__
 
-#include <assert.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
-#include <Windows.h>
+#include <assert.h>
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
+#include <Windows.h>
 
 
 #include <stdarg.h>
