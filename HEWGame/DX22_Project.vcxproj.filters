@@ -903,6 +903,9 @@
     <ClInclude Include="Game\UI\VideoBackgroundRenderer.h">
       <Filter>Game\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Game\UI\VideoTexturePlayer.h">
+      <Filter>Game\UI</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\Effekseer\Effekseer.h">
       <Filter>ThirdParty\Effekseer</Filter>
     </ClInclude>
