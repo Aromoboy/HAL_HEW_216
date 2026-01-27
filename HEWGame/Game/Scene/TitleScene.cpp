@@ -1,6 +1,8 @@
 ﻿#include "TitleScene.h"
+
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
+
 #include "PerspectiveCamera.h"
 #include "SceneGame.h"
 #include "ScenePowerUp.h"
@@ -10,7 +12,7 @@
 #include "SceneManager.h"
 #include "TitleRenderer.h"
 #include "SceneResult.h"
-#include "BackgroundRenderer.h"
+ 
 #include <memory>
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
@@ -63,6 +65,7 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 
 void TitleScene::Draw()
 {
+    // RootDraw triggers Draw(const Camera&) where the background is rendered.
     RootDraw();
 }
 
@@ -92,6 +95,15 @@ void TitleScene::OnEnter()
             m_video.reset();
         }
     }
+
+    /* UI ボタン用テクスチャ読み込み
+    m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
+    m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
+    m_texPowerUpRed.Create("Assets/Texture/タイトル画面UI3.png");
+    m_texPowerUpGreen.Create("Assets/Texture/タイトル画面UI4.png");
+    m_texExitRed.Create("Assets/Texture/タイトル画面UI1.png");
+    m_texExitGreen.Create("Assets/Texture/タイトル画面UI2.png");
+    */
     DirectX::XMMATRIX p = DirectX::XMMatrixOrthographicOffCenterLH(
         0.0f, 1280.0f, 720.0f, 0.0f, 0.0f, 1.0f);
     DirectX::XMFLOAT4X4 proj;
@@ -251,5 +263,9 @@ void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamer
     {
         m_titleManager->DrawAll(*m_renderer);
     }
+
+
+ 
+
     
 }

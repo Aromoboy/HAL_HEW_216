@@ -693,6 +693,7 @@ namespace Entities
             break;
         }
 
+
         PickupBox box;
         box.halfWidth = clampPickupExtent(m_pickupHalfWidth);
         box.halfHeight = clampPickupExtent(m_pickupHalfHeight);

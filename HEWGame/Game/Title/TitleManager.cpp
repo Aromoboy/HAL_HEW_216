@@ -26,14 +26,14 @@ TitleManager::TitleManager(Core::UpdateScheduler* a_scheduler, TextureCache& a_c
 		a_format,
 		a_input))
 	, m_nodes(
-		TitleNode(a_cache.Get("GameSceneNode"), float2(0.0f, 0.0f), float2(1.0f, 1.0f)),
-		TitleNode(a_cache.Get("PowerUpSceneNode"), float2(-1.0f, 0.0f), float2(1.0f, 1.0f)),
-		TitleNode(a_cache.Get("GameEndNode"), float2(-1.0f, -1.0f), float2(1.0f, 1.0f))
+		TitleNode(a_cache.Get("GameSceneNode"), float2(3.0f, 0.0f), float2(SCREEN_WIDTH * kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("PowerUpSceneNode"), float2(-2.5f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("GameEndNode"), float2(-2.5f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y))
 	)
 	, m_selectNodes(
-		TitleNode(a_cache.Get("SelectGameSceneNode"), float2(0.0f, 0.0f), float2(1.0f, 1.0f)),
-		TitleNode(a_cache.Get("SelectPowerUpSceneNode"), float2(-1.0f, 0.0f), float2(1.0f, 1.0f)),
-		TitleNode(a_cache.Get("SelectGameEndNode"), float2(-1.0f, -1.0f), float2(1.0f, 1.0f))
+		TitleNode(a_cache.Get("SelectGameSceneNode"), float2(0.0f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("SelectPowerUpSceneNode"), float2(0.0f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
+		TitleNode(a_cache.Get("SelectGameEndNode"), float2(0.0f, 0.0f), float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y))
 	)
 {
 }
@@ -97,15 +97,16 @@ void TitleManager::SetFormat(const TitleCursor::NodeFormat& a_format)
 }
 
 
-void TitleManager::DrawAll(TitleRenderer& a_titleRenderer, const CameraSpace::ICamera& camera)
+void TitleManager::DrawAll(TitleRenderer& a_titleRenderer)
 {
 	SetDepthTest(false);
 	for (auto it : m_nodes)
 	{
-		a_titleRenderer.Draw(it.nodeTexture, it.pos, it.size, camera);
+		a_titleRenderer.Draw(it.nodeTexture, it.pos, it.size);
 	}
 
-	a_titleRenderer.Draw(m_selectNodes.at(m_cursor->GetCursorNum()).nodeTexture, m_selectNodes.at(m_cursor->GetCursorNum()).pos, m_selectNodes.at(m_cursor->GetCursorNum()).size, camera);
+	
+	//a_titleRenderer.Draw(m_selectNodes.at(m_cursor->GetCursorNum()).nodeTexture, m_selectNodes.at(m_cursor->GetCursorNum()).pos, m_selectNodes.at(m_cursor->GetCursorNum()).size, camera);
 	SetDepthTest(true);
 }
 
