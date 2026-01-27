@@ -74,6 +74,16 @@ namespace SceneSpace
                         2.0f,
                         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
                         DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f) });
+
+                VideoBackgroundRenderer::ShaderPaths shaderPaths{
+                    "Assets/shaders/video_vs.cso",
+                    "Assets/shaders/video_ps.cso"
+                };
+                m_videoBackground = std::make_unique<VideoBackgroundRenderer>();
+                if (!m_videoBackground->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/PowerUp.mp4"))
+                {
+                    m_videoBackground.reset();
+                }
                 return true;
         }
 
@@ -173,7 +183,10 @@ namespace SceneSpace
 
         void ScenePowerUp::Update(const Core::UpdateContext& ctx)
         {
-                (void)ctx;
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Update(ctx.dt);
+                }
                 Core::Input* input = GetInput();
                 if (input && input->IsTrigger(Core::ActionId::Cancel))
                 {
@@ -204,7 +217,10 @@ namespace SceneSpace
                 {
                         return;
                 }
-                m_powerUpRenderer->DrawBackground(*activeCamera, m_backUVProgress);
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Draw();
+                }
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpRenderer->DrawCost(m_cost, *activeCamera);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
@@ -274,6 +290,10 @@ namespace SceneSpace
                 {
                         m_powerUpRenderer->Shutdown();
                 }
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Shutdown();
+                }
 
                 if (m_rig)
                 {
@@ -299,6 +319,7 @@ namespace SceneSpace
                 m_cursor.reset();
                 m_powerUpManager.reset();
                 m_powerUpRenderer.reset();
+                m_videoBackground.reset();
                 m_camera.reset();
                 m_effectSystem.reset();
         }

@@ -726,6 +726,13 @@ Render
 モデル描画まわり。描画は “一発で描ける” 流儀（Renderer/DrawSystem 経由）。
 ローダーは仮で OK（立方体などの代用でも成立）。
 
+Video 背景の設計判断
+
+選択: **Variant B — `VideoBackgroundRenderer` を `BackgroundRenderer` と同じレイヤに追加**。
+理由: シーン単位で寿命と設定を持てるため、複数シーンでの切り替え/差し替えが容易。
+また、既存の `BackgroundRenderer` と同層に置くことで、Scene の所有・初期化・Draw 呼び出しの
+流れに自然に乗せられ、グローバルなバックエンドモジュールを増やさずに再利用できる。
+
 Systems
 
 物理系。基本は重力 + 減衰。

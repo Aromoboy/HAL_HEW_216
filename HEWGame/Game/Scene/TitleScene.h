@@ -3,7 +3,7 @@
 
 #include "Scene.h"
 #include "SceneManager.h"
-#include "BackgroundRenderer.h"
+#include "VideoTexturePlayer.h"
 #include <array> 
 #include <memory>
 #include "TitleRenderer.h"
@@ -57,7 +57,7 @@ private:
 private:
     UiState m_uiState = UiState::MainMenu;
     int m_cursor = 0;
-    std::unique_ptr<BackgroundRenderer> m_background;
+    std::unique_ptr<VideoTexturePlayer> m_video;
 
     std::unique_ptr<TitleRenderer> m_renderer;
     std::unique_ptr<TitleManager> m_titleManager;
