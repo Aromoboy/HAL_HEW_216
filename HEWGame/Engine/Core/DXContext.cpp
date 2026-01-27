@@ -316,7 +316,7 @@ namespace Core
                 ReleaseSceneTargets();
 
                 m_sceneTargets.color = std::make_unique<RenderTarget>();
-                HRESULT hr = m_sceneTargets.color->Create(DXGI_FORMAT_R8G8B8A8_UNORM, width, height);
+                HRESULT hr = m_sceneTargets.color->Create(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, width, height);
                 if (FAILED(hr))
                 {
                         DebugLog::DebugMessage("[DXContext] Failed to create scene color render target.\n");
