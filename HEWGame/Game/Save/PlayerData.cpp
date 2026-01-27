@@ -77,6 +77,7 @@ namespace
 		entry.fReplenishSpeed = 0.0f;
 		entry.nReplenishCount = 0;
 		entry.fPtMultipl = 1.0f;
+		entry.timerLevel = 0;
 
 		for (const auto& item : PowerUpEffectConfig::Entries())
 		{
@@ -97,6 +98,9 @@ namespace
 				break;
 			case PowerUpType::PointAmount:
 				entry.fPtMultipl = effect.value;
+				break;
+			case PowerUpType::Timer:
+				entry.timerLevel = level;
 				break;
 			case PowerUpType::Whip:
 				entry.creamEnabled = effect.enabled;
