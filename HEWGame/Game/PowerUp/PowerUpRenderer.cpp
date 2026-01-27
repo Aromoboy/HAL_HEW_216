@@ -433,34 +433,6 @@ const std::wstring PowerUpRenderer::UTF8toWString(const std::string srcUTF8) con
 	return strSJis;
 }
 
-void PowerUpRenderer::DrawBackground(const CameraSpace::ICamera& camera)
-{
-	if (!m_background)
-	{
-		return;
-	}
-
-	const DirectX::XMFLOAT4X4& view = camera.GetView();
-	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
-
-	DirectX::XMFLOAT4X4 world;
-	float3 position;
-	float3 scale;
-
-	// 画面中央・最背面
-	position = { 0.0f, 0.0f, 2.4f };
-	scale = { 3.6f, 2.0f, 1.0f };
-
-	DrawMatrix::CreateWorldMatrix(
-		world,
-		position,
-		scale,
-		float3{ 0.0f, 0.0f, 0.0f }
-	);
-
-	DrawSprite(m_background, world, view, proj);
-}
-
 void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
 {
 	// 各マトリクスと描画用のパラメーター
