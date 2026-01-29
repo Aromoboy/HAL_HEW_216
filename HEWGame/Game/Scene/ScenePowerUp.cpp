@@ -65,14 +65,14 @@ namespace SceneSpace
 
                 EffectSystem::EffectCreateRequest FruitRequest(
                     "Fruit",
-                    float3{ 0.3f, -0.2f, 1.0f },
+                    float3{ 0.55f, -0.3f, 1.0f },
                     float3{ 0.0f, 0.0f, 0.0f },
                     0);
                 m_effectSystem->SpawnEffect(FruitRequest);
 
                 EffectSystem::EffectCreateRequest BubbleRequest(
                     "Bubble",
-                    float3{ 0.0f, 0.0f, 1.0f },
+                    float3{ -0.6f, -0.2f, 1.0f },
                     float3{ 0.0f, 0.0f, 0.0f },
                     0);
                 m_effectSystem->SpawnEffect(BubbleRequest);
@@ -219,7 +219,7 @@ namespace SceneSpace
                 {
                     EffectSystem::EffectCreateRequest BubbleRequest(
                         "Bubble",
-                        float3{ 0.5f, 0.0f, 1.0f },
+                        float3{ -0.6f, -0.2f, 1.0f },
                         float3{ 0.0f, 0.0f, 0.0f },
                         0);
                     m_effectSystem->SpawnEffect(BubbleRequest);
