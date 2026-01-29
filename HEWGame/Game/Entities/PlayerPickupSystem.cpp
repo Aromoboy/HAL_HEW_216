@@ -576,9 +576,12 @@ namespace Entities
         m_lastPickupResult = pickupResult;
 
         // ピックアップ音を再生
-        if (auto* sound = SoundManagerEX::GetInstance())
+        if (pickupResult.result == SweetsSpace::PickupResult::Success)
         {
-            sound->PlaySoundEX("Assets/Audio/SE_Catch.wav", false, 0.5f);
+            if (auto* sound = SoundManagerEX::GetInstance())
+            {
+                sound->PlaySoundEX("Assets/Audio/SE_Catch.wav", false, 0.5f);
+            }
         }
 
         std::ostringstream oss;

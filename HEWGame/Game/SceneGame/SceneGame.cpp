@@ -1498,6 +1498,10 @@ void SceneGame::HandleColliderDebugCommands(const Core::UpdateContext& ctx)
                 m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
                 if (guidelineResult.guidelineAdvanced)
                 {
+                    if (auto* soundMgr = SoundManagerEX::GetInstance())
+                    {
+                        soundMgr->PlaySoundEX("Assets/Sound/SE_PhaseUp.wav", false, 0.8f);
+                    }
                         const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
                         m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
                         UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);

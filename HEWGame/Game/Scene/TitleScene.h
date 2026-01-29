@@ -67,6 +67,7 @@ private:
 
 
     int m_titleBGMHandle = -1;
+    bool m_shouldStopBGM = true;
 };
 
 #endif
