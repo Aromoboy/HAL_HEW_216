@@ -6,6 +6,7 @@
 #include "TitleScene.h"
 #include "TextureCache.h"
 #include "AppGame.h"
+#include "Timer.h"
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
@@ -51,6 +52,9 @@ namespace SceneSpace
 
                 std::unordered_map<std::string, EffectCreateData> effectDatas;
                 effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
+                effectDatas.try_emplace("Bubble", EffectCreateData(u"Assets/Effect/PowerUpEffect/bubble_effect.efkefc", 0.1f));
+                effectDatas.try_emplace("Fruit", EffectCreateData(u"Assets/Effect/PowerUpEffect/Banana_strawberry_animation.efkefc", 0.5f));
+                effectDatas.try_emplace("Star", EffectCreateData(u"Assets/Effect/PowerUpEffect/star_background.efkefc", 0.1f));
                 m_effectSystem = std::make_unique<EffectSystem>(m_manager->GetEffectRenderer(), m_manager->GetEffectManager(), effectDatas);
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
                 m_rig = std::make_unique<CameraRig>(m_camera);
@@ -59,7 +63,27 @@ namespace SceneSpace
                 m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input, *m_effectSystem);
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
-                
+                EffectSystem::EffectCreateRequest FruitRequest(
+                    "Fruit",
+                    float3{ 0.3f, -0.2f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                m_effectSystem->SpawnEffect(FruitRequest);
+
+                EffectSystem::EffectCreateRequest BubbleRequest(
+                    "Bubble",
+                    float3{ 0.0f, 0.0f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                m_effectSystem->SpawnEffect(BubbleRequest);
+
+                EffectSystem::EffectCreateRequest StarRequest(
+                    "Star",
+                    float3{ 0.0f, 0.0f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                m_effectSystem->SpawnEffect(StarRequest);
+
                 m_rig->Attach(m_target);
 
                 LoadPowerUpFile();
@@ -175,6 +199,7 @@ namespace SceneSpace
         {
                 (void)ctx;
                 Core::Input* input = GetInput();
+                m_timer.StepTime(ctx.dt);
                 if (input && input->IsTrigger(Core::ActionId::Cancel))
                 {
                         if (m_manager)
@@ -188,6 +213,23 @@ namespace SceneSpace
                 if (!m_target || !m_cursor || !m_powerUpManager)
                 {
                         return;
+                }
+
+                if (m_effectSystem != nullptr && m_timer.GetCount())
+                {
+                    EffectSystem::EffectCreateRequest BubbleRequest(
+                        "Bubble",
+                        float3{ 0.5f, 0.0f, 1.0f },
+                        float3{ 0.0f, 0.0f, 0.0f },
+                        0);
+                    m_effectSystem->SpawnEffect(BubbleRequest);
+
+                    EffectSystem::EffectCreateRequest StarRequest(
+                        "Star",
+                        float3{ 0.0f, 0.0f, 1.0f },
+                        float3{ 0.0f, 0.0f, 0.0f },
+                        0);
+                    m_effectSystem->SpawnEffect(StarRequest);
                 }
 
                 m_target->MoveTarget(m_cursor->GetDrawPos(), m_powerUpManager->GetNodeDistance());
