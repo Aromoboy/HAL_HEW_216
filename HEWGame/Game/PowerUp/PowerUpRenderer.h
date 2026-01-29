@@ -12,8 +12,8 @@
 
 struct PowerUpHudLayoutConfig
 {
-	uint32_t textureWidth = 1024;
-	uint32_t textureHeight = 512;
+	uint32_t textureWidth = 512;
+	uint32_t textureHeight = 256;
 	float marginPixels = 24.0f;
 	float innerPaddingPixels = 12.0f;
 	float fontSizePixels = 28.0f;
