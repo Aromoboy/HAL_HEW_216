@@ -15,6 +15,8 @@
  
 #include <memory>
 
+static int s_TitleBGMHandle = -1;
+
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
     , m_camera(nullptr)
@@ -113,25 +115,41 @@ void TitleScene::OnEnter()
     );
     Sprite::SetProjection(proj);
 
-    if (SoundManagerEX::GetInstance())
+    m_shouldStopBGM = true;
+
+    if (s_TitleBGMHandle == -1)
     {
-        m_titleBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
-            "Assets/Audio/BGM_Menu.wav", true, 0.5f);
+
+        if (auto* soundMgr = SoundManagerEX::GetInstance())
+        {
+
+            s_TitleBGMHandle = soundMgr->PlaySoundEX(
+                "Assets/Audio/BGM_Menu.wav",
+                true, // Loop
+                0.5f
+            );
+
+        }
     }
 
     m_rig = std::make_unique<CameraRig>(m_camera);
     m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
-
     m_rig->Attach(m_target);
 }
 
 void TitleScene::OnExit()
 {
 
-    if (m_titleBGMHandle != -1 && SoundManagerEX::GetInstance())
+    if (m_shouldStopBGM)
     {
-        SoundManagerEX::GetInstance()->StopSound(m_titleBGMHandle);
-        m_titleBGMHandle = -1;
+        if (s_TitleBGMHandle != -1)
+        {
+            if (auto* soundMgr = SoundManagerEX::GetInstance())
+            {
+                soundMgr->StopSound(s_TitleBGMHandle);
+            }
+            s_TitleBGMHandle = -1;
+        }
     }
 
     if (m_video)
@@ -197,6 +215,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
     // Enter でゲーム開始
     if (input->IsTrigger(Core::ActionId::Confirm))
     {
+        m_shouldStopBGM = true;
         if (m_manager)
         {
             m_manager->RequestSceneChange(
@@ -207,6 +226,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger('P'))
     {
+        m_shouldStopBGM = false;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
@@ -216,6 +236,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger(VK_F1))
     {
+        m_shouldStopBGM = true;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<EffectTestScene>(*m_manager));
@@ -225,6 +246,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger(VK_SPACE))
     {
+        m_shouldStopBGM = false;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<SceneSpace::SettingScene>(*m_manager));
@@ -234,6 +256,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger(Core::ActionId::Cancel))
     {
+        m_shouldStopBGM = false;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
@@ -243,6 +266,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger('O'))
     {
+        m_shouldStopBGM = false;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager));
