@@ -1,4 +1,4 @@
-#include "TitleManager.h"
+﻿#include "TitleManager.h"
 
 #include "Core/UpdateScheduler.h"
 #include "PowerUpNode.h"
