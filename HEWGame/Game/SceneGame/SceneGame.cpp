@@ -646,6 +646,8 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
     }
     RootUpdate(timer, input);
 
+
+
     if (m_pendingRetryReset)
     {
         m_pendingRetryReset = false;
@@ -1312,6 +1314,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
         if (guidelineResult.guidelineAdvanced)
         {
+          //  const int scorePerPhase = 200;
+            
+          //  m_isScoreCounting = true;
+         //   m_scoreToAddRemaining += scorePerPhase;
+
             const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
             m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
@@ -1339,6 +1346,25 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 }
             }
         }
+        //+200 スコア入った時徐々に増える
+        //if (m_isScoreCounting)
+        //{
+        //    const float addInterval = 0.01f;
+        //    m_scoreAddTimer += ctx.dt;
+
+        //    while (m_scoreAddTimer >= addInterval && m_scoreToAddRemaining > 0)
+        //    {
+        //        m_scoreAddTimer -= addInterval;
+        //        m_realtimeScore += 1;
+        //        m_scoreToAddRemaining -= 1;
+        //    }
+        //    if (m_scoreToAddRemaining <= 0)
+        //    {
+        //        m_isScoreCounting = false;
+        //        m_scoreAddTimer = 0.0;
+        //    }
+        //}
+
         break;
     }
     case StageState::TimeUp:
@@ -1360,7 +1386,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     if (m_stageState == StageState::ShowingResult)
     {
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+//       const int score = m_gameplayRules.ComputeScore(&m_phaseManager,m_lastApprovePeakHeight);
+//        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        const int score = m_gameplayRules.GetCurrentScore();
         const auto action = input ? m_playerController.HandlePostGameMenuInput(*input, peakHeight, score, m_resultState)
             : PlayerController::PostGameAction::None;
         switch (action)
@@ -1398,11 +1426,14 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float remainingSeconds = std::max(0.0f, m_gameplayRules.GetRemainingCountdownSeconds());
         const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        const int score = m_gameplayRules.GetCurrentScore();
+//        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+//        const int score = m_gameplayRules.ComputeScore(&m_phaseManager, m_lastApprovePeakHeight);
         uiData.hud.remainingSeconds = remainingSeconds;
         uiData.hud.currentHeight = currentHeight;
         uiData.hud.peakHeight = peakHeight;
         uiData.hud.score = score;
+    //    uiData.hud.score = m_realtimeScore;
         uiData.hud.sweetsCount = GetSweetsCount();
         uiData.hud.timeUp = isTimeUp;
         uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
@@ -1429,6 +1460,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.result.currentHeight = currentHeight;
         uiData.result.peakHeight = peakHeight;
         uiData.result.score = score;
+      //  uiData.hud.score = m_realtimeScore;
         uiData.result.sweetsCount = GetSweetsCount();
         uiData.result.timeUp = isTimeUp;
         uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
