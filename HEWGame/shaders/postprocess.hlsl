@@ -149,5 +149,10 @@ float4 PSMain(VSOut input) : SV_TARGET
         float grain = (noise - 0.5f) * 2.0f * grainAmount;
         col = saturate(col + grain);
     }
+    // NOTE: When the render target is sRGB, leave gamma at 1.0 to avoid double correction.
+    if (gamma != 1.0f)
+    {
+        col = pow(saturate(col), 1.0f / max(gamma, 0.0001f));
+    }
     return float4(col, 1.0f);
 }
