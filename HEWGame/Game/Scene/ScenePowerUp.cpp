@@ -75,7 +75,7 @@ namespace SceneSpace
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("SweetsSpawnSpeed", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_Speed_icon.png");
                 cache.Load("SweetsSpawnQuantity", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_UP_icon.png");
-                cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
+                cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon _remake.png");
                 cache.Load("Timer", GetDevice(), L"Assets/Texture/upgrade_UI_time_bonus_icon.png");
 
                 std::unordered_map<std::string, EffectCreateData> effectDatas;

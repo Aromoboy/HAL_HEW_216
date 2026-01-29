@@ -7,7 +7,7 @@
 constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
 constexpr float2 kCursorOffset = { 0.0015f, 0.014f };
-constexpr float kPowerUpInputDeadzone = 0.2f;
+constexpr float kPowerUpInputDeadzone = 0.6f;
 
 PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManager* a_powerUpManager, PowerUpManager::NodeFormat a_format, int& a_cost, Core::Input& input, EffectSystem& a_effectSystem, std::function<void(int)> onPurchase)
 	:m_powerUpManager(a_powerUpManager)
