@@ -17,6 +17,7 @@
 #include "VideoBackgroundRenderer.h"
 #include "Timer.h"
 
+#include "VideoBackgroundRenderer.h"
 
 
 class PowerUpManager;

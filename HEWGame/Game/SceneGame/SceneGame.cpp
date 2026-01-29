@@ -1172,6 +1172,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
     }
+    
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
@@ -1297,6 +1298,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             }
         }
 
+        if (rulesResult.timeUp)
+        {
+            SetStageState(StageState::TimeUp);
+            return;
+        }
 
         if (input)
         {

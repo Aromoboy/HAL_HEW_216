@@ -430,6 +430,10 @@ namespace SceneSpace
                 {
                         m_powerUpRenderer->Shutdown();
                 }
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Shutdown();
+                }
 
                 if (m_rig)
                 {
