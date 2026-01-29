@@ -7,6 +7,7 @@
 constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
 constexpr float2 kCursorOffset = { 0.0015f, 0.014f };
+constexpr float2 kTitleCursorDeadZone(0.3f);
 
 TitleCursor::TitleCursor(std::shared_ptr<Texture2D> a_texture, TitleCursor::NodeFormat a_format, Core::Input& input)
 	: m_input(&input)
@@ -42,10 +43,9 @@ void TitleCursor::OnUpdate(const Core::UpdateContext& ctx)
 		}
 	}
 
-
 	m_isClick = m_input && 
 		m_keyTimer <= 0.0f && 
-		m_input->IsKeyTrigger(VK_RETURN);
+		m_input->IsTrigger(Core::ActionId::Select);
 
 }
 
@@ -64,22 +64,22 @@ void TitleCursor::MoveInput(Core::Input& input)
 	float controllerX = input.GetAxis(Core::ActionId::MoveX);
 	float controllerY = input.GetAxis(Core::ActionId::RotateYaw);
 
-	if (controllerX < 0 || input.IsPress('A'))
+	if (controllerX < -kTitleCursorDeadZone.x || input.IsPress('A'))
 	{
-		if (m_index - m_format.y >= 0) m_index -= m_format.y;
+		m_index = 2;
 	}
-	else if (controllerX > 0 || input.IsPress('D'))
+	else if (controllerX > kTitleCursorDeadZone.x || input.IsPress('D'))
 	{
-		if (m_index + m_format.y < m_format.y) m_index = std::min(m_index + m_format.y, m_format.maxNode);
+		m_index = 0;
 	}
 
-	if (controllerY > 0 || input.IsPress('W'))
+	if (controllerY > kTitleCursorDeadZone.y || input.IsPress('W'))
 	{
-		if (m_index - 1 >= 0 && m_index % m_format.y != 0) m_index--;
+		m_index = 2;
 	}
-	else if (controllerY < 0 || input.IsPress('S'))
+	else if (controllerY < -kTitleCursorDeadZone.y || input.IsPress('S'))
 	{
-		if (m_index + 1 < m_format.maxNode && (m_index + 1) % m_format.y != 0)	m_index++;
+		m_index = 1;
 	}
 
 }

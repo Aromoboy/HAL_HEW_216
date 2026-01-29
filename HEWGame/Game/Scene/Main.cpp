@@ -43,6 +43,7 @@ namespace
         EffekseerRendererDX11::RendererRef g_effectRenderer;
         Effekseer::ManagerRef g_effectManager;
         std::unique_ptr<SoundManagerEX> g_soundManager;
+        bool isEnd;
 
         std::filesystem::path GetExecutableDirectory()
         {
@@ -183,6 +184,8 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
 
         LogBootScenario();
 
+        isEnd = false;
+
         return hr;
 }
 
@@ -221,6 +224,7 @@ void Update()
         if (g_sceneManager)
         {
                 g_sceneManager->Update();
+                isEnd = g_sceneManager->IsGameEnd();
         }
 
 #ifdef _DEBUG
@@ -386,4 +390,9 @@ void Draw()
         }
 
         EndDrawDirectX();
+}
+
+bool IsEnd()
+{
+    return isEnd;
 }

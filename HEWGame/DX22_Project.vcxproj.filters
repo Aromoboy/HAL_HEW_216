@@ -936,6 +936,9 @@
     <ClCompile Include="Game\Title\TitleCursor.cpp">
       <Filter>Game\Title</Filter>
     </ClCompile>
+    <ClCompile Include="Game\Title\TitleManager.cpp">
+      <Filter>Game\Title</Filter>
+    </ClCompile>
     <ClCompile Include="SceneResult.cpp">
       <Filter>Game\UI</Filter>
     </ClCompile>
@@ -962,6 +965,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Title\TitleCursor.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Title\TitleManager.h">
       <Filter>Game\Title</Filter>
     </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpNode.h">

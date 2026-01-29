@@ -67,7 +67,6 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 
 void TitleScene::Draw()
 {
-    // RootDraw triggers Draw(const Camera&) where the background is rendered.
     RootDraw();
 }
 
@@ -212,26 +211,26 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         return;
     }
 
-    // Enter でゲーム開始
-    if (input->IsTrigger(Core::ActionId::Confirm))
+
+    switch (m_titleManager->GetSceneMoveRequest())
     {
+    case GAME_REQUEST:
         m_shouldStopBGM = true;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(
-                std::make_unique<SceneGame>(*m_manager));
-        }
-        return;
+        m_manager->RequestSceneChange(
+            std::make_unique<SceneGame>(*m_manager));
+        break;
+
+    case POWERUP_REQUEST:
+        m_shouldStopBGM = false;
+        m_manager->RequestSceneChange(
+            std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
+        break;
+
     }
 
-    if (input->IsTrigger('P'))
+    if (m_titleManager->GetGameEndRequest())
     {
-        m_shouldStopBGM = false;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
-        }
-        return;
+        m_manager->GameEndRequest();
     }
 
     if (input->IsTrigger(VK_F1))

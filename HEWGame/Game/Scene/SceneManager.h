@@ -74,6 +74,8 @@ namespace SceneSpace
         void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings);
         void Update();
         void Draw();
+        void GameEndRequest();
+        bool IsGameEnd();
         IScene* GetActiveScene();
         const IScene* GetActiveScene() const;
         float GetFadeAlpha() const;
@@ -98,6 +100,7 @@ namespace SceneSpace
         std::unique_ptr<IScene> m_pendingScene;
         bool m_sceneLoaded;
         bool m_sceneEntered;
+        bool m_isEnd;
         SceneTransitionController m_transition;
         SceneTransitionController::State m_lastTransitionState;
     };
