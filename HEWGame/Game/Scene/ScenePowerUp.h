@@ -55,6 +55,7 @@ namespace SceneSpace
                 std::shared_ptr<PowerUpTarget> m_target;
                 std::unique_ptr<VideoBackgroundRenderer> m_videoBackground;
                 Timer m_timer;
+                Timer m_starTimer;
                 bool m_inputRegistered = false;
                 int m_cost;
                 PlayerData m_playerData;
