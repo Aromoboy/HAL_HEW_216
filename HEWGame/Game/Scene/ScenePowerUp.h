@@ -15,6 +15,8 @@
 #include "EffectSystem.h"
 #include "Save/PlayerData.h"
 #include "VideoBackgroundRenderer.h"
+#include "Timer.h"
+
 
 
 class PowerUpManager;
@@ -51,6 +53,7 @@ namespace SceneSpace
                 std::unique_ptr<CameraRig> m_rig;
                 std::shared_ptr<PowerUpTarget> m_target;
                 std::unique_ptr<VideoBackgroundRenderer> m_videoBackground;
+                Timer m_timer;
                 bool m_inputRegistered = false;
                 int m_cost;
                 PlayerData m_playerData;
