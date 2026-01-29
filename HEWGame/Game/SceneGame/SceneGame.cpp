@@ -1090,30 +1090,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const GameplayRulesSystem::UpdateInput rulesInput{
-        m_stageState == StageState::Playing,
-        ctx.dt,
-        m_sweetsManager.get(),
-        &m_phaseManager,
-        m_clearPhaseCount
-    };
-    const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
-    if (rulesResult.timeUp && m_stageState == StageState::Playing)
-    {
-        SetStageState(StageState::TimeUp);
-
-     
-       
-        return;
-
-
-
-    }
-    if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
-    {
-        UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
-        BroadcastPhaseAdvance(rulesResult.currentPhase);
-    }
+    
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
@@ -1215,6 +1192,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         };
         const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
 
+        if (rulesResult.timeUp)
+        {
+            SetStageState(StageState::TimeUp);
+            return;
+        }
 
         if (input)
         {
