@@ -684,20 +684,18 @@ void PowerUpRenderer::UpdateBitmap(const NodeRenderData& data)
 		return;
 	}
 
-	if(m_config.textureWidth != data.stringTexture->GetWidth() || m_config.textureHeight != data.stringTexture->GetHeight())
-	{
-		return;
-	}
+	const uint32_t textureWidth = std::min(m_config.textureWidth, data.stringTexture->GetWidth());
+	const uint32_t textureHeight = std::min(m_config.textureHeight, data.stringTexture->GetHeight());
 
-	PatBlt(m_memoryDC, 0, 0, static_cast<int>(data.stringTexture->GetWidth()), static_cast<int>(data.stringTexture->GetHeight()), BLACKNESS);
+	PatBlt(m_memoryDC, 0, 0, static_cast<int>(textureWidth), static_cast<int>(textureHeight), BLACKNESS);
 
 	const std::wstring hudText = BuildHudString(data);
 
 	RECT textRect = {};
 	textRect.left = static_cast<LONG>(m_config.innerPaddingPixels);
 	textRect.top = static_cast<LONG>(m_config.innerPaddingPixels);
-	textRect.right = static_cast<LONG>(data.stringTexture->GetWidth()) - static_cast<LONG>(m_config.innerPaddingPixels);
-	textRect.bottom = static_cast<LONG>(data.stringTexture->GetHeight()) - static_cast<LONG>(m_config.innerPaddingPixels);
+	textRect.right = static_cast<LONG>(textureWidth) - static_cast<LONG>(m_config.innerPaddingPixels);
+	textRect.bottom = static_cast<LONG>(textureHeight) - static_cast<LONG>(m_config.innerPaddingPixels);
 
 	RECT shadowRect = textRect;
 	shadowRect.left += static_cast<LONG>(m_config.shadowOffsetX);
