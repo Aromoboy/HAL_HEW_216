@@ -1156,10 +1156,12 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
     if (rulesResult.timeUp && m_stageState == StageState::Playing)
     {
+        if (auto* soundMgr = SoundManagerEX::GetInstance())
+        {
+            soundMgr->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
+        }
         SetStageState(StageState::TimeUp);
 
-     
-       
         return;
 
 
