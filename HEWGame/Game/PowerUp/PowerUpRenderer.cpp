@@ -584,6 +584,9 @@ bool PowerUpRenderer::CreateTextResources()
 	LOGFONTA font = {};
 	font.lfHeight = -static_cast<LONG>(m_config.fontSizePixels);
 	font.lfWeight = FW_SEMIBOLD;
+	font.lfQuality = CLEARTYPE_QUALITY;
+	font.lfOutPrecision = OUT_TT_PRECIS;
+	font.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 	strcpy_s(font.lfFaceName, "Segoe UI");
 	m_font = CreateFontIndirectA(&font);
 	if (!m_font)
