@@ -96,9 +96,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	DWORD fpsOldTime = countStartTime;
 	float processingTime = 0.0f;
 	int fpsCount = 0;
+    
 
 	//--- ウィンドウの管理
-	while (1)
+	while (true)
 	{
 		if (PeekMessage(&message, NULL, 0, 0, PM_NOREMOVE))
 		{
@@ -122,12 +123,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                                 {
                                         Update();
                                         Draw();
-
+                                        
                                         if (nowTime - fpsOldTime >= 1000)
                                         {
                                                 processingTime = static_cast<float>(timeGetTime() - nowTime);
                                         }
-
+                                        if (IsEnd()) PostMessage(hWnd, WM_CLOSE, 0, 0);
                                         fpsCount++;
                                 }
 

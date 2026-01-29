@@ -200,7 +200,17 @@ protected:
     bool m_showStartImage = false;
     bool  m_gameStarted = false; 
     std::shared_ptr<Texture> m_countdownTextures[4]; // 0～3秒
+    float m_whistleTimer = 0.0f;
+    bool m_whistlePlayed = false;
+    bool m_bgmStarted = false;
     SceneSpace::SceneManager* m_manager = nullptr;
+    //スコア変数　ゲーム開始時100ポイントついてる
+    int m_realtimeScore = 100;
+    float m_lastApprovePeakHeight = 0.0f;
+    //カウントアップ型スコア加算（ゲームにスコア表示するなら、、、）
+    bool m_isScoreCounting = false;
+    int  m_scoreToAddRemaining = 0;
+    float m_scoreAddTimer = 0.0f;
 };
 
 #endif

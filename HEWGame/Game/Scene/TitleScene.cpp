@@ -10,11 +10,12 @@
 #include "EffectTestScene.h"
 #include "DirectX.h"
 #include "SceneManager.h"
-#include "BackgroundRenderer.h"
 #include "TitleRenderer.h"
 #include "SceneResult.h"
  
 #include <memory>
+
+static int s_TitleBGMHandle = -1;
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
@@ -37,7 +38,7 @@ bool TitleScene::Load(Core::Input& input)
     cache.Load("SelectGameSceneNode", GetDevice(), L"Assets/Texture/STARTUIselect.png");
     cache.Load("SelectPowerUpSceneNode", GetDevice(), L"Assets/Texture/GREADUPUIselect.png");
     cache.Load("SelectGameEndNode", GetDevice(), L"Assets/Texture/ENDUIselect.png");
-
+    cache.Load("TitleBack", GetDevice(), L"Assets/Texture/Title.png");
     m_renderer = std::make_unique<TitleRenderer>();
     m_titleManager = std::make_unique<TitleManager>(&GetUpdateScheduler(), cache, format, input);
 
@@ -46,14 +47,9 @@ bool TitleScene::Load(Core::Input& input)
 
 void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
 {
-    if (input.IsTrigger(Core::ActionId::Confirm))
+    if (m_video)
     {
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(
-                std::make_unique<SceneGame>(*m_manager));
-        }
-        return;
+        m_video->Update(timer.DeltaTime());
     }
 
     RootUpdate(timer, input);
@@ -79,19 +75,15 @@ void TitleScene::OnEnter()
 
     SetActiveCamera(registeredCamera);
 
-    BackgroundRendererConfig cfg{};
-    BackgroundRendererConfig::BackgroundLayer layer;
-    layer.texturePath = "Assets/Texture/StartScreen.png";
-    layer.parallaxFactor = 0.0f;
-    layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
-    layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    cfg.layers.push_back(layer);
-    if (!cfg.layers.empty())
+    if (!m_video)
     {
-        m_background = std::make_unique<BackgroundRenderer>();
-        if (!m_background->Initialize(cfg))
+        VideoTexturePlayer::ShaderPaths shaderPaths;
+        shaderPaths.vertexShader = "Assets/shaders/video_vs.cso";
+        shaderPaths.pixelShader = "Assets/shaders/video_ps.cso";
+        m_video = std::make_unique<VideoTexturePlayer>();
+        if (!m_video->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Title.mp4"))
         {
-            m_background.reset();
+            m_video.reset();
         }
     }
 
@@ -112,29 +104,48 @@ void TitleScene::OnEnter()
     );
     Sprite::SetProjection(proj);
 
-    if (SoundManagerEX::GetInstance())
+    m_shouldStopBGM = true;
+
+    if (s_TitleBGMHandle == -1)
     {
-        m_titleBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
-            "Assets/Audio/BGM_Menu.wav", true, 0.5f);
+
+        if (auto* soundMgr = SoundManagerEX::GetInstance())
+        {
+
+            s_TitleBGMHandle = soundMgr->PlaySoundEX(
+                "Assets/Audio/BGM_Menu.wav",
+                true, // Loop
+                0.5f
+            );
+
+        }
     }
 
     m_rig = std::make_unique<CameraRig>(m_camera);
     m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
-
     m_rig->Attach(m_target);
 }
 
 void TitleScene::OnExit()
 {
 
-    if (m_titleBGMHandle != -1 && SoundManagerEX::GetInstance())
+    if (m_shouldStopBGM)
     {
-        SoundManagerEX::GetInstance()->StopSound(m_titleBGMHandle);
-        m_titleBGMHandle = -1;
+        if (s_TitleBGMHandle != -1)
+        {
+            if (auto* soundMgr = SoundManagerEX::GetInstance())
+            {
+                soundMgr->StopSound(s_TitleBGMHandle);
+            }
+            s_TitleBGMHandle = -1;
+        }
     }
 
-    if (m_background) m_background->Shutdown();
-    m_background.reset();
+    if (m_video)
+    {
+        m_video->Shutdown();
+        m_video.reset();
+    }
     if (m_inputRegistered)
     {
         if (auto* input = GetInput())
@@ -190,28 +201,31 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         return;
     }
 
-    // Enter でゲーム開始
-    if (input->IsTrigger(Core::ActionId::Confirm))
+
+    switch (m_titleManager->GetSceneMoveRequest())
     {
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(
-                std::make_unique<SceneGame>(*m_manager));
-        }
-        return;
+    case GAME_REQUEST:
+        m_shouldStopBGM = true;
+        m_manager->RequestSceneChange(
+            std::make_unique<SceneGame>(*m_manager));
+        break;
+
+    case POWERUP_REQUEST:
+        m_shouldStopBGM = false;
+        m_manager->RequestSceneChange(
+            std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
+        break;
+
     }
 
-    if (input->IsTrigger('P'))
+    if (m_titleManager->GetGameEndRequest())
     {
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::ScenePowerUp>(*m_manager));
-        }
-        return;
+        m_manager->GameEndRequest();
     }
 
     if (input->IsTrigger(VK_F1))
     {
+        m_shouldStopBGM = true;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<EffectTestScene>(*m_manager));
@@ -221,6 +235,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger(VK_SPACE))
     {
+        m_shouldStopBGM = false;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<SceneSpace::SettingScene>(*m_manager));
@@ -230,6 +245,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger(Core::ActionId::Cancel))
     {
+        m_shouldStopBGM = false;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
@@ -239,6 +255,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 
     if (input->IsTrigger('O'))
     {
+        m_shouldStopBGM = false;
         if (m_manager)
         {
             m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager));
@@ -250,10 +267,15 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
 {
  
-
-    if (m_background) m_background->Draw(0.0f, 1.0f);
-
-    m_titleManager->DrawAll(*m_renderer);
+    (void)activeCamera;
+    if (m_video)
+    {
+        m_video->Draw();
+    }
+    if (m_titleManager)
+    {
+        m_titleManager->DrawAll(*m_renderer);
+    }
 
 
  

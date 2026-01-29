@@ -63,6 +63,8 @@ namespace Stage
         bool guidelineHeightSet = false;
         float guidelineStep = 0.0f;
         bool guidelineStepSet = false;
+        float guidelinePlayerMaxYOffset = 0.0f;
+        bool guidelinePlayerMaxYOffsetSet = false;
         float guidelineThicknessPixels = 0.0f;
         bool guidelineThicknessSet = false;
         float guidelineThicknessWorld = 0.0f;

@@ -99,7 +99,7 @@ void TitleRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, flo
 	DirectX::XMFLOAT4X4 view;
 	DirectX::XMFLOAT4X4 proj;
 	
-	DrawMatrix::CreateWorldMatrix(world, pos, size, float3(0.01f, 0.01f, 0.01f), false);
+	DrawMatrix::CreateWorldMatrix(world, pos, size, float3(0.0f, 0.0f, 0.0f), false);
 
 	DrawMatrix::CreateViewMatrix(view, float3(0.0f, 0.0f, -10.0f), float3(0.0f, 0.0f, 1000.0f), float3(0.0f, 1.0f, 0.0f));
 	DrawMatrix::CreateProjectionMatrix(proj, 60.0f, 16.0f / 9.0f, 0.0001f, 1000.0f);

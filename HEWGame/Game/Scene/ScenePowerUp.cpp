@@ -7,6 +7,7 @@
 #include "TitleScene.h"
 #include "TextureCache.h"
 #include "AppGame.h"
+#include "Timer.h"
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
@@ -14,6 +15,7 @@
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
 #include "Debug.h"
+#include "Save/Save.h"
 
 
 #include <sstream>
@@ -74,10 +76,13 @@ namespace SceneSpace
                 cache.Load("SweetsSpawnSpeed", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_Speed_icon.png");
                 cache.Load("SweetsSpawnQuantity", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_UP_icon.png");
                 cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
-                cache.Load("Timer", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
+                cache.Load("Timer", GetDevice(), L"Assets/Texture/upgrade_UI_time_bonus_icon.png");
 
                 std::unordered_map<std::string, EffectCreateData> effectDatas;
                 effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
+                effectDatas.try_emplace("Bubble", EffectCreateData(u"Assets/Effect/PowerUpEffect/bubble_effect.efkefc", 0.1f));
+                effectDatas.try_emplace("Fruit", EffectCreateData(u"Assets/Effect/PowerUpEffect/Banana_strawberry_animation.efkefc", 0.5f));
+                effectDatas.try_emplace("Star", EffectCreateData(u"Assets/Effect/PowerUpEffect/star_background.efkefc", 0.1f));
                 m_effectSystem = std::make_unique<EffectSystem>(m_manager->GetEffectRenderer(), m_manager->GetEffectManager(), effectDatas);
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
                 m_rig = std::make_unique<CameraRig>(m_camera);
@@ -106,7 +111,27 @@ namespace SceneSpace
                 m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input, *m_effectSystem, std::move(onPurchase));
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
-                
+                EffectSystem::EffectCreateRequest FruitRequest(
+                    "Fruit",
+                    float3{ 0.55f, -0.3f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                m_effectSystem->SpawnEffect(FruitRequest);
+
+                EffectSystem::EffectCreateRequest BubbleRequest(
+                    "Bubble",
+                    float3{ -0.6f, -0.2f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                m_effectSystem->SpawnEffect(BubbleRequest);
+
+                EffectSystem::EffectCreateRequest StarRequest(
+                    "Star",
+                    float3{ 0.0f, 0.0f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                m_effectSystem->SpawnEffect(StarRequest);
+
                 m_rig->Attach(m_target);
 
                 LoadPowerUpFile();
@@ -121,6 +146,16 @@ namespace SceneSpace
                         2.0f,
                         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
                         DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f) });
+
+                VideoBackgroundRenderer::ShaderPaths shaderPaths{
+                    "Assets/shaders/video_vs.cso",
+                    "Assets/shaders/video_ps.cso"
+                };
+                m_videoBackground = std::make_unique<VideoBackgroundRenderer>();
+                if (!m_videoBackground->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/PowerUp.mp4"))
+                {
+                    m_videoBackground.reset();
+                }
                 return true;
         }
 
@@ -185,6 +220,10 @@ namespace SceneSpace
                 DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to save player data on exit.\n");
             }
 
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Shutdown();
+                }
                 ShutdownPowerUpSystems();
                 if (m_inputRegistered)
                 {
@@ -236,8 +275,12 @@ namespace SceneSpace
 
         void ScenePowerUp::Update(const Core::UpdateContext& ctx)
         {
-                (void)ctx;
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Update(ctx.dt);
+                }
                 Core::Input* input = GetInput();
+                m_timer.StepTime(ctx.dt);
                 if (input && input->IsTrigger(Core::ActionId::Cancel))
                 {
                         if (m_manager)
@@ -251,6 +294,23 @@ namespace SceneSpace
                 if (!m_target || !m_cursor || !m_powerUpManager)
                 {
                         return;
+                }
+
+                if (m_effectSystem != nullptr && m_timer.GetCount())
+                {
+                    EffectSystem::EffectCreateRequest BubbleRequest(
+                        "Bubble",
+                        float3{ -0.6f, -0.2f, 1.0f },
+                        float3{ 0.0f, 0.0f, 0.0f },
+                        0);
+                    m_effectSystem->SpawnEffect(BubbleRequest);
+
+                    EffectSystem::EffectCreateRequest StarRequest(
+                        "Star",
+                        float3{ 0.0f, 0.0f, 1.0f },
+                        float3{ 0.0f, 0.0f, 0.0f },
+                        0);
+                    m_effectSystem->SpawnEffect(StarRequest);
                 }
 
                 m_target->MoveTarget(m_cursor->GetDrawPos(), m_powerUpManager->GetNodeDistance());
@@ -267,7 +327,10 @@ namespace SceneSpace
                 {
                         return;
                 }
-                m_powerUpRenderer->DrawBackground(*activeCamera, m_backUVProgress);
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Draw();
+                }
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpRenderer->DrawCost(m_cost, *activeCamera);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
@@ -392,6 +455,7 @@ namespace SceneSpace
                 m_cursor.reset();
                 m_powerUpManager.reset();
                 m_powerUpRenderer.reset();
+                m_videoBackground.reset();
                 m_camera.reset();
                 m_effectSystem.reset();
         }

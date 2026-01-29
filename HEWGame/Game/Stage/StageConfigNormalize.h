@@ -32,6 +32,7 @@ namespace Stage
         PickupOffset pickupOffset{};
         float guidelineHeight = 0.0f;
         float guidelineStep = 0.0f;
+        float guidelinePlayerMaxYOffset = 0.0f;
         float guidelineThicknessPixels = 0.0f;
         float guidelineThicknessWorld = 0.0f;
         float guidelineWidthPaddingWorld = 0.0f;
@@ -71,9 +72,10 @@ namespace Stage
         static constexpr float kDefaultPickupBoxHeightCells = 5.0f;
         static constexpr float kDefaultPickupMaxDistance = 0.5f;
         static constexpr float kDefaultPickupDepthThreshold = std::numeric_limits<float>::infinity();
-        static constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::WorldX;
+        static constexpr Stage::PickupOffsetMode kDefaultPickupOffsetMode = Stage::PickupOffsetMode::FacingDirection;
         static constexpr float kDefaultGuidelineHeight = 2.0f;
         static constexpr float kDefaultGuidelineStep = 1.0f;
+        static constexpr float kDefaultGuidelinePlayerMaxYOffset = 0.0f;
         static constexpr float kDefaultGuidelineThicknessPixels = 3.0f;
         static constexpr float kDefaultGuidelineThicknessWorld = 0.05f;
         static constexpr float kDefaultGuidelineZOffset = 0.1f;

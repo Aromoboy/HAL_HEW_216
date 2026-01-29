@@ -201,6 +201,7 @@ namespace Stage
         result.pickupOffsetLocalCells = StageConfigDefaults::DefaultPickupOffsetLocalCells();
         result.guidelineHeight = StageConfigDefaults::kDefaultGuidelineHeight;
         result.guidelineStep = StageConfigDefaults::kDefaultGuidelineStep;
+        result.guidelinePlayerMaxYOffset = StageConfigDefaults::kDefaultGuidelinePlayerMaxYOffset;
         result.guidelineThicknessPixels = StageConfigDefaults::kDefaultGuidelineThicknessPixels;
         result.guidelineThicknessWorld = StageConfigDefaults::kDefaultGuidelineThicknessWorld;
         result.guidelineWidthPaddingWorld = StageConfigDefaults::DefaultGuidelineWidthPaddingWorld();
@@ -697,6 +698,21 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse guidelineStep on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "guidelinePlayerMaxYOffset")
+            {
+                try
+                {
+                    result.guidelinePlayerMaxYOffset = std::stof(rawValue);
+                    result.guidelinePlayerMaxYOffsetSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse guidelinePlayerMaxYOffset on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }

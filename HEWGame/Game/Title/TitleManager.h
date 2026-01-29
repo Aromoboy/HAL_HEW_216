@@ -34,6 +34,12 @@ namespace CameraSpace
 	class ICamera;
 }
 
+enum SceneMoveRequest
+{
+	GAME_REQUEST,
+	POWERUP_REQUEST,
+	SCENE_REQUEST_NONE
+};
 
 enum TitleNodeType
 {
@@ -82,6 +88,9 @@ public:
 	void RegisterCursor();
 	void UnregisterCursor();
 
+	SceneMoveRequest GetSceneMoveRequest();
+	bool GetGameEndRequest();
+
 	void OnUpdate(const Core::UpdateContext& ctx) final;
 
 	void SetFormat(const TitleCursor::NodeFormat&);
@@ -94,12 +103,17 @@ public:
 private:
 	Core::UpdateScheduler* m_scheduler;
 
+	std::shared_ptr<Texture2D> m_backTexture;
+
 	TitleCursor::NodeFormat m_format;
 
 	std::array<TitleNode, TITLE_MAX_NODE> m_nodes;
 	std::array<TitleNode, TITLE_MAX_NODE> m_selectNodes;
 
 	std::unique_ptr<TitleCursor> m_cursor;
+
+	SceneMoveRequest m_sceneRequest;
+	bool m_gameEndRequest;
 
 	TextureCache& m_cache;
 };

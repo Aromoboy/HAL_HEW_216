@@ -194,7 +194,7 @@ PlayerController::PostGameAction PlayerController::HandlePostGameMenuInput(Core:
         return PostGameAction::None;
     }
 
-    // Œˆ’è
+    // æ±ºå®š
     if (input.IsTrigger(Core::ActionId::Confirm))
     {
         std::ostringstream oss;
@@ -249,6 +249,10 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
     const float minX = camPos.x - halfWidth;
     const float maxX = camPos.x + halfWidth;
     const float minY = input.stageFloorY - kPlayerMinimumYMargin;
+    const std::optional<float> maxY =
+        (std::isfinite(input.maxY) && input.maxY > 0.0f)
+        ? std::optional<float>{ input.maxY }
+        : std::nullopt;
 
     const bool changed =
         !m_cachedPlayerBoundsValid ||
@@ -279,7 +283,7 @@ void PlayerController::UpdatePlayerBounds(const BoundsInput& input)
         }
     }
 
-    input.player->SetScreenBounds(minX, maxX, std::nullopt);
+    input.player->SetScreenBounds(minX, maxX, maxY);
     input.player->SetMinimumY(minY);
 
     if (input.sweetsManager)

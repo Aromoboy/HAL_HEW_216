@@ -68,6 +68,13 @@ namespace Entities
                     0.0f
                 };
 
+
+                if (horizontal != 0.0f)
+                {
+                    player.SetRotation(float3(0.0f, 90.0f * m_facingSign, 0.0f));
+
+                }
+
                 if (hasBody)
                     player.SetLinearVelocity(desired);
                 else

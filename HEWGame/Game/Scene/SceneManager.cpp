@@ -211,6 +211,7 @@ namespace SceneSpace
         , m_input(input)
         , m_sceneLoaded(false)
         , m_sceneEntered(false)
+        , m_isEnd(false)
         , m_lastTransitionState(SceneTransitionController::State::Idle)
         , m_renderer(a_renderer)
         , m_manager(a_manager)
@@ -244,6 +245,16 @@ namespace SceneSpace
             assert(m_sceneLoaded && m_sceneEntered);
             m_activeScene->Draw();
         }
+    }
+
+    void SceneManager::GameEndRequest()
+    {
+        m_isEnd = true;
+    }
+
+    bool SceneManager::IsGameEnd()
+    {
+        return m_isEnd;
     }
 
     SceneSpace::IScene* SceneManager::GetActiveScene()

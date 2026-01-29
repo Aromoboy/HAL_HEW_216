@@ -89,7 +89,7 @@ namespace Entities
         float m_pickupMaxDistance = 0.5f;
         float m_pickupDepthThreshold = 0.0f;
         float3 m_pickupOriginOffset{ 0.0f, 0.0f, 0.0f };
-        float3 m_carryOffset{ 0.0f, 1.0f, 0.5f };
+        float3 m_carryOffset{ 2.0f, 0.0f, 0.5f };
         float m_dropUpwardBoost = 4.0f;
         float m_facingSign = 1.0f;
         std::optional<ColliderFootprint> m_colliderFootprint;

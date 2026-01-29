@@ -20,11 +20,11 @@ namespace SceneSpace
     {
         (void)input;
 
-        // ƒJƒƒ‰
+        // ã‚«ãƒ¡ãƒ©
         m_camera = std::make_shared<CameraSpace::BaseCamera>();
         m_rig = std::make_unique<CameraRig>(m_camera);
 
-        // ƒŠƒUƒ‹ƒgƒŒƒ“ƒ_ƒ‰
+        // ãƒªã‚¶ãƒ«ãƒˆãƒ¬ãƒ³ãƒ€ãƒ©
         m_resultRenderer = std::make_unique<ResultRenderer>();
 
         ResultLayoutConfig config{};
@@ -37,13 +37,15 @@ namespace SceneSpace
 
         m_resultRenderer->Initialize(config);
 
-        // UI ƒeƒNƒXƒ`ƒƒ
+        // UI ãƒ†ã‚¯ã‚¹ãƒãƒ£
         const char* paths[3] =
         {
             "Assets/Texture/basket_UI_remake2.png",
             "Assets/Texture/basket_UI_remake3.png",
             "Assets/Texture/basket_UI_remake4.png"
         };
+
+        
 
         for (int i = 0; i < 3; i++)
         {
@@ -52,7 +54,7 @@ namespace SceneSpace
            
 
         }
-        // ƒJ[ƒ\ƒ‹iPowerUpCursor—¬—pj
+        // ã‚«ãƒ¼ã‚½ãƒ«ï¼ˆPowerUpCursoræµç”¨ï¼‰
        /* m_cursor = std::make_unique<PowerUpCursor>();*/
 
 
@@ -78,32 +80,20 @@ namespace SceneSpace
         }
         SetActiveCamera(registeredCamera);
 
-
-
-
-
-        BackgroundRendererConfig cfg{};
-        BackgroundRendererConfig::BackgroundLayer layer;
-        layer.texturePath = "Assets/Texture/background_UI_remake.png";  // ”wŒi‰æ‘œ
-        layer.parallaxFactor = 0.0f;
-        layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
-        layer.tintColor = DirectX::XMFLOAT4(1, 1, 1, 1);
-        cfg.layers.push_back(layer);
-
-        if (!cfg.layers.empty())
+        m_videoPlayer = std::make_unique<VideoTexturePlayer>();
+        VideoTexturePlayer::ShaderPaths shaderPaths{};
+        shaderPaths.vertexShader = "Assets/shaders/video_vs.cso";
+        shaderPaths.pixelShader = "Assets/shaders/video_ps.cso";
+        if (!m_videoPlayer->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Result.mp4"))
         {
-            m_background = std::make_unique<BackgroundRenderer>();
-            if (!m_background->Initialize(cfg))
-            {
-                m_background.reset();
-            }
+            m_videoPlayer.reset();
         }
-        m_texStartRed.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI5.png");
-        m_texStartGreen.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI6.png");
-        m_texPowerUpRed.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI3.png");
-        m_texPowerUpGreen.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI4.png");
-        m_texExitRed.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–Ê.png");
-        m_texExitGreen.Create("Assets/Texture/ƒ^ƒCƒgƒ‹‰æ–ÊUI2.png");
+        m_texStartRed.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI5.png");
+        m_texStartGreen.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI6.png");
+        m_texPowerUpRed.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI3.png");
+        m_texPowerUpGreen.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI4.png");
+        m_texExitRed.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢.png");
+        m_texExitGreen.Create("Assets/Texture/ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢UI2.png");
         m_texStartEffect.Create("Assets/Texture/start.png");
         m_texNumber[1].Create("Assets/Texture/3-1.png");
         m_texNumber[2].Create("Assets/Texture/2-1.png");
@@ -114,8 +104,8 @@ namespace SceneSpace
         DirectX::XMStoreFloat4x4(
             &proj,
             DirectX::XMMatrixOrthographicOffCenterLH(
-                0.0f, 1280.0f,   // X: ¶ ¨ ‰E
-                960.0f, 0.0f,   // Y: ã ¨ ‰º
+                0.0f, 1280.0f,   // X: å·¦ â†’ å³
+                960.0f, 0.0f,   // Y: ä¸Š â†’ ä¸‹
                 0.0f, 1.0f)
         );
 
@@ -137,9 +127,15 @@ namespace SceneSpace
         UnregisterSceneUpdateNode();
         UnregisterCameraUpdateNode();
 
+        if (m_videoPlayer)
+        {
+            m_videoPlayer->Shutdown();
+        }
+
         //m_cursor.reset();
         m_menuTextures = {};
         m_resultRenderer.reset();
+        m_videoPlayer.reset();
         m_rig.reset();
         m_camera.reset();
     }
@@ -170,8 +166,13 @@ namespace SceneSpace
         RootUpdate(timer, input);
     }
 
-    void SceneResult::Update(const Core::UpdateContext&)
+    void SceneResult::Update(const Core::UpdateContext& ctx)
     {
+        if (m_videoPlayer)
+        {
+            m_videoPlayer->Update(ctx.dt);
+        }
+
         Core::Input* input = GetInput();
         if (!input) return;
 
@@ -231,26 +232,19 @@ namespace SceneSpace
         Sprite::ScopedPassDefaults spritePass;
 
         {
-            if (m_background)
+            if (m_videoPlayer)
             {
-                m_background->Draw(0.0f, 1.0f);
+                m_videoPlayer->Draw();
             }
 
-           
-            Sprite::ScopedPassDefaults spritePass;
-            RootDraw();   // © Draw(const Camera&) ‚ªŒÄ‚Î‚ê‚é
+            RootDraw();   // â† Draw(const Camera&) ãŒå‘¼ã°ã‚Œã‚‹
         }
-        // background_UI_remake.png
-        Sprite::SetColor({ 1,1,1,1 });
-        Sprite::SetSize({ 1280.0f, 960.0f }); // © UI—pƒTƒCƒY
-        Sprite::SetOffset({ 640.0f, 480.0f }); // © ‰æ–Ê’†‰›
-        Sprite::Draw();
         SetDepthTest(true);
     }
 
     void SceneResult::Draw(const std::shared_ptr<CameraSpace::ICamera>&)
     {
-        // ƒŠƒUƒ‹ƒgî•ñ
+        // ãƒªã‚¶ãƒ«ãƒˆæƒ…å ±
         ResultDisplayData data{};
         data.timeUp = true;
         data.remainingSeconds = 0.0f;
@@ -265,7 +259,7 @@ namespace SceneSpace
        //
        // const float baseY = 300.0f;
        // const float spacing = 110.0f;
-        const float baseX = 900.0f;   // ‰æ–Ê‰E‘¤
+        const float baseX = 900.0f;   // ç”»é¢å³å´
         const float baseY = 250.0f;
         const float spacing = 120.0f;
         for (int i = 0; i < 3; i++)
@@ -273,7 +267,7 @@ namespace SceneSpace
             float y = baseY + spacing * i;
             if (i == m_cursorIndex)
             {
-                y -= 10.0f; // ‘I‘ğ’†‚¾‚¯­‚µ“®‚©‚·
+                y -= 10.0f; // é¸æŠä¸­ã ã‘å°‘ã—å‹•ã‹ã™
             }
 
             Sprite::SetTexture(m_menuTextures[i].get());
@@ -300,4 +294,3 @@ namespace SceneSpace
 }
     
     
-
