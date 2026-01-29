@@ -777,12 +777,6 @@ void SceneGame::OnEnter()
     oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 
-    if (SoundManagerEX::GetInstance())
-    {
-        m_gameBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
-            "Assets/Audio/BGM_MainGame.wav", true, 0.4f);
-    }
-
     for (int i = 0; i <= 3; ++i)
     {
         m_countdownTextures[i] = std::make_shared<Texture>();
@@ -792,6 +786,10 @@ void SceneGame::OnEnter()
     m_countdownTextures[1]->Create("Assets/Texture/1-1.png", true);
     m_countdownTextures[2]->Create("Assets/Texture/2-1.png", true);
     m_countdownTextures[3]->Create("Assets/Texture/3-1.png", true);
+    m_whistleTimer = 0.0f;
+    m_whistlePlayed = false;
+    m_bgmStarted = false;
+    m_gameBGMHandle = -1;
 }
 
 void SceneGame::OnExit()
@@ -936,14 +934,6 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     , m_playerController(DebugTrace, kLogPrefix)
     , m_manager(&a_manager)
 {
-    auto* soundMgr = SoundManagerEX::GetInstance();
-    if (soundMgr)
-    {
-        m_gameBGMHandle = soundMgr->PlaySoundEX("Assets/Sound/BGM_Game.wav",  
-            true,   // ループ
-            0.4f    // 音量
-        );
-    }
 }
 
 SceneGame::~SceneGame()
@@ -1259,22 +1249,54 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 if (m_startCountdownNumber > 1)
                 {
                     m_startCountdownNumber--; // 3→2→1
+
+                    if (auto* soundMgr = SoundManagerEX::GetInstance())
+                    {
+                        soundMgr->PlaySoundEX("Assets/Audio/SE_CountDown.wav", false, 0.7f);
+                    }
                 }
                 else if (m_startCountdownNumber == 1)
                 {
-                    m_startCountdownNumber = 0; // 数字は終了
-                    m_showStartImage = true;    // start を表示
+                    m_startCountdownNumber = 0;
+                    m_showStartImage = true;
+
+                    if (!m_whistlePlayed)
+                    {
+                        if (auto* soundMgr = SoundManagerEX::GetInstance())
+                        {
+                            soundMgr->PlaySoundEX("Assets/Audio/SE_Start.wav", false, 0.7f);
+                            m_whistlePlayed = true;
+                            m_whistleTimer = 0.0f;
+                        }
+                    }
                 }
                 else if (m_showStartImage)
                 {
-                    m_showStartImage = false;    // start 表示終了
-                    m_gameStarted = true;        // ゲーム本編開始
-                    ToggleGameplaySystems(true); // プレイヤーやスイーツ動かす
+                    m_showStartImage = false;
+                    m_gameStarted = true;
+                    ToggleGameplaySystems(true);
                 }
             }
 
-            return; // カウントダウン中はここで Update を終了
+            return;
         }
+
+        // --- BGM開始処理（ゲーム開始後も実行） ---
+        if (m_whistlePlayed && !m_bgmStarted)
+        {
+            m_whistleTimer += ctx.dt;
+
+            if (m_whistleTimer >= 0.8f)
+            {
+                if (auto* soundMgr = SoundManagerEX::GetInstance())
+                {
+                    m_gameBGMHandle = soundMgr->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.6f);
+                    m_bgmStarted = true;
+
+                }
+            }
+        }
+
 
         if (input)
         {
