@@ -21,6 +21,7 @@ constexpr float2 kInfomationPositionOffset = { 0.170f,  0.000f };
 constexpr float2 kLevelPositionOffset = { 0.50f,  0.045f };
 constexpr float2 kCostPositionOffset = { 0.50f,  -0.060f }; 
 constexpr float2 kCostNumberPositionOffset = { 0.68f,  0.290f };
+constexpr float2 kHudFairyPositionOffset = { -0.39f,  -0.210f };
 constexpr float kIconScaleOffset = 0.5f;
 constexpr float kFrameScaleOffset = 0.5f;
 constexpr float kBackFrameScaleOffset = 1.8f;
@@ -30,6 +31,7 @@ constexpr float kInfomationScaleOffset = 0.05f;
 constexpr float kLevelScaleOffset = 0.06f;
 constexpr float kCostScaleOffset = 0.05f;
 constexpr float kCostNumberScaleOffset = 0.08f;
+constexpr float2 kHudFairyIconScaleOffset = { 0.65f, 0.43f };
 
 constexpr float kNodeNameCharCount = 5.0f * 3.0f;
 constexpr float kInfoCharCount = 15.0f * 3.0f;
@@ -47,6 +49,7 @@ constexpr const char* kBackgroundTextureName = "PowerUpBG";
 
 constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
 constexpr float kHudCostIconScaleOffset = 0.25f;
+
 
 
 
@@ -128,6 +131,7 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 	m_number = a_cache.Get(kNumberTextureName);
 	m_cost = a_cache.Get(kCostTextureName);
+	m_fairy = a_cache.Get("Fairy");
 	m_iconFrame = a_cache.Get(kFrameTextureName);
 	m_backFrame = a_cache.Get(kBackFrameTexturenName);
 	m_background = a_cache.Get(kBackgroundTextureName);
@@ -216,6 +220,22 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
 	DrawSprite(m_cost, world, view, proj);
+
+
+	// バックフレーム描画
+	offset.x = kHudFairyPositionOffset.x;
+	offset.y = kHudFairyPositionOffset.y;
+	position.x = offset.x;
+	position.y = offset.y;
+	position.z = 1.0f;
+	scale.x = kHudFairyIconScaleOffset.x;
+	scale.y = kHudFairyIconScaleOffset.y;
+	scale.z = 1.0f;
+
+	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	DrawSprite(m_fairy, world, view, proj);
+
+
 }
 
 void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera, float a_alpha)

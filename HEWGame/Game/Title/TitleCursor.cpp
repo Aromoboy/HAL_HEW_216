@@ -7,7 +7,7 @@
 constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
 constexpr float2 kCursorOffset = { 0.0015f, 0.014f };
-constexpr float2 kTitleCursorDeadZone(0.3f);
+constexpr float2 kTitleCursorDeadZone(0.6f, 0.6f);
 
 TitleCursor::TitleCursor(std::shared_ptr<Texture2D> a_texture, TitleCursor::NodeFormat a_format, Core::Input& input)
 	: m_input(&input)
@@ -72,8 +72,7 @@ void TitleCursor::MoveInput(Core::Input& input)
 	{
 		m_index = 0;
 	}
-
-	if (controllerY > kTitleCursorDeadZone.y || input.IsPress('W'))
+	else if (controllerY > kTitleCursorDeadZone.y || input.IsPress('W'))
 	{
 		m_index = 2;
 	}

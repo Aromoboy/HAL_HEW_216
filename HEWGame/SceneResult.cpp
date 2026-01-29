@@ -194,13 +194,13 @@ namespace SceneSpace
                 m_cursorIndex++;
                 if (m_cursorIndex >= kMenuCount) m_cursorIndex = 0;
 
-
                 inputLock = true;
             }
-            if (std::abs(vertical) < 0.2f)
-            {
-                inputLock = false;
-            }
+
+        }
+        if (std::abs(vertical) < 0.2f)
+        {
+            inputLock = false;
         }
 
         if (input->IsTrigger(Core::ActionId::Confirm))
@@ -251,7 +251,9 @@ namespace SceneSpace
         data.score = 12345;
         data.sweetsCount = 12;
 
-        m_resultRenderer->Draw(data);
+        //m_resultRenderer->Draw(data);
+
+        
 
        // const float baseX = 0.65f;
        // const float baseY = -0.2f;
@@ -271,8 +273,8 @@ namespace SceneSpace
             }
 
             Sprite::SetTexture(m_menuTextures[i].get());
-            Sprite::SetSize({ 400.0f,120.0f });
-            Sprite::SetOffset({ 640.0f, y });
+            Sprite::SetSize({ 2.0f,1.0f });
+            Sprite::SetOffset({ 1.0f, 0.0f });
 
             if (i == m_cursorIndex)
             {
@@ -285,7 +287,8 @@ namespace SceneSpace
 
             Sprite::Draw();
         }
-
+        
+       
         
         
     }

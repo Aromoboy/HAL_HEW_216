@@ -256,6 +256,7 @@ namespace Entities
         }
 
         m_activeAnimation = m_idleAnimation;
+        m_activeAnimation->Step(0.2f);
         player.m_animation = m_activeAnimation;
 
         if (!modelPath.empty())

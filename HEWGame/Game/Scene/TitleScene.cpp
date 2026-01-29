@@ -52,11 +52,13 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
         m_video->Update(timer.DeltaTime());
     }
 
+
     RootUpdate(timer, input);
 }
 
 void TitleScene::Draw()
 {
+    // RootDraw triggers Draw(const Camera&) where the background is rendered.
     RootDraw();
 }
 
