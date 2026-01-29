@@ -206,29 +206,20 @@ HRESULT RenderTarget::CreateFromScreen()
 	HRESULT hr;
 
 	// バックバッファのポインタを取
+	ID3D11Texture2D* pBackBuffer = NULL;
 	hr = GetSwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&m_pTex);
 	if (FAILED(hr)) { return hr; }
 
 	// バックバッファへのポインタを指定してレンダーターゲトビューを作
-	D3D11_TEXTURE2D_DESC desc = {};
-	m_pTex->GetDesc(&desc);
-	DXGI_FORMAT rtvFormat = desc.Format;
-	if (desc.Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
-	{
-		rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	}
-	else if (desc.Format == DXGI_FORMAT_R8G8B8A8_UNORM)
-	{
-		rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-	}
-
 	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	rtvDesc.Format = rtvFormat;
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	rtvDesc.Texture2D.MipSlice = 0;
 	hr = GetDevice()->CreateRenderTargetView(m_pTex, &rtvDesc, &m_pRTV);
 	if (SUCCEEDED(hr))
 	{
+		D3D11_TEXTURE2D_DESC desc;
+		m_pTex->GetDesc(&desc);
 		m_width = desc.Width;
 		m_height = desc.Height;
 	}
