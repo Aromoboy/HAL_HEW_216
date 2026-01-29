@@ -2,6 +2,7 @@
 #include "Core/Input.h"
 #include "DebugConsole.h"
 #include "Defines.h"
+#include "SoundManagerEX.h"
 #include <iostream>
 
 constexpr float maxMoveSecond = 0.10f;
@@ -118,22 +119,32 @@ void PowerUpCursor::MoveInput(Core::Input& input)
 	float controllerX = input.GetAxis(Core::ActionId::MoveX);
 	float controllerY = input.GetAxis(Core::ActionId::RotateYaw);
 
+	bool moved = false;
+
 	if (controllerX < -kPowerUpInputDeadzone || input.IsPress('A'))
 	{
-		if (m_index - m_format.y >= 0) m_index -= m_format.y;
+		if (m_index - m_format.y >= 0) m_index -= m_format.y; moved = true;
 	}
 	else if (controllerX > kPowerUpInputDeadzone || input.IsPress('D'))
 	{
-		if (m_index + m_format.y < m_powerUpManager->GetNodeCount()) m_index += m_format.y;
+		if (m_index + m_format.y < m_powerUpManager->GetNodeCount()) m_index += m_format.y; moved = true;
 	}
 
 	if (controllerY > kPowerUpInputDeadzone || input.IsPress('W'))
 	{
-		if (m_index - 1 >= 0 && m_index % m_format.y != 0) m_index--;
+		if (m_index - 1 >= 0 && m_index % m_format.y != 0) m_index--; moved = true;
 	}
 	else if (controllerY < -kPowerUpInputDeadzone || input.IsPress('S'))
 	{
-		if (m_index + 1 < m_powerUpManager->GetNodeCount() && (m_index + 1) % m_format.y != 0)	m_index++;
+		if (m_index + 1 < m_powerUpManager->GetNodeCount() && (m_index + 1) % m_format.y != 0)	m_index++; moved = true;
+	}
+
+	if (moved)
+	{
+		if (auto* soundMgr = SoundManagerEX::GetInstance())
+		{
+			soundMgr->PlaySoundEX("Assets/Audio/SE_Enter.wav", false, 0.5f);
+		}
 	}
 
 }
