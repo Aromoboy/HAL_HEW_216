@@ -38,7 +38,7 @@ bool TitleScene::Load(Core::Input& input)
     cache.Load("SelectGameSceneNode", GetDevice(), L"Assets/Texture/STARTUIselect.png");
     cache.Load("SelectPowerUpSceneNode", GetDevice(), L"Assets/Texture/GREADUPUIselect.png");
     cache.Load("SelectGameEndNode", GetDevice(), L"Assets/Texture/ENDUIselect.png");
-    cache.Load("TitleBack", GetDevice(), L"Assets/Texture/Title.jpg");
+    cache.Load("TitleBack", GetDevice(), L"Assets/Texture/Title.png");
     m_renderer = std::make_unique<TitleRenderer>();
     m_titleManager = std::make_unique<TitleManager>(&GetUpdateScheduler(), cache, format, input);
 
