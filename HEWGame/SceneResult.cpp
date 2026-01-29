@@ -9,10 +9,17 @@
 #include "ScenePowerUp.h"
 #include "AppGame.h"
 
+
+constexpr float2 kResultCostOffset  = {  0.0f, -1.2f };
+constexpr float2 kResultTowerOffset = { -0.7f,  1.5f };
+
+
 namespace SceneSpace
 {
-    SceneResult::SceneResult(SceneManager& manager)
+    SceneResult::SceneResult(SceneManager& manager, int a_towerSize, int a_getCost)
         : m_manager(&manager)
+        , m_towerSize(a_towerSize)
+        , m_getCost(a_getCost)
     {
     }
 
@@ -38,25 +45,33 @@ namespace SceneSpace
         m_resultRenderer->Initialize(config);
 
         // UI テクスチャ
-        const char* paths[3] =
+        TextureCache& cache = TextureCache::Instance();
+        
+        std::string keys[3] =
         {
             "Assets/Texture/basket_UI_remake2.png",
             "Assets/Texture/basket_UI_remake3.png",
             "Assets/Texture/basket_UI_remake4.png"
         };
 
-        
+        std::wstring paths[3] =
+        {
+            L"Assets/Texture/basket_UI_remake2.png",
+            L"Assets/Texture/basket_UI_remake3.png",
+            L"Assets/Texture/basket_UI_remake4.png"
+        };
 
+        
         for (int i = 0; i < 3; i++)
         {
-            m_menuTextures[i] = std::make_unique<Texture>();
-            m_menuTextures[i]->Create(paths[i], true);
-           
-
+            m_menuTextures[i] = cache.Load(keys[i], GetDevice(), paths[i]);
         }
-        // カーソル（PowerUpCursor流用）
-       /* m_cursor = std::make_unique<PowerUpCursor>();*/
 
+        m_pointAmount = cache.Load("PointAmount", GetDevice(), L"Assets/Texture/number.png");
+
+        m_menuSelectNodes = cache.Load("ResultSelect", GetDevice(), L"Assets/Texture/basket_UI_backeffect_remake.png");
+        
+        m_backTexture = cache.Load("ResultBack", GetDevice(), L"Assets/Texture/background_UI_remake.png");
 
        
         return true;
@@ -251,45 +266,75 @@ namespace SceneSpace
         data.score = 12345;
         data.sweetsCount = 12;
 
-        //m_resultRenderer->Draw(data);
 
-        
+        const float baseX = 2.9f;   // 画面右側
+        const float baseY = 1.7f;
+        const float spacingx = -0.1f;
+        const float spacingy = -1.95f;
 
-       // const float baseX = 0.65f;
-       // const float baseY = -0.2f;
-       ////const float intervalY = 0.25f;
-       //
-       // const float baseY = 300.0f;
-       // const float spacing = 110.0f;
-        const float baseX = 900.0f;   // 画面右側
-        const float baseY = 250.0f;
-        const float spacing = 120.0f;
+        m_resultRenderer->Draw(m_backTexture, float2(-0.7f, 1.0f), float2(12.0f, 9.0f));
+
         for (int i = 0; i < 3; i++)
         {
-            float y = baseY + spacing * i;
+            float x = baseX + spacingx * i;
+            float y = baseY + spacingy * i;
+            float3 color(1.0f, 1.0f, 1.0f);
             if (i == m_cursorIndex)
             {
-                y -= 10.0f; // 選択中だけ少し動かす
+                m_resultRenderer->Draw(m_menuSelectNodes, float2(baseX, y), float2(4.5f, 3.0f), float3(1.0f, 1.0f, 1.0f));
             }
 
-            Sprite::SetTexture(m_menuTextures[i].get());
-            Sprite::SetSize({ 2.0f,1.0f });
-            Sprite::SetOffset({ 1.0f, 0.0f });
-
-            if (i == m_cursorIndex)
-            {
-                Sprite::SetColor({ 0.3f, 1.0f, 0.3f, 1.0f });
-            }
-            else
-            {
-                Sprite::SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
-            }
-
-            Sprite::Draw();
+            m_resultRenderer->Draw(m_menuTextures[i], float2(x, y), float2(5.0f, 3.0f), color);
         }
         
        
-        
+        int costCount = 0;
+        int cost = m_getCost;
+        if (cost)
+        {
+            while (cost)
+            {
+                float2 pos(kResultCostOffset.x - 0.7f * costCount, kResultCostOffset.y);
+                float2 scale(1.0f, 1.0f);
+
+                int drawNum = cost % 10;
+                m_resultRenderer->Draw(m_pointAmount, pos, scale, float3(1.0F, 1.0F, 1.0F), 1.0F, float2((float)drawNum / 10.0f, 0.0f), float2(0.1f, 1.0f));
+                cost /= 10;
+                costCount++;
+            }
+        }
+        else
+        {
+            float2 pos(kResultCostOffset.x, kResultCostOffset.y);
+            float2 scale(1.0f, 1.0f);
+            DirectX::XMFLOAT4X4 world;
+
+            m_resultRenderer->Draw(m_pointAmount, pos, scale, float3(1.0F, 1.0F, 1.0F), 1.0F, float2(0.0f, 0.0f), float2(0.1f, 1.0f));
+        }
+
+        int towerCount = 0;
+        int towerSize = m_getCost;
+        if (towerSize)
+        {
+            while (towerSize)
+            {
+                float2 pos(kResultTowerOffset.x - 1.2f * towerCount, kResultTowerOffset.y);
+                float2 scale(1.7f, 1.7f);
+
+                int drawNum = towerSize % 10;
+                m_resultRenderer->Draw(m_pointAmount, pos, scale, float3(1.0F, 1.0F, 1.0F), 1.0F, float2((float)drawNum / 10.0f, 0.0f), float2(0.1f, 1.0f));
+                towerSize /= 10;
+                towerCount++;
+            }
+        }
+        else
+        {
+            float2 pos(kResultTowerOffset.x, kResultTowerOffset.y);
+            float2 scale(1.7f, 1.7f);
+            DirectX::XMFLOAT4X4 world;
+
+            m_resultRenderer->Draw(m_pointAmount, pos, scale, float3(1.0F, 1.0F, 1.0F), 1.0F, float2(0.0f, 0.0f), float2(0.1f, 1.0f));
+        }
         
     }
 

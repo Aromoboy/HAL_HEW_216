@@ -182,18 +182,31 @@ void PowerUpRenderer::DrawCost(int cost, const CameraSpace::ICamera& camera)
 	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
 
 	int count  = 0;
-	while (cost)
+	if (cost)
 	{
-		float3 pos(kCostNumberPositionOffset.x - kCostNumberInterval * count, kCostNumberPositionOffset.y, 1.0f);
+		while (cost)
+		{
+			float3 pos(kCostNumberPositionOffset.x - kCostNumberInterval * count, kCostNumberPositionOffset.y, 1.0f);
+			float3 scale(kCostNumberScaleOffset, kCostNumberScaleOffset, 1.0f);
+			DirectX::XMFLOAT4X4 world;
+			DrawMatrix::CreateWorldMatrix(world, pos, scale, float3());
+
+			int drawNum = cost % 10;
+			DrawSprite(m_number, world, view, proj, DrawSpriteData(float2(0.1f * drawNum, 0.0f), float2(0.1f, 1.0f)));
+			cost /= 10;
+			count++;
+		}
+	}
+	else
+	{
+		float3 pos(kCostNumberPositionOffset.x, kCostNumberPositionOffset.y, 1.0f);
 		float3 scale(kCostNumberScaleOffset, kCostNumberScaleOffset, 1.0f);
 		DirectX::XMFLOAT4X4 world;
 		DrawMatrix::CreateWorldMatrix(world, pos, scale, float3());
 
-		int drawNum = cost % 10;
-		DrawSprite(m_number, world, view, proj, DrawSpriteData(float2(0.1f * drawNum, 0.0f), float2(0.1f, 1.0f)));
-		cost /= 10;
-		count++;
+		DrawSprite(m_number, world, view, proj, DrawSpriteData(float2(0.0f, 0.0f), float2(0.1f, 1.0f)));
 	}
+
 }
 
 void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)

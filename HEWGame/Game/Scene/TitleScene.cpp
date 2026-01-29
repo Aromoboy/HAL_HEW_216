@@ -260,7 +260,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
         m_shouldStopBGM = false;
         if (m_manager)
         {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager));
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, 1000, 1000));
         }
     }
 

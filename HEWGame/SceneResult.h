@@ -20,7 +20,7 @@ namespace SceneSpace
     class SceneResult : public SceneSpace::Scene, public SceneSpace::IScene
     {
     public:
-        explicit SceneResult(SceneManager& manager);
+        explicit SceneResult(SceneManager& manager, int a_towerSize, int a_getCost);
         ~SceneResult() = default;
 
         bool Load(Core::Input& input) override;
@@ -35,6 +35,8 @@ namespace SceneSpace
         void Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera) final;
 
     private:
+
+
         SceneManager* m_manager = nullptr;
 
         std::shared_ptr<CameraSpace::BaseCamera> m_camera;
@@ -42,11 +44,15 @@ namespace SceneSpace
 
         std::unique_ptr<ResultRenderer> m_resultRenderer;
         std::unique_ptr<ResultRenderer> m_renderer;
-        std::array<std::unique_ptr<Texture>, 3> m_menuTextures;
-       
+        std::array<std::shared_ptr<Texture2D>, 3> m_menuTextures;
+        std::shared_ptr<Texture2D> m_menuSelectNodes;
+        std::shared_ptr<Texture2D> m_backTexture;
+        std::shared_ptr<Texture2D> m_pointAmount;
 
         int m_selectIndex = 0;
       
+        int m_getCost;
+        int m_towerSize;
 
         int m_cursorIndex = 0;
         static constexpr int kMenuCount = 3;
@@ -64,7 +70,6 @@ namespace SceneSpace
         Texture m_texStartEffect;
         Texture m_texNumber[4];
 
-        std::shared_ptr<Texture2D> m_backTexture;
 
     };
 }
