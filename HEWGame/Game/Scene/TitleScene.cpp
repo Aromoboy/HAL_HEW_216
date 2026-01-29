@@ -52,16 +52,6 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
         m_video->Update(timer.DeltaTime());
     }
 
-    if (input.IsTrigger(Core::ActionId::Confirm))
-    {
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(
-                std::make_unique<SceneGame>(*m_manager));
-        }
-        return;
-    }
-
     RootUpdate(timer, input);
 }
 
