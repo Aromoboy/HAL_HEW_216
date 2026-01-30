@@ -1291,6 +1291,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         };
         const GameplayRulesSystem::UpdateResult rulesResult =
             m_gameplayRules.Update(rulesInput);
+        m_realtimeScore = m_gameplayRules.GetCurrentScore();
 
         if (rulesResult.timeUp)
         {
@@ -1299,7 +1300,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
             SetStageState(StageState::TimeUp);
             m_manager->RequestSceneChange(
-                std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_realtimeScore));
+                std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_gameplayRules.GetCurrentScore()));
             return;
         }
 
@@ -1399,7 +1400,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 }
 
 
-                m_realtimeScore += 200;
             }
         }
         //+200 スコア入った時徐々に増える
@@ -2686,6 +2686,7 @@ void SceneGame::ResetPlaySession()
     }
 
     m_gameplayRules.ResetSession();
+    m_realtimeScore = m_gameplayRules.GetCurrentScore();
     m_guidelineSystem.ResetSession();
     ResetGuidelineHeight();
     ToggleGameplaySystems(true);
