@@ -67,7 +67,7 @@ namespace SceneSpace
             m_menuTextures[i] = cache.Load(keys[i], GetDevice(), paths[i]);
         }
 
-        m_pointAmount = cache.Load("PointAmount", GetDevice(), L"Assets/Texture/number.png");
+        m_pointAmount = cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");
 
         m_menuSelectNodes = cache.Load("ResultSelect", GetDevice(), L"Assets/Texture/basket_UI_backeffect_remake.png");
         
