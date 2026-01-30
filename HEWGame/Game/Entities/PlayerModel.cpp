@@ -339,24 +339,15 @@ namespace Entities
 
             if (m_activeAnimation == m_stabAnimation && m_activeAnimation->IsPlayEnd())
             {
-                switch (m_dontActionAnimationState)
-                {
-                case IDLE :
-                    m_activAnimationState = IDLE;
-                    m_activeAnimation = m_idleAnimation;
-                    break;
-
-                case MOVE:
-                    m_activAnimationState = MOVE;
-                    m_activeAnimation = m_moveAnimation;
-                    break;
-                }
-
+                m_activAnimationState == CARRY;
+                m_activeAnimation = m_moveAnimation;
                 player.m_animation = m_activeAnimation;
                 if (m_activeAnimation)
                 {
                     m_activeAnimation->SetLoop(true);
+                    m_activeAnimation->Play();
                 }
+
             }
         }
     }
@@ -379,7 +370,7 @@ namespace Entities
     void PlayerModel::PlayIdle(Player& player)
     {
         m_dontActionAnimationState = IDLE;
-        if (m_activAnimationState == STAB || m_activAnimationState == IDLE)
+        if (m_activAnimationState == STAB || m_activAnimationState == CARRY ||  m_activAnimationState == IDLE)
         {
             return;
         }
@@ -408,7 +399,7 @@ namespace Entities
     void PlayerModel::PlayMove(Player& player)
     {
         m_dontActionAnimationState = MOVE;
-        if (m_activAnimationState == STAB || m_activAnimationState == MOVE)
+        if (m_activAnimationState == STAB || m_activAnimationState == CARRY || m_activAnimationState == MOVE)
         {
             return;
         }
@@ -419,6 +410,30 @@ namespace Entities
         {
             m_activeAnimation->SetLoop(true);
             m_activeAnimation->Play();
+        }
+    }
+
+    void PlayerModel::PlayUnCarry(Player& player)
+    {
+        if (m_activAnimationState != CARRY && m_activAnimationState != STAB) return;
+
+        switch (m_dontActionAnimationState)
+        {
+        case IDLE:
+            m_activAnimationState = IDLE;
+            m_activeAnimation = m_idleAnimation;
+            break;
+
+        case MOVE:
+            m_activAnimationState = MOVE;
+            m_activeAnimation = m_moveAnimation;
+            break;
+        }
+
+        player.m_animation = m_activeAnimation;
+        if (m_activeAnimation)
+        {
+            m_activeAnimation->SetLoop(true);
         }
     }
 

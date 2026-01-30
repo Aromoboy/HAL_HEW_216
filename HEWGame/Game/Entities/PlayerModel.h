@@ -25,7 +25,8 @@ namespace Entities
         {
             IDLE,
             MOVE,
-            STAB
+            STAB,
+            CARRY
         };
 
         void Initialize(Player& player, std::shared_ptr<Render::Model> model);
@@ -35,6 +36,7 @@ namespace Entities
         void PlayIdle(Player& player);
         void PlayStabAnimation(Player& player);
         void PlayMove(Player& player);
+        void PlayUnCarry(Player& player);
         Transform GetRenderTransform() const;
         std::shared_ptr<Animation> GetActiveAnimation() const;
         bool IsActionAnimation();
