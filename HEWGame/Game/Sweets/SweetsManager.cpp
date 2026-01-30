@@ -157,7 +157,7 @@ namespace SweetsSpace
         m_spawner.OnStateChanged(sweets, *previous, state);
         if (state == SweetsState::Stacked && *previous != SweetsState::Stacked)
         {
-            m_spawner.OnSweetsStacked(sweets);
+            m_spawner.ReleaseSpawnOriginOnStacked(sweets);
         }
     }
 
