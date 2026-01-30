@@ -589,6 +589,41 @@ bool SceneGame::Load(Core::Input& input)
     m_stageObjects = std::move(composition->stageObjects);
     m_stageObjectsInitial = m_stageObjects;
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    if (m_sweetsManager)
+    {
+        std::optional<AABB> cakeBounds;
+        for (const auto& obj : m_stageObjects)
+        {
+            if (!IsCakeStageObject(obj))
+            {
+                continue;
+            }
+
+            const auto& physicsEntity = obj.physicsEntity;
+            if (!physicsEntity)
+            {
+                continue;
+            }
+
+            physicsEntity->SyncColliderBounds();
+            const AABB bounds = physicsEntity->GetAABB();
+            if (!cakeBounds)
+            {
+                cakeBounds = bounds;
+            }
+            else
+            {
+                cakeBounds->min.x = std::min(cakeBounds->min.x, bounds.min.x);
+                cakeBounds->min.y = std::min(cakeBounds->min.y, bounds.min.y);
+                cakeBounds->min.z = std::min(cakeBounds->min.z, bounds.min.z);
+                cakeBounds->max.x = std::max(cakeBounds->max.x, bounds.max.x);
+                cakeBounds->max.y = std::max(cakeBounds->max.y, bounds.max.y);
+                cakeBounds->max.z = std::max(cakeBounds->max.z, bounds.max.z);
+            }
+        }
+
+        m_sweetsManager->SetCakeBounds(cakeBounds);
+    }
     ApplyPowerUpEffects(m_playerPowerUpData);
 
 #if defined(_DEBUG)
