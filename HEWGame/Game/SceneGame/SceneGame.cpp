@@ -1299,6 +1299,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 sm->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
 
             SetStageState(StageState::TimeUp);
+            EnsureResultSaved();
             m_manager->RequestSceneChange(
                 std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_gameplayRules.GetCurrentScore()));
             return;
