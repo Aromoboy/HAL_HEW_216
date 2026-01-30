@@ -12,16 +12,16 @@
 #include <algorithm>
 
 // 各オフセット
-constexpr float2 kIconPositionOffset = { -0.18f, -0.008f };
-constexpr float2 kFramePositionOffset = { -0.18f, -0.008f };
-constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
-constexpr float2 kCostIconPositionOffset = { 0.10f,  -0.050f };
-constexpr float2 kNamePositionOffset = { 0.31f,  0.05f };
-constexpr float2 kInfomationPositionOffset = { 0.170f,  0.000f };
-constexpr float2 kLevelPositionOffset = { 0.50f,  0.045f };
-constexpr float2 kCostPositionOffset = { 0.50f,  -0.060f }; 
-constexpr float2 kCostNumberPositionOffset = { 0.68f,  0.290f };
-constexpr float2 kHudFairyPositionOffset = { -0.39f,  -0.210f };
+constexpr float2 kBackFramePositionOffset = { 0.00f,  0.35f };
+constexpr float2 kIconPositionOffset = { -0.18f, -0.17f + kBackFramePositionOffset.y };
+constexpr float2 kFramePositionOffset = { -0.18f, -0.17f + kBackFramePositionOffset.y };
+constexpr float2 kCostIconPositionOffset = { 0.13f,  -0.215f + kBackFramePositionOffset.y };
+constexpr float2 kNamePositionOffset = { 0.31f,  -0.11f + kBackFramePositionOffset.y };
+constexpr float2 kInfomationPositionOffset = { 0.170f,  -0.17f + kBackFramePositionOffset.y };
+constexpr float2 kLevelPositionOffset = { 0.50f,  -0.1155f + kBackFramePositionOffset.y };
+constexpr float2 kCostPositionOffset = { 0.50f,  -0.23f + kBackFramePositionOffset.y }; 
+constexpr float2 kCostNumberPositionOffset = { 0.68f,  0.340f };
+constexpr float2 kHudFairyPositionOffset = { -5.39f,  -0.250f };
 constexpr float kIconScaleOffset = 0.5f;
 constexpr float kFrameScaleOffset = 0.5f;
 constexpr float kBackFrameScaleOffset = 1.8f;
@@ -47,7 +47,7 @@ constexpr const char* kBackFrameTexturenName = "BackFrame";
 constexpr const char* kBackgroundTextureName = "PowerUpBG";
 
 
-constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
+constexpr float2 kHudCostIconPositionOffset = { 0.35f,  0.35f };
 constexpr float kHudCostIconScaleOffset = 0.25f;
 
 
