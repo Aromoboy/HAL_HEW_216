@@ -32,7 +32,8 @@ namespace
             return false;
         }
 
-        sweets.SyncColliderBounds();
+        auto* mutableSweets = const_cast<::SweetsSpace::ActiveSweets*>(&sweets);
+        mutableSweets->SyncColliderBounds();
         const AABB bounds = sweets.GetAABB();
         const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
 
