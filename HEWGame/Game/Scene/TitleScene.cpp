@@ -15,7 +15,7 @@
  
 #include <memory>
 
-static int s_TitleBGMHandle = -1;
+int s_TitleBGMHandle = -1;
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
