@@ -1,5 +1,4 @@
-﻿//なんでマージしないのー？
-#include "Transform.h"
+﻿#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
@@ -782,10 +781,12 @@ void SceneGame::OnEnter()
         m_countdownTextures[i] = std::make_shared<Texture>();
     }
 
-    m_countdownTextures[0]->Create("Assets/Texture/start.png", true);
+    m_countdownTextures[0]->Create("Assets/Texture/start_remake.png", true);
     m_countdownTextures[1]->Create("Assets/Texture/1-1.png", true);
     m_countdownTextures[2]->Create("Assets/Texture/2-1.png", true);
     m_countdownTextures[3]->Create("Assets/Texture/3-1.png", true);
+    m_finishTexture = std::make_shared<Texture>();
+    m_finishTexture->Create("Assets/Texture/Finish_remake.png", true);
     m_whistleTimer = 0.0f;
     m_whistlePlayed = false;
     m_bgmStarted = false;
@@ -1147,7 +1148,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
+    /*const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
     const GameplayRulesSystem::UpdateInput rulesInput{
         isPlaying,
         ctx.dt,
@@ -1174,7 +1175,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
-    }
+    }*/
     
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
@@ -1241,7 +1242,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         Core::Input* input = GetInput();
 
-        // --- カウントダウン処理 ---
+        // カウントダウン
         if (!m_gameStarted)
         {
             m_startCountdownTimer += ctx.dt;
@@ -1252,12 +1253,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
                 if (m_startCountdownNumber > 1)
                 {
-                    m_startCountdownNumber--; // 3→2→1
-
-                    if (auto* soundMgr = SoundManagerEX::GetInstance())
-                    {
-                        soundMgr->PlaySoundEX("Assets/Audio/SE_CountDown.wav", false, 0.7f);
-                    }
+                    m_startCountdownNumber--;
+                    if (auto* sm = SoundManagerEX::GetInstance())
+                        sm->PlaySoundEX("Assets/Audio/SE_CountDown.wav", false, 0.7f);
                 }
                 else if (m_startCountdownNumber == 1)
                 {
@@ -1266,12 +1264,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
                     if (!m_whistlePlayed)
                     {
-                        if (auto* soundMgr = SoundManagerEX::GetInstance())
-                        {
-                            soundMgr->PlaySoundEX("Assets/Audio/SE_Start.wav", false, 0.7f);
-                            m_whistlePlayed = true;
-                            m_whistleTimer = 0.0f;
-                        }
+                        if (auto* sm = SoundManagerEX::GetInstance())
+                            sm->PlaySoundEX("Assets/Audio/SE_Start.wav", false, 0.7f);
+
+                        m_whistlePlayed = true;
+                        m_whistleTimer = 0.0f;
                     }
                 }
                 else if (m_showStartImage)
@@ -1285,29 +1282,47 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             return;
         }
 
-        // --- BGM開始処理（ゲーム開始後も実行） ---
-        if (m_whistlePlayed && !m_bgmStarted)
-        {
-            m_whistleTimer += ctx.dt;
-
-            if (m_whistleTimer >= 0.0f)
-            {
-                if (auto* soundMgr = SoundManagerEX::GetInstance())
-                {
-                    m_gameBGMHandle = soundMgr->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.6f);
-                    m_bgmStarted = true;
-
-                }
-            }
-        }
+        const GameplayRulesSystem::UpdateInput rulesInput{
+            m_gameStarted,
+            ctx.dt,
+            m_sweetsManager.get(),
+            &m_phaseManager,
+            m_clearPhaseCount
+        };
+        const GameplayRulesSystem::UpdateResult rulesResult =
+            m_gameplayRules.Update(rulesInput);
 
         if (rulesResult.timeUp)
         {
+            if (auto* sm = SoundManagerEX::GetInstance())
+                sm->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
+
             SetStageState(StageState::TimeUp);
+            m_manager->RequestSceneChange(
+                std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_realtimeScore));
             return;
         }
 
+        if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
+        {
+            UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
+            BroadcastPhaseAdvance(rulesResult.currentPhase);
+        }
 
+        if (m_whistlePlayed && !m_bgmStarted)
+        {
+            m_whistleTimer += ctx.dt;
+            if (m_whistleTimer >= 0.8f)
+            {
+                if (auto* sm = SoundManagerEX::GetInstance())
+                    m_gameBGMHandle =
+                    sm->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.6f);
+
+                m_bgmStarted = true;
+            }
+        }
+
+// --- タイムアップ判定 ---
 
         if (input)
         {
@@ -1409,6 +1424,17 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     }
     case StageState::TimeUp:
+        SetStageState(StageState::Finish);
+        m_finishTimer = 0.0f;   // Finish演出用タイマー初期化
+        break;
+    case StageState::Finish:
+        m_finishTimer += ctx.dt;
+        // FINISHを表示してからリザルトへ
+        if (m_finishTimer >= 2.0f)
+        {
+            SetStageState(StageState::ShowingResult);
+        }
+        break;
     case StageState::Cleared:
         SetStageState(StageState::ShowingResult);
         break;
@@ -2104,10 +2130,23 @@ void SceneGame::DrawOverlay()
         Sprite::SetOffset({ 0.0f, 0.0f }); 
         Sprite::SetSize({ 1.0f, 1.0f });   
         Sprite::SetColor({ 1,1,1,1 });
-
         Sprite::Draw();
     }
-    
+
+    // FINISH表示
+    if (m_stageState == StageState::Finish)
+    {
+        Sprite::ScopedPassDefaults guard;
+
+        Sprite::SetTexture(m_finishTexture.get());
+
+        // 画面中央に表示
+        Sprite::SetOffset({ 0.0f, 0.0f });
+        Sprite::SetSize({ 1.0f, 1.0f }); 
+        Sprite::SetColor({ 1,1,1,1 });
+        Sprite::Draw();
+    }
+
 #if defined(_DEBUG)
 #endif
 }
@@ -2438,15 +2477,18 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
+
+    m_whistlePlayed = false;
+    m_whistleTimer = 0.0f;
+    m_bgmStarted = false;
+
     m_resultFinalized = false;
     m_resultSaved = false;
 
-    // カウントダウン開始
-    m_startCountdownNumber = 3;   // 秒数
+    m_startCountdownNumber = 3;
     m_startCountdownTimer = 0.0f;
     m_gameStarted = false;
 
-    // この時点ではプレイヤーやスイーツは止めておく
     ToggleGameplaySystems(false);
 }
 

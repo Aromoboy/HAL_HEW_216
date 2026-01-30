@@ -67,6 +67,7 @@ public:
         TimeUp,
         Cleared,
         ShowingResult,
+        Finish,
     };
 
     using PlayerColliderTuning = SceneGameConfig::PlayerColliderTuning;
@@ -203,6 +204,10 @@ protected:
     float m_whistleTimer = 0.0f;
     bool m_whistlePlayed = false;
     bool m_bgmStarted = false;
+    bool  m_showFinishImage = false;
+    float m_finishTimer = 0.0f;
+    bool  m_finishDone = false;
+    std::shared_ptr<Texture> m_finishTexture;
     SceneSpace::SceneManager* m_manager = nullptr;
     //スコア変数　ゲーム開始時100ポイントついてる
     int m_realtimeScore = 100;

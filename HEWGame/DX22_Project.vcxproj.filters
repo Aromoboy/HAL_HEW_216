@@ -977,4 +977,15 @@
 		  <Filter>Game\UI</Filter>
 	  </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Title\TitleCursor.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Title\TitleManager.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\PowerUp\PowerUpNode.h">
+      <Filter>Game\PowerUp</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
