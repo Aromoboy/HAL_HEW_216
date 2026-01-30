@@ -52,6 +52,7 @@ namespace SweetsSpace
         int GetStackedInBatch() const;
 
         void OnStateChanged(const std::shared_ptr<ActiveSweets>& sweets, SweetsState previousState, SweetsState newState);
+        void OnSweetsStacked(const std::shared_ptr<ActiveSweets>& sweets);
         void OnSweetsRemoved(const std::shared_ptr<ActiveSweets>& sweets, int remainingToStack, int liveAfterRemoval, const char* context);
 
     private:
