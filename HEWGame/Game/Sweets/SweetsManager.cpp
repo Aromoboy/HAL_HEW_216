@@ -35,9 +35,8 @@ namespace
         auto* mutableSweets = const_cast<::SweetsSpace::ActiveSweets*>(&sweets);
         mutableSweets->SyncColliderBounds();
         const AABB bounds = sweets.GetAABB();
-        const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
 
-        if (centerX < cakeBounds->min.x || centerX > cakeBounds->max.x)
+        if (bounds.max.x < cakeBounds->min.x || bounds.min.x > cakeBounds->max.x)
         {
             return false;
         }
