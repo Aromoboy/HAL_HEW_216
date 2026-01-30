@@ -2,6 +2,7 @@
 #include "Core/Input.h"
 #include "DebugConsole.h"
 #include "Defines.h"
+#include "SoundManagerEX.h"
 #include <iostream>
 
 constexpr float maxMoveSecond = 0.10f;
@@ -61,6 +62,8 @@ bool TitleCursor::IsCursorClick()
 
 void TitleCursor::MoveInput(Core::Input& input)
 {
+	CursorIndex previousIndex = m_index;
+
 	float controllerX = input.GetAxis(Core::ActionId::MoveX);
 	float controllerY = input.GetAxis(Core::ActionId::RotateYaw);
 
@@ -79,6 +82,14 @@ void TitleCursor::MoveInput(Core::Input& input)
 	else if (controllerY < -kTitleCursorDeadZone.y || input.IsPress('S'))
 	{
 		m_index = 1;
+	}
+
+	if (m_index != previousIndex)
+	{
+		if (auto* soundMgr = SoundManagerEX::GetInstance())
+		{
+			soundMgr->PlaySoundEX("Assets/Audio/SE_Enter.wav", false, 0.5f);
+		}
 	}
 
 }

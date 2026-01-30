@@ -210,6 +210,11 @@ namespace SceneSpace
                 if (m_cursorIndex < 0) m_cursorIndex = kMenuCount - 1;
 
                 inputLock = true;
+
+                if (auto* soundMgr = SoundManagerEX::GetInstance())
+                {
+                    soundMgr->PlaySoundEX("Assets/Audio/SE_Enter.wav", false, 0.5f);
+                }
             }
             else if (vertical < -0.5f)
             {
@@ -217,6 +222,11 @@ namespace SceneSpace
                 if (m_cursorIndex >= kMenuCount) m_cursorIndex = 0;
 
                 inputLock = true;
+
+                if (auto* soundMgr = SoundManagerEX::GetInstance())
+                {
+                    soundMgr->PlaySoundEX("Assets/Audio/SE_Enter.wav", false, 0.5f);
+                }
             }
 
         }
