@@ -35,9 +35,8 @@ namespace
         auto* mutableSweets = const_cast<::SweetsSpace::ActiveSweets*>(&sweets);
         mutableSweets->SyncColliderBounds();
         const AABB bounds = sweets.GetAABB();
-        const float centerX = (bounds.min.x + bounds.max.x) * 0.5f;
 
-        if (centerX < cakeBounds->min.x || centerX > cakeBounds->max.x)
+        if (bounds.max.x < cakeBounds->min.x || bounds.min.x > cakeBounds->max.x)
         {
             return false;
         }
@@ -158,7 +157,7 @@ namespace SweetsSpace
         m_spawner.OnStateChanged(sweets, *previous, state);
         if (state == SweetsState::Stacked && *previous != SweetsState::Stacked)
         {
-            m_spawner.OnSweetsStacked(sweets);
+            m_spawner.ReleaseSpawnOriginOnStacked(sweets);
         }
     }
 
