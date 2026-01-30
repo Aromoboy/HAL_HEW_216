@@ -14,6 +14,7 @@
 #include <vector>
 #include <limits>
 
+#include "AABB.h"
 #include "Core/UpdateNode.h"
 #include "ICamera.h"
 #include "ModelDX.h"
@@ -131,6 +132,7 @@ namespace SweetsSpace
         void SetGrabRespawnDelaySeconds(float respawnDelaySeconds);
         void SetHorizontalBounds(float minX, float maxX, std::optional<float> margin = std::nullopt);
         void SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin = std::nullopt);
+        void SetCakeBounds(const std::optional<AABB>& bounds);
         void SetGeneratedColliderThicknessPadding(float factor);
         void SetGeneratedColliderMinThickness(float thickness);
         void OnContactBegin(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
@@ -158,6 +160,7 @@ namespace SweetsSpace
         SweetsLifecycle m_lifecycle;
         SweetsRenderer m_renderer;
         bool m_creamEnabled{ true };
+        std::optional<AABB> m_cakeBounds;
     };
 
 }
