@@ -313,7 +313,7 @@ namespace SceneSpace
         }
 
         int towerCount = 0;
-        int towerSize = m_getCost;
+        int towerSize = m_towerSize;
         if (towerSize)
         {
             while (towerSize)

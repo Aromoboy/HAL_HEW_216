@@ -1163,7 +1163,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             soundMgr->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
         }
         SetStageState(StageState::TimeUp);
-        m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_realtimeScore));
+        m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_realtimeScore));
         return;
 
 
@@ -1376,6 +1376,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
                     }
                 }
+
+
+                m_realtimeScore += 200;
             }
         }
         //+200 スコア入った時徐々に増える
