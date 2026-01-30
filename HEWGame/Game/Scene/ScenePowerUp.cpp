@@ -8,6 +8,7 @@
 #include "TextureCache.h"
 #include "AppGame.h"
 #include "Timer.h"
+#include "SoundManagerEX.h"
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
@@ -21,6 +22,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+extern int s_TitleBGMHandle;
 
 namespace
 {
@@ -105,6 +108,11 @@ namespace SceneSpace
                                 return;
                         }
 
+                        if (auto* soundMgr = SoundManagerEX::GetInstance())
+                        {
+                            soundMgr->PlaySoundEX("Assets/Audio/SE_Purchase.wav", false, 0.7f);
+                        }
+
                         PlayerData::Data& entry = m_playerEntries.front();
                         entry.levels[effectEntry->type] = m_powerUpManager->GetLevel(index);
                         entry.nPoints = m_cost;
@@ -186,6 +194,14 @@ namespace SceneSpace
                 if (registeredCamera)
                 {
                         SetActiveCamera(registeredCamera);
+                }
+
+                if (s_TitleBGMHandle == -1)
+                {
+                    if (auto* soundMgr = SoundManagerEX::GetInstance())
+                    {
+                        s_TitleBGMHandle = soundMgr->PlaySoundEX("Assets/Audio/BGM_Menu.wav", true, 0.5f);
+                    }
                 }
 
                 Save& save = Save::Instance();

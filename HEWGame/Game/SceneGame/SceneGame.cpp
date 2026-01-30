@@ -1289,7 +1289,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         {
             m_whistleTimer += ctx.dt;
 
-            if (m_whistleTimer >= 0.8f)
+            if (m_whistleTimer >= 0.0f)
             {
                 if (auto* soundMgr = SoundManagerEX::GetInstance())
                 {
@@ -1350,6 +1350,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             
           //  m_isScoreCounting = true;
          //   m_scoreToAddRemaining += scorePerPhase;
+
+            if (auto* soundMgr = SoundManagerEX::GetInstance())
+            {
+                soundMgr->PlaySoundEX("Assets/Audio/SE_PhaseUp.wav", false, 0.8f);
+            }
 
             const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
             m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;

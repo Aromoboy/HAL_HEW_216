@@ -95,6 +95,11 @@ namespace SceneSpace
         }
         SetActiveCamera(registeredCamera);
 
+        if (auto soundMgr = SoundManagerEX::GetInstance())
+        {
+            soundMgr->PlaySoundEX("Assets/Audio/SE_ResultPop.wav", false, 0.5f);
+        }
+
         m_videoPlayer = std::make_unique<VideoTexturePlayer>();
         VideoTexturePlayer::ShaderPaths shaderPaths{};
         shaderPaths.vertexShader = "Assets/shaders/video_vs.cso";
