@@ -1163,7 +1163,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             soundMgr->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
         }
         SetStageState(StageState::TimeUp);
-        m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_realtimeScore));
+        OnStageResult();
+        m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_gameplayRules.ComputeScore(&m_phaseManager)));
         return;
 
 

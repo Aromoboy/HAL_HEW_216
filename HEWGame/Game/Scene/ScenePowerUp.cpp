@@ -15,7 +15,6 @@
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
 #include "Debug.h"
-#include "Save/Save.h"
 
 
 #include <sstream>
@@ -188,9 +187,7 @@ namespace SceneSpace
                         SetActiveCamera(registeredCamera);
                 }
 
-                Save& save = Save::Instance();
-                m_cost = save.GetCost();
-                m_powerUpManager->LoadNodeData(save);
+                
         }
 
         void ScenePowerUp::OnExit()
