@@ -589,6 +589,41 @@ bool SceneGame::Load(Core::Input& input)
     m_stageObjects = std::move(composition->stageObjects);
     m_stageObjectsInitial = m_stageObjects;
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    if (m_sweetsManager)
+    {
+        std::optional<AABB> cakeBounds;
+        for (const auto& obj : m_stageObjects)
+        {
+            if (!IsCakeStageObject(obj))
+            {
+                continue;
+            }
+
+            const auto& physicsEntity = obj.physicsEntity;
+            if (!physicsEntity)
+            {
+                continue;
+            }
+
+            physicsEntity->SyncColliderBounds();
+            const AABB bounds = physicsEntity->GetAABB();
+            if (!cakeBounds)
+            {
+                cakeBounds = bounds;
+            }
+            else
+            {
+                cakeBounds->min.x = std::min(cakeBounds->min.x, bounds.min.x);
+                cakeBounds->min.y = std::min(cakeBounds->min.y, bounds.min.y);
+                cakeBounds->min.z = std::min(cakeBounds->min.z, bounds.min.z);
+                cakeBounds->max.x = std::max(cakeBounds->max.x, bounds.max.x);
+                cakeBounds->max.y = std::max(cakeBounds->max.y, bounds.max.y);
+                cakeBounds->max.z = std::max(cakeBounds->max.z, bounds.max.z);
+            }
+        }
+
+        m_sweetsManager->SetCakeBounds(cakeBounds);
+    }
     ApplyPowerUpEffects(m_playerPowerUpData);
 
 #if defined(_DEBUG)
@@ -1291,6 +1326,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         };
         const GameplayRulesSystem::UpdateResult rulesResult =
             m_gameplayRules.Update(rulesInput);
+        m_realtimeScore = m_gameplayRules.GetCurrentScore();
 
         if (rulesResult.timeUp)
         {
@@ -1298,8 +1334,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 sm->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
 
             SetStageState(StageState::TimeUp);
+            EnsureResultSaved();
             m_manager->RequestSceneChange(
-                std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_realtimeScore));
+                std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_gameplayRules.GetCurrentScore()));
             return;
         }
 
@@ -1399,7 +1436,6 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 }
 
 
-                m_realtimeScore += 200;
             }
         }
         //+200 スコア入った時徐々に増える
@@ -2686,6 +2722,7 @@ void SceneGame::ResetPlaySession()
     }
 
     m_gameplayRules.ResetSession();
+    m_realtimeScore = m_gameplayRules.GetCurrentScore();
     m_guidelineSystem.ResetSession();
     ResetGuidelineHeight();
     ToggleGameplaySystems(true);
