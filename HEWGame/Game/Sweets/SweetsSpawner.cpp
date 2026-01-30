@@ -845,6 +845,21 @@ namespace SweetsSpace
 
     void SweetsSpawner::OnSweetsStacked(const std::shared_ptr<ActiveSweets>& sweets)
     {
+        ReleaseSpawnOriginOnStacked(sweets);
+    }
+
+    void SweetsSpawner::ReleaseSpawnOriginOnStacked(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        if (!sweets)
+        {
+            return;
+        }
+
+        if (m_spawnOriginAssignments.find(sweets.get()) == m_spawnOriginAssignments.end())
+        {
+            return;
+        }
+
         UnregisterSpawnOrigin(sweets);
     }
 
