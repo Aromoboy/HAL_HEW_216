@@ -126,21 +126,21 @@ namespace SceneSpace
                     float3{ 0.55f, -0.3f, 1.0f },
                     float3{ 0.0f, 0.0f, 0.0f },
                     0);
-                m_effectSystem->SpawnEffect(FruitRequest);
+                //m_effectSystem->SpawnEffect(FruitRequest);
 
                 EffectSystem::EffectCreateRequest BubbleRequest(
                     "Bubble",
                     float3{ -0.6f, -0.2f, 1.0f },
                     float3{ 0.0f, 0.0f, 0.0f },
                     0);
-                m_effectSystem->SpawnEffect(BubbleRequest);
+                //m_effectSystem->SpawnEffect(BubbleRequest);
 
                 EffectSystem::EffectCreateRequest StarRequest(
                     "Star",
                     float3{ 0.0f, 0.0f, 1.0f },
                     float3{ 0.0f, 0.0f, 0.0f },
                     0);
-                m_effectSystem->SpawnEffect(StarRequest);
+                //m_effectSystem->SpawnEffect(StarRequest);
 
                 m_rig->Attach(m_target);
 
@@ -318,7 +318,7 @@ namespace SceneSpace
                         float3{ -0.6f, -0.2f, 1.0f },
                         float3{ 0.0f, 0.0f, 0.0f },
                         0);
-                    m_effectSystem->SpawnEffect(BubbleRequest);
+                    //m_effectSystem->SpawnEffect(BubbleRequest);
 
 
 

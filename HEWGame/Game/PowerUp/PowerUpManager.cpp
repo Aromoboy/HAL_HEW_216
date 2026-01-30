@@ -10,7 +10,7 @@
 #include <cassert>
 
 
-constexpr float2 kUnitDistanse = { 1.4f, -0.5f };
+constexpr float2 kUnitDistanse = { 1.4f, -0.4f };
 
 PowerUpManager::PowerUpManager(Core::UpdateScheduler& a_scheduler, TextureCache& a_cache, const NodeFormat& a_format)
 	:m_scheduler(a_scheduler)
