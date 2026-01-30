@@ -1335,8 +1335,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
             SetStageState(StageState::TimeUp);
             EnsureResultSaved();
-            m_manager->RequestSceneChange(
-                std::make_unique<SceneSpace::SceneResult>(*m_manager, 100.0f, m_gameplayRules.GetCurrentScore()));
+            OnStageResult();
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_gameplayRules.ComputeScore(&m_phaseManager)));
             return;
         }
 

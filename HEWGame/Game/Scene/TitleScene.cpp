@@ -223,47 +223,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
     if (m_titleManager->GetGameEndRequest())
     {
         m_manager->GameEndRequest();
-    }
-
-    if (input->IsTrigger(VK_F1))
-    {
-        m_shouldStopBGM = true;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<EffectTestScene>(*m_manager));
-        }
-        return;
-    }
-
-    if (input->IsTrigger(VK_SPACE))
-    {
-        m_shouldStopBGM = false;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SettingScene>(*m_manager));
-        }
-        return;
-    }
-
-    if (input->IsTrigger(Core::ActionId::Cancel))
-    {
-        m_shouldStopBGM = false;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
-        }
-    }
-
-
-    if (input->IsTrigger('O'))
-    {
-        m_shouldStopBGM = false;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, 1000, 1000));
-        }
-    }
-
+    }    
 }
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
