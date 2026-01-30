@@ -9,6 +9,8 @@ namespace DebugLog
     void Init(HWND hwnd);
 
     void DebugMessage(const std::string& message);
+
+    extern bool EnableConsoleOutput;
 }
 
 [[deprecated("Use DebugLog::Init instead")]] inline void InitDebug(HWND hwnd)
