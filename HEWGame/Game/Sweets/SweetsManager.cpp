@@ -136,6 +136,10 @@ namespace SweetsSpace
 
         m_contacts.OnStateChanged(sweets.get(), *previous, state);
         m_spawner.OnStateChanged(sweets, *previous, state);
+        if (state == SweetsState::Stacked && *previous != SweetsState::Stacked)
+        {
+            m_spawner.OnSweetsStacked(sweets);
+        }
     }
 
     void SweetsManager::Erase(const std::shared_ptr<ActiveSweets>& sweets)

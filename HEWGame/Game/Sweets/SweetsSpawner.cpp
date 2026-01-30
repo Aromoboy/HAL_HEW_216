@@ -843,6 +843,11 @@ namespace SweetsSpace
         }
     }
 
+    void SweetsSpawner::OnSweetsStacked(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        UnregisterSpawnOrigin(sweets);
+    }
+
     void SweetsSpawner::OnSweetsRemoved(const std::shared_ptr<ActiveSweets>& sweets, int remainingToStack,
         int liveAfterRemoval, const char* context)
     {
