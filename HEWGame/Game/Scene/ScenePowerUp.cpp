@@ -16,7 +16,6 @@
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
 #include "Debug.h"
-#include "Save/Save.h"
 
 
 #include <sstream>
@@ -203,10 +202,6 @@ namespace SceneSpace
                         s_TitleBGMHandle = soundMgr->PlaySoundEX("Assets/Audio/BGM_Menu.wav", true, 0.5f);
                     }
                 }
-
-                Save& save = Save::Instance();
-                m_cost = save.GetCost();
-                m_powerUpManager->LoadNodeData(save);
         }
 
         void ScenePowerUp::OnExit()

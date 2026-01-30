@@ -14,6 +14,7 @@
 #include "TitleRenderer.h"
 #include "VideoBackgroundRenderer.h"
 
+#include "Save/PlayerData.h"
 
 namespace SceneSpace
 {
@@ -48,6 +49,7 @@ namespace SceneSpace
         std::shared_ptr<Texture2D> m_menuSelectNodes;
         std::shared_ptr<Texture2D> m_backTexture;
         std::shared_ptr<Texture2D> m_pointAmount;
+        std::shared_ptr<Texture2D> m_meter;
 
         int m_selectIndex = 0;
       
