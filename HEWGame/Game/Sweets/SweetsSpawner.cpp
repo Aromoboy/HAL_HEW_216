@@ -1314,20 +1314,21 @@ namespace SweetsSpace
         }
     }
 
-    void SweetsSpawner::UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets)
+    bool SweetsSpawner::UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets)
     {
         if (!sweets)
         {
-            return;
+            return false;
         }
 
         const auto it = m_spawnOriginAssignments.find(sweets.get());
         if (it == m_spawnOriginAssignments.end())
         {
-            return;
+            return false;
         }
 
         const SpawnOriginAssignment assignment = it->second;
+        m_spawnOriginAssignments.erase(it);
         if (assignment.lane == SpawnOriginLane::Primary)
         {
             if (assignment.index < m_spawnOriginLiveCountsPrimary.size())
@@ -1342,8 +1343,7 @@ namespace SweetsSpace
                 m_spawnOriginLiveCountsSecondary[assignment.index] = std::max(0, m_spawnOriginLiveCountsSecondary[assignment.index] - 1);
             }
         }
-
-        m_spawnOriginAssignments.erase(it);
+        return true;
     }
 
     Transform SweetsSpawner::BuildSpawnTransform(const std::string& normalizedKind, const SpawnOriginSelection& originSelection)

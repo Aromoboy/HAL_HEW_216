@@ -90,7 +90,7 @@ namespace SweetsSpace
         int SpawnInitialPerPoint(int perPoint);
         void ResetSpawnOriginTracking();
         void RegisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets, const SpawnOriginSelection& selection);
-        void UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets);
+        bool UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets);
         void EnsureRegisteredWeights(SpawnTuningConfig& config,
             const std::unordered_set<std::string>& registeredKindsNormalized,
             const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const;
