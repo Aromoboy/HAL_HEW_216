@@ -2,6 +2,7 @@
 
 #include "Core/Input.h"
 #include "Entities/Player.h"
+#include "Entities/PlayerModel.h"
 #include "SoundManagerEX.h"
 
 #include <algorithm>
@@ -35,7 +36,7 @@ namespace
 
 namespace Entities
 {
-    void PlayerMovement::Update(Player& player, const Core::UpdateContext& ctx, Core::Input& input)
+    void PlayerMovement::Update(Player& player, PlayerModel& a_modelSystem, const Core::UpdateContext& ctx, Core::Input& input)
     {
         const bool hasBody = player.HasBox2DBody();
         if (!hasBody && !m_missingBodyLogged)
@@ -83,16 +84,26 @@ namespace Entities
                         desired.y * ctx.dt,
                         desired.z * ctx.dt
                         });
+                a_modelSystem.PlayMove(player);
             }
-            else if (hasBody)
+            else 
             {
-                player.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+                a_modelSystem.PlayIdle(player);
+
+                if (hasBody)
+                {
+                    player.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
+                }
             }
+
+            
         }
         else if (hasBody)
         {
             player.SetLinearVelocity({ 0.0f, 0.0f, 0.0f });
         }
+        
+        
 
         // ===== 移動音（フェードアウト付き）=====
         if (auto* sound = SoundManagerEX::GetInstance())

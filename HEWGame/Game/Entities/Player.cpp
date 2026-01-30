@@ -21,7 +21,7 @@ namespace Entities
         m_modelSystem.SyncVisualTransformFromPhysics(*this);
         if (m_input)
         {
-            m_movementSystem.Update(*this, ctx, *m_input);
+            m_movementSystem.Update(*this, m_modelSystem, ctx, *m_input);
         }
         m_pickupSystem.SetFacingSign(m_movementSystem.GetFacingSign());
         m_modelSystem.UpdateAnimation(*this);
