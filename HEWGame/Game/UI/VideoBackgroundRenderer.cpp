@@ -494,6 +494,9 @@ void VideoBackgroundRenderer::Draw(float scrollOffset,
 
 void VideoBackgroundRenderer::DrawInternal()
 {
+    SetDepthTest(false);
+    SetBlendMode(BLEND_ALPHA);
+
     m_vertexShader->WriteBuffer(0, m_matrices);
     m_vertexShader->Bind();
     m_pixelShader->SetTexture(0, m_srv.Get());
@@ -501,6 +504,9 @@ void VideoBackgroundRenderer::DrawInternal()
 
     SetSamplerState(SAMPLER_LINEAR);
     m_quad->Draw();
+
+    SetBlendMode(BLEND_NONE);
+    SetDepthTest(true);
 }
 
 void VideoBackgroundRenderer::Shutdown()
@@ -530,7 +536,8 @@ void VideoBackgroundRenderer::Shutdown()
 
 bool VideoBackgroundRenderer::CreateFullScreenQuad()
 {
-    const DirectX::XMFLOAT4 white(1.0f, 1.0f, 1.0f, 1.0f);
+    constexpr float kVideoAlpha = 0.9f;
+    const DirectX::XMFLOAT4 white(1.0f, 1.0f, 1.0f, kVideoAlpha);
     m_quadVertices = {{
         {{-1.0f,  1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, white},
         {{ 1.0f,  1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, white},
