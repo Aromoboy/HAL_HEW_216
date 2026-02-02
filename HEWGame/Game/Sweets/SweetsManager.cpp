@@ -24,6 +24,25 @@ namespace
         const auto resolved = ::SweetsSpace::SweetsPrototypeManifest::Instance().Resolve(kind);
         return resolved && *resolved == ::SweetsSpace::SweetsType::Cream;
     }
+
+    bool IsWithinCakeStackZone(const ::SweetsSpace::ActiveSweets& sweets, const std::optional<AABB>& cakeBounds)
+    {
+        if (!cakeBounds)
+        {
+            return false;
+        }
+
+        auto* mutableSweets = const_cast<::SweetsSpace::ActiveSweets*>(&sweets);
+        mutableSweets->SyncColliderBounds();
+        const AABB bounds = sweets.GetAABB();
+
+        if (bounds.max.x < cakeBounds->min.x || bounds.min.x > cakeBounds->max.x)
+        {
+            return false;
+        }
+
+        return bounds.min.y >= cakeBounds->max.y;
+    }
 }
 
 namespace SweetsSpace
@@ -136,6 +155,10 @@ namespace SweetsSpace
 
         m_contacts.OnStateChanged(sweets.get(), *previous, state);
         m_spawner.OnStateChanged(sweets, *previous, state);
+        if (state == SweetsState::Stacked && *previous != SweetsState::Stacked)
+        {
+            m_spawner.ReleaseSpawnOriginOnStacked(sweets);
+        }
     }
 
     void SweetsManager::Erase(const std::shared_ptr<ActiveSweets>& sweets)
@@ -224,7 +247,22 @@ namespace SweetsSpace
 
     bool SweetsManager::ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets)
     {
-        return m_lifecycle.ReleaseCarriedSweets(sweets);
+        const bool released = m_lifecycle.ReleaseCarriedSweets(sweets);
+        if (!released || !sweets || sweets->IsPendingDestroy())
+        {
+            return released;
+        }
+
+        if (!IsCreamTag(sweets->GetTag()))
+        {
+            const bool shouldStack = IsAnchoredToCake(*sweets) || IsWithinCakeStackZone(*sweets, m_cakeBounds);
+            if (shouldStack)
+            {
+                SetState(sweets, SweetsState::Stacked);
+            }
+        }
+
+        return released;
     }
 
     void SweetsManager::SetOutOfBoundsSettings(bool despawnEnabled, bool respawnEnabled, float respawnDelaySeconds)
@@ -245,6 +283,11 @@ namespace SweetsSpace
     void SweetsManager::SetWorldBounds(float minX, float maxX, float minY, std::optional<float> margin)
     {
         m_lifecycle.SetWorldBounds(minX, maxX, minY, margin);
+    }
+
+    void SweetsManager::SetCakeBounds(const std::optional<AABB>& bounds)
+    {
+        m_cakeBounds = bounds;
     }
 
     void SweetsManager::SetGeneratedColliderThicknessPadding(float factor)

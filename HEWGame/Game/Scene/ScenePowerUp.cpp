@@ -7,6 +7,8 @@
 #include "TitleScene.h"
 #include "TextureCache.h"
 #include "AppGame.h"
+#include "Timer.h"
+#include "SoundManagerEX.h"
 
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
@@ -14,12 +16,13 @@
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
 #include "Debug.h"
-#include "Save/Save.h"
 
 
 #include <sstream>
 #include <string>
 #include <vector>
+
+extern int s_TitleBGMHandle;
 
 namespace
 {
@@ -44,6 +47,8 @@ namespace SceneSpace
         : m_manager(&manager)
         , m_backUVProgress(0.0f)
         , m_cost(0)
+        , m_timer(5.0f)
+        , m_starTimer(0.2f)
         {
         }
 
@@ -74,11 +79,15 @@ namespace SceneSpace
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("SweetsSpawnSpeed", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_Speed_icon.png");
                 cache.Load("SweetsSpawnQuantity", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_UP_icon.png");
-                cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon.png");
+                cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon _remake.png");
                 cache.Load("Timer", GetDevice(), L"Assets/Texture/upgrade_UI_time_bonus_icon.png");
+                cache.Load("Fairy", GetDevice(), L"Assets/Texture/PowerUpBackFairy.png");
 
                 std::unordered_map<std::string, EffectCreateData> effectDatas;
                 effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
+                effectDatas.try_emplace("Bubble", EffectCreateData(u"Assets/Effect/PowerUpEffect/bubble_effect.efkefc", 0.05f));
+                effectDatas.try_emplace("Fruit", EffectCreateData(u"Assets/Effect/PowerUpEffect/Banana_strawberry_animation.efkefc", 0.5f));
+                effectDatas.try_emplace("Star", EffectCreateData(u"Assets/Effect/PowerUpEffect/star_background.efkefc", 0.175f));
                 m_effectSystem = std::make_unique<EffectSystem>(m_manager->GetEffectRenderer(), m_manager->GetEffectManager(), effectDatas);
                 m_camera = std::make_shared<CameraSpace::PerspectiveCamera>(45.0f);
                 m_rig = std::make_unique<CameraRig>(m_camera);
@@ -98,6 +107,11 @@ namespace SceneSpace
                                 return;
                         }
 
+                        if (auto* soundMgr = SoundManagerEX::GetInstance())
+                        {
+                            soundMgr->PlaySoundEX("Assets/Audio/SE_Purchase.wav", false, 0.7f);
+                        }
+
                         PlayerData::Data& entry = m_playerEntries.front();
                         entry.levels[effectEntry->type] = m_powerUpManager->GetLevel(index);
                         entry.nPoints = m_cost;
@@ -107,7 +121,27 @@ namespace SceneSpace
                 m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input, *m_effectSystem, std::move(onPurchase));
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
 
-                
+                EffectSystem::EffectCreateRequest FruitRequest(
+                    "Fruit",
+                    float3{ 0.55f, -0.3f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                //m_effectSystem->SpawnEffect(FruitRequest);
+
+                EffectSystem::EffectCreateRequest BubbleRequest(
+                    "Bubble",
+                    float3{ -0.6f, -0.2f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                //m_effectSystem->SpawnEffect(BubbleRequest);
+
+                EffectSystem::EffectCreateRequest StarRequest(
+                    "Star",
+                    float3{ 0.0f, 0.0f, 1.0f },
+                    float3{ 0.0f, 0.0f, 0.0f },
+                    0);
+                //m_effectSystem->SpawnEffect(StarRequest);
+
                 m_rig->Attach(m_target);
 
                 LoadPowerUpFile();
@@ -161,9 +195,13 @@ namespace SceneSpace
                         SetActiveCamera(registeredCamera);
                 }
 
-                Save& save = Save::Instance();
-                m_cost = save.GetCost();
-                m_powerUpManager->LoadNodeData(save);
+                if (s_TitleBGMHandle == -1)
+                {
+                    if (auto* soundMgr = SoundManagerEX::GetInstance())
+                    {
+                        s_TitleBGMHandle = soundMgr->PlaySoundEX("Assets/Audio/BGM_Menu.wav", true, 0.5f);
+                    }
+                }
         }
 
         void ScenePowerUp::OnExit()
@@ -256,6 +294,8 @@ namespace SceneSpace
                     m_videoBackground->Update(ctx.dt);
                 }
                 Core::Input* input = GetInput();
+                m_timer.StepTime(ctx.dt);
+                m_starTimer.StepTime(ctx.dt);
                 if (input && input->IsTrigger(Core::ActionId::Cancel))
                 {
                         if (m_manager)
@@ -269,6 +309,32 @@ namespace SceneSpace
                 if (!m_target || !m_cursor || !m_powerUpManager)
                 {
                         return;
+                }
+
+                if (m_effectSystem != nullptr && m_timer.GetCount())
+                {
+                    EffectSystem::EffectCreateRequest BubbleRequest(
+                        "Bubble",
+                        float3{ -0.6f, -0.2f, 1.0f },
+                        float3{ 0.0f, 0.0f, 0.0f },
+                        0);
+                    //m_effectSystem->SpawnEffect(BubbleRequest);
+
+
+
+                }
+                if (m_effectSystem != nullptr && m_starTimer.GetCount())
+                {
+                    float2 pos;
+                    pos.x = std::fmodf((float)rand() / 100.0f, 1.0f) - 0.5f;
+                    pos.y = std::fmodf((float)rand() / 100.0f, 0.5f) - 0.25f;
+
+                    EffectSystem::EffectCreateRequest StarRequest(
+                        "Star",
+                        float3{ pos.x, pos.y, 1.0f },
+                        float3{ 0.0f, 0.0f, 0.0f },
+                        0);
+                    m_effectSystem->SpawnEffect(StarRequest);
                 }
 
                 m_target->MoveTarget(m_cursor->GetDrawPos(), m_powerUpManager->GetNodeDistance());
@@ -291,10 +357,11 @@ namespace SceneSpace
                 }
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpRenderer->DrawCost(m_cost, *activeCamera);
-                m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
-                m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
                 SetDepthTest(true);
                 m_effectSystem->Draw(activeCamera.get());
+                SetDepthTest(false);
+                m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
+                m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
         }
 
         bool ScenePowerUp::LoadPowerUpFile()
@@ -387,6 +454,10 @@ namespace SceneSpace
                 if (m_powerUpRenderer)
                 {
                         m_powerUpRenderer->Shutdown();
+                }
+                if (m_videoBackground)
+                {
+                    m_videoBackground->Shutdown();
                 }
 
                 if (m_rig)

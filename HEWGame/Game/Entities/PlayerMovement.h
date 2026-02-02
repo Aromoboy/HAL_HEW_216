@@ -9,11 +9,12 @@ namespace Core
 namespace Entities
 {
     class Player;
+    class PlayerModel;
 
     class PlayerMovement
     {
     public:
-        void Update(Player& player, const Core::UpdateContext& ctx, Core::Input& input);
+        void Update(Player& player, PlayerModel& a_modelSystem, const Core::UpdateContext& ctx, Core::Input& input);
 
         void SetMoveSpeed(float speed);
         void SetMoveSpeeds(float horizontal, float vertical);

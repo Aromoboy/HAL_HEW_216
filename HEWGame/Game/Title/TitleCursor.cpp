@@ -2,12 +2,13 @@
 #include "Core/Input.h"
 #include "DebugConsole.h"
 #include "Defines.h"
+#include "SoundManagerEX.h"
 #include <iostream>
 
 constexpr float maxMoveSecond = 0.10f;
 constexpr float maxPowerUpSecond = 0.10f;
 constexpr float2 kCursorOffset = { 0.0015f, 0.014f };
-constexpr float2 kTitleCursorDeadZone(0.3f);
+constexpr float2 kTitleCursorDeadZone(0.6f, 0.6f);
 
 TitleCursor::TitleCursor(std::shared_ptr<Texture2D> a_texture, TitleCursor::NodeFormat a_format, Core::Input& input)
 	: m_input(&input)
@@ -61,6 +62,8 @@ bool TitleCursor::IsCursorClick()
 
 void TitleCursor::MoveInput(Core::Input& input)
 {
+	CursorIndex previousIndex = m_index;
+
 	float controllerX = input.GetAxis(Core::ActionId::MoveX);
 	float controllerY = input.GetAxis(Core::ActionId::RotateYaw);
 
@@ -72,14 +75,21 @@ void TitleCursor::MoveInput(Core::Input& input)
 	{
 		m_index = 0;
 	}
-
-	if (controllerY > kTitleCursorDeadZone.y || input.IsPress('W'))
+	else if (controllerY > kTitleCursorDeadZone.y || input.IsPress('W'))
 	{
 		m_index = 2;
 	}
 	else if (controllerY < -kTitleCursorDeadZone.y || input.IsPress('S'))
 	{
 		m_index = 1;
+	}
+
+	if (m_index != previousIndex)
+	{
+		if (auto* soundMgr = SoundManagerEX::GetInstance())
+		{
+			soundMgr->PlaySoundEX("Assets/Audio/SE_Enter.wav", false, 0.5f);
+		}
 	}
 
 }

@@ -13,6 +13,7 @@
 #if defined(_WIN32)
 #include <windows.h>
 #include <array>
+
 #endif
 
 
@@ -85,7 +86,7 @@ public:
     bool Initialize(const ResultLayoutConfig& config);
     void Shutdown();
     void Draw(const ResultDisplayData& data);
-    void Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size);
+    void Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size, float3 color = { 1.0f, 1.0f, 1.0f }, float alpha = { 1.0f }, float2 uvPos = {0.0f, 0.0f}, float2 uvScale = {1.0f, 1.0f});
 
 private:
     class DynamicTexture;

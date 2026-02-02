@@ -30,6 +30,9 @@ void GameplayRulesSystem::ResetSession()
     m_peakTowerHeight = 0.0f;
     m_maxTowerHeight = 0.0f;
     m_phaseUpCount = 0;
+    //スコア
+    m_scoreState = GameplayRules::ScoreState{};
+
     m_isGameClear = false;
     m_pendingTimeBonuses.clear();
 }
@@ -111,6 +114,12 @@ GameplayRulesSystem::UpdateResult GameplayRulesSystem::Update(const UpdateInput&
     m_phaseUpCount = towerTelemetryResult.state.phaseUpCount;
     m_isGameClear = towerTelemetryResult.state.isGameClear;
 
+    //フェーズ到達時にスコア確定
+    if (towerTelemetryResult.phaseAdvanced)
+    {
+        ComputeScore(input.phaseManager);
+    }
+
     UpdateResult result{};
     result.timeUp = countdownResult.timeUp;
     result.phaseAdvanced = towerTelemetryResult.phaseAdvanced;
@@ -119,13 +128,17 @@ GameplayRulesSystem::UpdateResult GameplayRulesSystem::Update(const UpdateInput&
     return result;
 }
 
+//int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager)
+//{
+////    return ComputeScore(phaseManager, m_peakTowerHeight);
+//    return ComputeScore(phaseManager);
+//}
+
+//int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager, float peakHeight)
 int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager)
 {
-    return ComputeScore(phaseManager, m_peakTowerHeight);
-}
+    //m_scoreState.peakTowerHeight = peakHeight;
 
-int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager, float peakHeight)
-{
     const GameplayRules::ScoreInput scoreInput{
         phaseManager,
         m_baseScorePerMeter,
@@ -133,14 +146,21 @@ int GameplayRulesSystem::ComputeScore(GameFlow::PhaseManager* phaseManager, floa
         m_log,
         m_logPrefix
     };
-    GameplayRules::ScoreState scoreState{
-        peakHeight,
-        m_lastScoreLogValue,
-        m_lastScoreLogMultiplier
-    };
-    GameplayRules::ScoreResult scoreResult = GameplayRules::ComputeScore(scoreInput, scoreState);
-    m_lastScoreLogValue = scoreResult.state.lastScoreLogValue;
-    m_lastScoreLogMultiplier = scoreResult.state.lastScoreLogMultiplier;
+
+    GameplayRules::ScoreResult scoreResult =
+        GameplayRules::ComputeScore(scoreInput, m_scoreState);
+    //GameplayRules::ScoreState scoreState{
+    //    peakHeight,
+    //    m_lastScoreLogValue,
+    //    m_lastScoreLogMultiplier
+    //};
+    //GameplayRules::ScoreResult scoreResult = GameplayRules::ComputeScore(scoreInput, scoreState);
+    //m_lastScoreLogValue = scoreResult.state.lastScoreLogValue;
+    //m_lastScoreLogMultiplier = scoreResult.state.lastScoreLogMultiplier;
+    
+    //状態を保存
+    m_scoreState = scoreResult.state;
+    
     return scoreResult.score;
 }
 
@@ -182,4 +202,9 @@ int GameplayRulesSystem::GetPhaseUpCount() const
 bool GameplayRulesSystem::IsGameClear() const
 {
     return m_isGameClear;
+}
+
+int GameplayRulesSystem::GetCurrentScore() const
+{
+    return m_scoreState.accumulatedPhaseBonus;
 }

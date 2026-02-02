@@ -52,6 +52,8 @@ namespace SweetsSpace
         int GetStackedInBatch() const;
 
         void OnStateChanged(const std::shared_ptr<ActiveSweets>& sweets, SweetsState previousState, SweetsState newState);
+        void OnSweetsStacked(const std::shared_ptr<ActiveSweets>& sweets);
+        void ReleaseSpawnOriginOnStacked(const std::shared_ptr<ActiveSweets>& sweets);
         void OnSweetsRemoved(const std::shared_ptr<ActiveSweets>& sweets, int remainingToStack, int liveAfterRemoval, const char* context);
 
     private:
@@ -89,7 +91,7 @@ namespace SweetsSpace
         int SpawnInitialPerPoint(int perPoint);
         void ResetSpawnOriginTracking();
         void RegisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets, const SpawnOriginSelection& selection);
-        void UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets);
+        bool UnregisterSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets);
         void EnsureRegisteredWeights(SpawnTuningConfig& config,
             const std::unordered_set<std::string>& registeredKindsNormalized,
             const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const;

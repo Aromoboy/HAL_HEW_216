@@ -15,9 +15,12 @@ namespace GameplayRules
 
     struct ScoreState
     {
-        float peakTowerHeight = 0.0f;
-        int lastScoreLogValue = 0;
-        float lastScoreLogMultiplier = 0.0f;
+//        float peakTowerHeight = 0.0f;
+//        int lastScoreLogValue = 0;
+//        float lastScoreLogMultiplier = 0.0f;
+
+        int accumulatedPhaseBonus = 0;
+        int lastCountedPhase = 0;
     };
 
     struct ScoreInput

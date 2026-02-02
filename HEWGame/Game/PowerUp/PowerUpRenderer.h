@@ -214,6 +214,7 @@ private:
 	std::shared_ptr<Texture2D> m_iconFrame;
 	std::shared_ptr<Texture2D> m_backFrame;
 	std::shared_ptr<Texture2D> m_background;
+	std::shared_ptr<Texture2D> m_fairy;
 
 	// 文字描画用関数
 	bool CreateTextResources();

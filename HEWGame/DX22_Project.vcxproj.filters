@@ -936,9 +936,6 @@
     <ClCompile Include="Game\Title\TitleCursor.cpp">
       <Filter>Game\Title</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Title\TitleManager.cpp">
-      <Filter>Game\Title</Filter>
-    </ClCompile>
     <ClCompile Include="SceneResult.cpp">
       <Filter>Game\UI</Filter>
     </ClCompile>
@@ -967,25 +964,28 @@
     <ClInclude Include="Game\Title\TitleCursor.h">
       <Filter>Game\Title</Filter>
     </ClInclude>
+    <ClInclude Include="Game\PowerUp\PowerUpNode.h">
+      <Filter>Game\PowerUp</Filter>
+    </ClInclude>
+	  <ClInclude Include="Game\Save\Save.h">
+		  <Filter>Game\Save</Filter>
+	  </ClInclude>
+	  <ClInclude Include="Game\Save\PlayerData.h">
+		  <Filter>Game\Save</Filter>
+	  </ClInclude>
+	  <ClInclude Include="SceneResult.h">
+		  <Filter>Game\UI</Filter>
+	  </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Title\TitleCursor.h">
+      <Filter>Game\Title</Filter>
+    </ClInclude>
     <ClInclude Include="Game\Title\TitleManager.h">
       <Filter>Game\Title</Filter>
     </ClInclude>
     <ClInclude Include="Game\PowerUp\PowerUpNode.h">
       <Filter>Game\PowerUp</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Save\Save.h">
-      <Filter>Game\Save</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Save\PlayerData.h">
-      <Filter>Game\Save</Filter>
-    </ClInclude>
   </ItemGroup>
-	<ItemGroup>
-		<ClInclude Include="SceneResult.h">
-			<Filter>Game\UI</Filter>
-		</ClInclude>
-		<ClInclude Include="Game\Title\TitleManager.h">
-			<Filter>Game\Title</Filter>
-		</ClInclude>
-	</ItemGroup>
 </Project>

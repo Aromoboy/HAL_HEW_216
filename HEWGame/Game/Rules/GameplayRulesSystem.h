@@ -63,7 +63,8 @@ public:
     float GetMaxTowerHeight() const;
     int GetPhaseUpCount() const;
     bool IsGameClear() const;
-
+    //‚·‚±‚ 
+    int GetCurrentScore() const;
 private:
     float m_defaultPlaySeconds = 0.0f;
     float m_countdownLogIntervalSeconds = 0.0f;
@@ -86,4 +87,9 @@ private:
 
     int m_lastScoreLogValue = std::numeric_limits<int>::min();
     float m_lastScoreLogMultiplier = std::numeric_limits<float>::quiet_NaN();
+
+    GameplayRules::ScoreState m_scoreState;
+    //‚©‚­‚Ä‚¢‚½‚©‚³
+    float m_approvedPeakHeight = 0.0f;
+    
 };

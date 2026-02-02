@@ -1,5 +1,4 @@
-﻿//なんでマージしないのー？
-#include "Transform.h"
+﻿#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
@@ -590,6 +589,41 @@ bool SceneGame::Load(Core::Input& input)
     m_stageObjects = std::move(composition->stageObjects);
     m_stageObjectsInitial = m_stageObjects;
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    if (m_sweetsManager)
+    {
+        std::optional<AABB> cakeBounds;
+        for (const auto& obj : m_stageObjects)
+        {
+            if (!IsCakeStageObject(obj))
+            {
+                continue;
+            }
+
+            const auto& physicsEntity = obj.physicsEntity;
+            if (!physicsEntity)
+            {
+                continue;
+            }
+
+            physicsEntity->SyncColliderBounds();
+            const AABB bounds = physicsEntity->GetAABB();
+            if (!cakeBounds)
+            {
+                cakeBounds = bounds;
+            }
+            else
+            {
+                cakeBounds->min.x = std::min(cakeBounds->min.x, bounds.min.x);
+                cakeBounds->min.y = std::min(cakeBounds->min.y, bounds.min.y);
+                cakeBounds->min.z = std::min(cakeBounds->min.z, bounds.min.z);
+                cakeBounds->max.x = std::max(cakeBounds->max.x, bounds.max.x);
+                cakeBounds->max.y = std::max(cakeBounds->max.y, bounds.max.y);
+                cakeBounds->max.z = std::max(cakeBounds->max.z, bounds.max.z);
+            }
+        }
+
+        m_sweetsManager->SetCakeBounds(cakeBounds);
+    }
     ApplyPowerUpEffects(m_playerPowerUpData);
 
 #if defined(_DEBUG)
@@ -646,11 +680,13 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
     }
     RootUpdate(timer, input);
 
-    if (m_pendingRetryReset)
-    {
-        m_pendingRetryReset = false;
-        SetStageState(StageState::Playing);
-    }
+
+
+    //if (m_pendingRetryReset)
+    //{
+    //    m_pendingRetryReset = false;
+    //    SetStageState(StageState::Playing);
+    //}
 }
 
 void SceneGame::Draw()
@@ -775,21 +811,21 @@ void SceneGame::OnEnter()
     oss << kLogPrefix << "Enter scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 
-    if (SoundManagerEX::GetInstance())
-    {
-        m_gameBGMHandle = SoundManagerEX::GetInstance()->PlaySoundEX(
-            "Assets/Audio/BGM_MainGame.wav", true, 0.4f);
-    }
-
     for (int i = 0; i <= 3; ++i)
     {
         m_countdownTextures[i] = std::make_shared<Texture>();
     }
 
-    m_countdownTextures[0]->Create("Assets/Texture/start.png", true);
+    m_countdownTextures[0]->Create("Assets/Texture/start_remake.png", true);
     m_countdownTextures[1]->Create("Assets/Texture/1-1.png", true);
     m_countdownTextures[2]->Create("Assets/Texture/2-1.png", true);
     m_countdownTextures[3]->Create("Assets/Texture/3-1.png", true);
+    m_finishTexture = std::make_shared<Texture>();
+    m_finishTexture->Create("Assets/Texture/Finish_remake.png", true);
+    m_whistleTimer = 0.0f;
+    m_whistlePlayed = false;
+    m_bgmStarted = false;
+    m_gameBGMHandle = -1;
 }
 
 void SceneGame::OnExit()
@@ -934,14 +970,6 @@ SceneGame::SceneGame(SceneSpace::SceneManager& a_manager)
     , m_playerController(DebugTrace, kLogPrefix)
     , m_manager(&a_manager)
 {
-    auto* soundMgr = SoundManagerEX::GetInstance();
-    if (soundMgr)
-    {
-        m_gameBGMHandle = soundMgr->PlaySoundEX("Assets/Sound/BGM_Game.wav",  
-            true,   // ループ
-            0.4f    // 音量
-        );
-    }
 }
 
 SceneGame::~SceneGame()
@@ -1155,7 +1183,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
+    /*const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
     const GameplayRulesSystem::UpdateInput rulesInput{
         isPlaying,
         ctx.dt,
@@ -1166,10 +1194,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
     if (rulesResult.timeUp && m_stageState == StageState::Playing)
     {
+        if (auto* soundMgr = SoundManagerEX::GetInstance())
+        {
+            soundMgr->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
+        }
         SetStageState(StageState::TimeUp);
-
-     
-       
+        OnStageResult();
+        m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_gameplayRules.ComputeScore(&m_phaseManager)));
         return;
 
 
@@ -1179,7 +1210,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
-    }
+    }*/
+    
     m_guidelineSystem.TickCooldowns(ctx.dt);
 
 #if defined(_DEBUG)
@@ -1245,7 +1277,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         Core::Input* input = GetInput();
 
-        // --- カウントダウン処理 ---
+        // カウントダウン
         if (!m_gameStarted)
         {
             m_startCountdownTimer += ctx.dt;
@@ -1256,23 +1288,78 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
                 if (m_startCountdownNumber > 1)
                 {
-                    m_startCountdownNumber--; // 3→2→1
+                    m_startCountdownNumber--;
+                    if (auto* sm = SoundManagerEX::GetInstance())
+                        sm->PlaySoundEX("Assets/Audio/SE_CountDown.wav", false, 0.7f);
                 }
                 else if (m_startCountdownNumber == 1)
                 {
-                    m_startCountdownNumber = 0; // 数字は終了
-                    m_showStartImage = true;    // start を表示
+                    m_startCountdownNumber = 0;
+                    m_showStartImage = true;
+
+                    if (!m_whistlePlayed)
+                    {
+                        if (auto* sm = SoundManagerEX::GetInstance())
+                            sm->PlaySoundEX("Assets/Audio/SE_Start.wav", false, 0.7f);
+
+                        m_whistlePlayed = true;
+                        m_whistleTimer = 0.0f;
+                    }
                 }
                 else if (m_showStartImage)
                 {
-                    m_showStartImage = false;    // start 表示終了
-                    m_gameStarted = true;        // ゲーム本編開始
-                    ToggleGameplaySystems(true); // プレイヤーやスイーツ動かす
+                    m_showStartImage = false;
+                    m_gameStarted = true;
+                    ToggleGameplaySystems(true);
                 }
             }
 
-            return; // カウントダウン中はここで Update を終了
+            return;
         }
+
+        const GameplayRulesSystem::UpdateInput rulesInput{
+            m_gameStarted,
+            ctx.dt,
+            m_sweetsManager.get(),
+            &m_phaseManager,
+            m_clearPhaseCount
+        };
+        const GameplayRulesSystem::UpdateResult rulesResult =
+            m_gameplayRules.Update(rulesInput);
+        m_realtimeScore = m_gameplayRules.GetCurrentScore();
+
+        if (rulesResult.timeUp)
+        {
+            if (auto* sm = SoundManagerEX::GetInstance())
+                sm->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
+
+            SetStageState(StageState::TimeUp);
+            EnsureResultSaved();
+            OnStageResult();
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_gameplayRules.ComputeScore(&m_phaseManager)));
+            return;
+        }
+
+        if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
+        {
+            UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
+            BroadcastPhaseAdvance(rulesResult.currentPhase);
+        }
+
+        if (m_whistlePlayed && !m_bgmStarted)
+        {
+            m_whistleTimer += ctx.dt;
+            if (m_whistleTimer >= 0.8f)
+            {
+                if (auto* sm = SoundManagerEX::GetInstance())
+                    m_gameBGMHandle =
+                    sm->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.6f);
+
+                m_bgmStarted = true;
+            }
+        }
+
+// --- タイムアップ判定 ---
 
         if (input)
         {
@@ -1312,6 +1399,16 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_gameplayRules.AddPendingBonuses(std::move(guidelineResult.pendingBonuses));
         if (guidelineResult.guidelineAdvanced)
         {
+          //  const int scorePerPhase = 200;
+            
+          //  m_isScoreCounting = true;
+         //   m_scoreToAddRemaining += scorePerPhase;
+
+            if (auto* soundMgr = SoundManagerEX::GetInstance())
+            {
+                soundMgr->PlaySoundEX("Assets/Audio/SE_PhaseUp.wav", false, 0.8f);
+            }
+
             const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
             m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
@@ -1337,11 +1434,43 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
                     }
                 }
+
+
             }
         }
+        //+200 スコア入った時徐々に増える
+        //if (m_isScoreCounting)
+        //{
+        //    const float addInterval = 0.01f;
+        //    m_scoreAddTimer += ctx.dt;
+
+        //    while (m_scoreAddTimer >= addInterval && m_scoreToAddRemaining > 0)
+        //    {
+        //        m_scoreAddTimer -= addInterval;
+        //        m_realtimeScore += 1;
+        //        m_scoreToAddRemaining -= 1;
+        //    }
+        //    if (m_scoreToAddRemaining <= 0)
+        //    {
+        //        m_isScoreCounting = false;
+        //        m_scoreAddTimer = 0.0;
+        //    }
+        //}
+
         break;
     }
     case StageState::TimeUp:
+        SetStageState(StageState::Finish);
+        m_finishTimer = 0.0f;   // Finish演出用タイマー初期化
+        break;
+    case StageState::Finish:
+        m_finishTimer += ctx.dt;
+        // FINISHを表示してからリザルトへ
+        if (m_finishTimer >= 2.0f)
+        {
+            SetStageState(StageState::ShowingResult);
+        }
+        break;
     case StageState::Cleared:
         SetStageState(StageState::ShowingResult);
         break;
@@ -1360,7 +1489,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     if (m_stageState == StageState::ShowingResult)
     {
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+//       const int score = m_gameplayRules.ComputeScore(&m_phaseManager,m_lastApprovePeakHeight);
+//        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        const int score = m_gameplayRules.GetCurrentScore();
         const auto action = input ? m_playerController.HandlePostGameMenuInput(*input, peakHeight, score, m_resultState)
             : PlayerController::PostGameAction::None;
         switch (action)
@@ -1398,11 +1529,14 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float remainingSeconds = std::max(0.0f, m_gameplayRules.GetRemainingCountdownSeconds());
         const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
-        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+        const int score = m_gameplayRules.GetCurrentScore();
+//        const int score = m_gameplayRules.ComputeScore(&m_phaseManager);
+//        const int score = m_gameplayRules.ComputeScore(&m_phaseManager, m_lastApprovePeakHeight);
         uiData.hud.remainingSeconds = remainingSeconds;
         uiData.hud.currentHeight = currentHeight;
         uiData.hud.peakHeight = peakHeight;
         uiData.hud.score = score;
+    //    uiData.hud.score = m_realtimeScore;
         uiData.hud.sweetsCount = GetSweetsCount();
         uiData.hud.timeUp = isTimeUp;
         uiData.hud.moveSpeedMultiplier = m_playerSpeedMultiplier;
@@ -1429,6 +1563,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         uiData.result.currentHeight = currentHeight;
         uiData.result.peakHeight = peakHeight;
         uiData.result.score = score;
+      //  uiData.hud.score = m_realtimeScore;
         uiData.result.sweetsCount = GetSweetsCount();
         uiData.result.timeUp = isTimeUp;
         uiData.result.moveSpeedMultiplier = m_playerSpeedMultiplier;
@@ -2031,10 +2166,23 @@ void SceneGame::DrawOverlay()
         Sprite::SetOffset({ 0.0f, 0.0f }); 
         Sprite::SetSize({ 1.0f, 1.0f });   
         Sprite::SetColor({ 1,1,1,1 });
-
         Sprite::Draw();
     }
-    
+
+    // FINISH表示
+    if (m_stageState == StageState::Finish)
+    {
+        Sprite::ScopedPassDefaults guard;
+
+        Sprite::SetTexture(m_finishTexture.get());
+
+        // 画面中央に表示
+        Sprite::SetOffset({ 0.0f, 0.0f });
+        Sprite::SetSize({ 1.0f, 1.0f }); 
+        Sprite::SetColor({ 1,1,1,1 });
+        Sprite::Draw();
+    }
+
 #if defined(_DEBUG)
 #endif
 }
@@ -2365,15 +2513,18 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
+
+    m_whistlePlayed = false;
+    m_whistleTimer = 0.0f;
+    m_bgmStarted = false;
+
     m_resultFinalized = false;
     m_resultSaved = false;
 
-    // カウントダウン開始
-    m_startCountdownNumber = 3;   // 秒数
+    m_startCountdownNumber = 3;
     m_startCountdownTimer = 0.0f;
     m_gameStarted = false;
 
-    // この時点ではプレイヤーやスイーツは止めておく
     ToggleGameplaySystems(false);
 }
 
@@ -2571,6 +2722,7 @@ void SceneGame::ResetPlaySession()
     }
 
     m_gameplayRules.ResetSession();
+    m_realtimeScore = m_gameplayRules.GetCurrentScore();
     m_guidelineSystem.ResetSession();
     ResetGuidelineHeight();
     ToggleGameplaySystems(true);
