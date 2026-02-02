@@ -37,5 +37,5 @@ float4 PS(v2f input) : SV_Target {
   float y = txYUV.Sample(samLinear, float2(input.Tex.x, input.Tex.y * 0.5)).r;
   float u = txYUV.Sample(samLinear, float2(input.Tex.x * 0.5, 0.50 + input.Tex.y * 0.25)).r;
   float v = txYUV.Sample(samLinear, float2(input.Tex.x * 0.5, 0.75 + input.Tex.y * 0.25)).r;
-  return float4(YUVToRGB(float3(y,u,v)), 1.f);
+  return float4(YUVToRGB(float3(y, u, v)), 1.0f) * input.Color;
 }
