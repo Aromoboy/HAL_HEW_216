@@ -91,6 +91,7 @@ namespace
         constexpr float kDefaultVideoBackgroundParallax = 0.0001f;
         constexpr float kDefaultVideoBackgroundBaseOffset01 = 4.00f;
         constexpr bool kDefaultVideoBackgroundInvertScroll = false;
+        constexpr const char* kGameVideoBackgroundPath = "Assets/Video/Game.mp4";
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
             settings.fixedPosition = false;
@@ -155,30 +156,6 @@ namespace
             }
 
             return NormalizeStageKey(key);
-        }
-
-        bool IsVideoBackgroundPath(const std::string& path)
-        {
-            if (path.empty())
-            {
-                return false;
-            }
-
-            std::string ext;
-            try
-            {
-                ext = std::filesystem::path(path).extension().string();
-            }
-            catch (...)
-            {
-                return false;
-            }
-
-            std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char ch)
-                {
-                    return static_cast<char>(std::tolower(ch));
-                });
-            return ext == ".mp4";
         }
 
         bool IsCakeStageObject(const StageObject& obj)
@@ -509,15 +486,13 @@ bool SceneGame::Load(Core::Input& input)
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
     m_videoBackgroundRenderer.reset();
-    const std::string backgroundPath = m_stageData.GetBackgroundTexturePath();
-    if (IsVideoBackgroundPath(backgroundPath))
     {
         VideoBackgroundRenderer::ShaderPaths shaderPaths{
             "Assets/shaders/video_vs.cso",
             "Assets/shaders/video_ps.cso"
         };
         m_videoBackgroundRenderer = std::make_unique<VideoBackgroundRenderer>();
-        if (!m_videoBackgroundRenderer->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundPath))
+        if (!m_videoBackgroundRenderer->Initialize(GetDevice(), GetContext(), shaderPaths, kGameVideoBackgroundPath))
         {
             DebugTrace(std::string(kLogPrefix) + "Video background renderer failed to initialize.\n");
             m_videoBackgroundRenderer.reset();
@@ -1030,6 +1005,11 @@ SceneGame::~SceneGame()
     {
         m_uiOverlay->Shutdown();
         m_uiOverlay.reset();
+    }
+    if (m_videoBackgroundRenderer)
+    {
+        m_videoBackgroundRenderer->Shutdown();
+        m_videoBackgroundRenderer.reset();
     }
 
     if (m_physicsBinder)
