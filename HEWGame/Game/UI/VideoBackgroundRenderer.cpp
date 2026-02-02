@@ -446,6 +446,24 @@ void VideoBackgroundRenderer::Draw(float scrollOffset,
     float baseOffset01,
     bool invertScroll)
 {
+    Draw(
+        scrollOffset,
+        pixelsPerUnit,
+        viewportSize.x,
+        viewportSize.y,
+        parallaxFactor,
+        baseOffset01,
+        invertScroll);
+}
+
+void VideoBackgroundRenderer::Draw(float scrollOffset,
+    float pixelsPerUnit,
+    float viewportWidth,
+    float viewportHeight,
+    float parallaxFactor,
+    float baseOffset01,
+    bool invertScroll)
+{
     if (!m_ready || !m_quad || !m_vertexShader || !m_pixelShader || !m_srv)
     {
         return;
@@ -453,15 +471,15 @@ void VideoBackgroundRenderer::Draw(float scrollOffset,
 
     DirectX::XMFLOAT2 uvOffset{ 0.0f, 0.0f };
     DirectX::XMFLOAT2 uvScale{ 1.0f, 1.0f };
-    if (viewportSize.x > 0.0f && viewportSize.y > 0.0f && m_frameWidth > 0 && m_frameHeight > 0)
+    if (viewportWidth > 0.0f && viewportHeight > 0.0f && m_frameWidth > 0 && m_frameHeight > 0)
     {
         const float scrollDirection = invertScroll ? -1.0f : 1.0f;
         const float adjustedScrollOffset = scrollDirection * scrollOffset;
         const BackgroundUV::UVWindow window = BackgroundUV::ComputeVerticalUVWindow(
             static_cast<float>(m_frameWidth),
             static_cast<float>(m_frameHeight),
-            viewportSize.x,
-            viewportSize.y,
+            viewportWidth,
+            viewportHeight,
             adjustedScrollOffset,
             parallaxFactor,
             baseOffset01,

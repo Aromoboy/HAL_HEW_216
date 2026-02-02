@@ -2065,7 +2065,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             m_videoBackgroundRenderer->Draw(
                 scrollOffsetUsedForBackground,
                 pixelsPerUnit,
-                backgroundViewport,
+                backgroundViewport.x,
+                backgroundViewport.y,
                 kDefaultVideoBackgroundParallax,
                 kDefaultVideoBackgroundBaseOffset01,
                 kDefaultVideoBackgroundInvertScroll);

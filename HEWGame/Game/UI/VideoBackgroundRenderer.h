@@ -38,6 +38,13 @@ public:
         float parallaxFactor,
         float baseOffset01,
         bool invertScroll);
+    void Draw(float scrollOffset,
+        float pixelsPerUnit,
+        float viewportWidth,
+        float viewportHeight,
+        float parallaxFactor,
+        float baseOffset01,
+        bool invertScroll);
     void Shutdown();
 
 private:
