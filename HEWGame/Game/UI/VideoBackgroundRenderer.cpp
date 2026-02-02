@@ -1,8 +1,11 @@
 #include "VideoBackgroundRenderer.h"
 
+#include "UI/BackgroundUVUtil.h"
+
 #include <array>
 #include <cassert>
 #include <cstring>
+#include <cmath>
 #include <sstream>
 
 #include "DirectX.h"
@@ -432,6 +435,47 @@ void VideoBackgroundRenderer::Draw()
         return;
     }
 
+    UpdateQuadUV({ 0.0f, 0.0f }, { 1.0f, 1.0f });
+    DrawInternal();
+}
+
+void VideoBackgroundRenderer::Draw(float scrollOffset,
+    float pixelsPerUnit,
+    const DirectX::XMFLOAT2& viewportSize,
+    float parallaxFactor,
+    float baseOffset01,
+    bool invertScroll)
+{
+    if (!m_ready || !m_quad || !m_vertexShader || !m_pixelShader || !m_srv)
+    {
+        return;
+    }
+
+    DirectX::XMFLOAT2 uvOffset{ 0.0f, 0.0f };
+    DirectX::XMFLOAT2 uvScale{ 1.0f, 1.0f };
+    if (viewportSize.x > 0.0f && viewportSize.y > 0.0f && m_frameWidth > 0 && m_frameHeight > 0)
+    {
+        const float scrollDirection = invertScroll ? -1.0f : 1.0f;
+        const float adjustedScrollOffset = scrollDirection * scrollOffset;
+        const BackgroundUV::UVWindow window = BackgroundUV::ComputeVerticalUVWindow(
+            static_cast<float>(m_frameWidth),
+            static_cast<float>(m_frameHeight),
+            viewportSize.x,
+            viewportSize.y,
+            adjustedScrollOffset,
+            parallaxFactor,
+            baseOffset01,
+            pixelsPerUnit);
+        uvOffset = { window.u0, window.v0 };
+        uvScale = { window.scaleX, window.scaleY };
+    }
+
+    UpdateQuadUV(uvOffset, uvScale);
+    DrawInternal();
+}
+
+void VideoBackgroundRenderer::DrawInternal()
+{
     m_vertexShader->WriteBuffer(0, m_matrices);
     m_vertexShader->Bind();
     m_pixelShader->SetTexture(0, m_srv.Get());
@@ -450,6 +494,9 @@ void VideoBackgroundRenderer::Shutdown()
     m_srv.Reset();
     m_texture.Reset();
     m_decoder.reset();
+    m_hasCustomUV = false;
+    m_uvOffset = { 0.0f, 0.0f };
+    m_uvScale = { 1.0f, 1.0f };
 
     if (m_mfStarted)
     {
@@ -465,28 +512,21 @@ void VideoBackgroundRenderer::Shutdown()
 
 bool VideoBackgroundRenderer::CreateFullScreenQuad()
 {
-    struct Vertex
-    {
-        DirectX::XMFLOAT4 pos;
-        DirectX::XMFLOAT2 tex;
-        DirectX::XMFLOAT4 color;
-    };
-
     const DirectX::XMFLOAT4 white(1.0f, 1.0f, 1.0f, 1.0f);
-    Vertex vertices[] = {
+    m_quadVertices = {{
         {{-1.0f,  1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, white},
         {{ 1.0f,  1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, white},
         {{-1.0f, -1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, white},
         {{ 1.0f,  1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, white},
         {{ 1.0f, -1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, white},
         {{-1.0f, -1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, white},
-    };
+    }};
 
     MeshBuffer::Description desc{};
-    desc.pVtx = vertices;
-    desc.vtxSize = sizeof(Vertex);
-    desc.vtxCount = static_cast<UINT>(std::size(vertices));
-    desc.isWrite = false;
+    desc.pVtx = m_quadVertices.data();
+    desc.vtxSize = sizeof(QuadVertex);
+    desc.vtxCount = static_cast<UINT>(m_quadVertices.size());
+    desc.isWrite = true;
     desc.pIdx = nullptr;
     desc.idxSize = 0;
     desc.idxCount = 0;
@@ -498,6 +538,50 @@ bool VideoBackgroundRenderer::CreateFullScreenQuad()
         return false;
     }
     return SUCCEEDED(m_quad->Create(desc));
+}
+
+void VideoBackgroundRenderer::UpdateQuadUV(const DirectX::XMFLOAT2& uvOffset, const DirectX::XMFLOAT2& uvScale)
+{
+    if (!m_quad)
+    {
+        return;
+    }
+
+    constexpr float kEpsilon = 1e-6f;
+    const auto nearlyEqual = [](float a, float b)
+    {
+        return std::abs(a - b) <= kEpsilon;
+    };
+
+    if (m_hasCustomUV
+        && nearlyEqual(m_uvOffset.x, uvOffset.x)
+        && nearlyEqual(m_uvOffset.y, uvOffset.y)
+        && nearlyEqual(m_uvScale.x, uvScale.x)
+        && nearlyEqual(m_uvScale.y, uvScale.y))
+    {
+        return;
+    }
+
+    m_uvOffset = uvOffset;
+    m_uvScale = uvScale;
+    m_hasCustomUV = true;
+
+    static const DirectX::XMFLOAT2 kBaseUVs[6] = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {0.0f, 1.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f},
+    };
+
+    for (size_t i = 0; i < m_quadVertices.size(); ++i)
+    {
+        m_quadVertices[i].tex.x = kBaseUVs[i].x * uvScale.x + uvOffset.x;
+        m_quadVertices[i].tex.y = kBaseUVs[i].y * uvScale.y + uvOffset.y;
+    }
+
+    m_quad->Write(m_quadVertices.data());
 }
 
 bool VideoBackgroundRenderer::LoadShaders(const ShaderPaths& shader)

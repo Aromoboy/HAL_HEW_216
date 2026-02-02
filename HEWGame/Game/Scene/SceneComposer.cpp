@@ -1,8 +1,10 @@
 ﻿#include "SceneComposer.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
 #include <iomanip>
 #include <limits>
 #include <optional>
@@ -78,6 +80,30 @@ namespace
         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
         DirectX::XMFLOAT4(1.0f, 0.55f, 0.25f, 1.0f)
     };
+
+    bool IsVideoBackgroundPath(const std::string& path)
+    {
+        if (path.empty())
+        {
+            return false;
+        }
+
+        std::string ext;
+        try
+        {
+            ext = std::filesystem::path(path).extension().string();
+        }
+        catch (...)
+        {
+            return false;
+        }
+
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char ch)
+            {
+                return static_cast<char>(std::tolower(ch));
+            });
+        return ext == ".mp4";
+    }
 }
 
 SceneComposer::SceneComposer(Core::UpdateScheduler& scheduler)
@@ -525,6 +551,12 @@ void SceneComposer::ComposeUI(Composition& result)
     const std::string backgroundTexture = result.stageData.GetBackgroundTexturePath();
     if (!backgroundTexture.empty())
     {
+        if (IsVideoBackgroundPath(backgroundTexture))
+        {
+            DebugTrace(std::string(kLogPrefix) + "Background path points to a video; texture background renderer skipped.\n");
+        }
+        else
+        {
         // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
         constexpr float kDefaultBackgroundParallax = 0.0001f;
         BackgroundRendererConfig backgroundConfig{};
@@ -543,6 +575,7 @@ void SceneComposer::ComposeUI(Composition& result)
             oss << kLogPrefix << "Background renderer failed for texture '" << backgroundTexture << "'.\n";
             DebugTrace(oss.str());
             result.backgroundRenderer.reset();
+        }
         }
     }
     else

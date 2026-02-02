@@ -88,6 +88,9 @@ namespace
         constexpr float kScoreToPointsMultiplier = 1.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr float kDefaultVideoBackgroundParallax = 0.0001f;
+        constexpr float kDefaultVideoBackgroundBaseOffset01 = 4.00f;
+        constexpr bool kDefaultVideoBackgroundInvertScroll = false;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
             settings.fixedPosition = false;
@@ -152,6 +155,30 @@ namespace
             }
 
             return NormalizeStageKey(key);
+        }
+
+        bool IsVideoBackgroundPath(const std::string& path)
+        {
+            if (path.empty())
+            {
+                return false;
+            }
+
+            std::string ext;
+            try
+            {
+                ext = std::filesystem::path(path).extension().string();
+            }
+            catch (...)
+            {
+                return false;
+            }
+
+            std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char ch)
+                {
+                    return static_cast<char>(std::tolower(ch));
+                });
+            return ext == ".mp4";
         }
 
         bool IsCakeStageObject(const StageObject& obj)
@@ -481,6 +508,25 @@ bool SceneGame::Load(Core::Input& input)
     }
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
+    m_videoBackgroundRenderer.reset();
+    const std::string backgroundPath = m_stageData.GetBackgroundTexturePath();
+    if (IsVideoBackgroundPath(backgroundPath))
+    {
+        VideoBackgroundRenderer::ShaderPaths shaderPaths{
+            "Assets/shaders/video_vs.cso",
+            "Assets/shaders/video_ps.cso"
+        };
+        m_videoBackgroundRenderer = std::make_unique<VideoBackgroundRenderer>();
+        if (!m_videoBackgroundRenderer->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundPath))
+        {
+            DebugTrace(std::string(kLogPrefix) + "Video background renderer failed to initialize.\n");
+            m_videoBackgroundRenderer.reset();
+        }
+        else
+        {
+            m_backgroundRenderer.reset();
+        }
+    }
     m_blobShadowRenderer = std::make_unique<BlobShadowRenderer>();
     if (m_blobShadowRenderer)
     {
@@ -955,6 +1001,12 @@ void SceneGame::OnExit()
         m_gameBGMHandle = -1;
     }
 
+    if (m_videoBackgroundRenderer)
+    {
+        m_videoBackgroundRenderer->Shutdown();
+        m_videoBackgroundRenderer.reset();
+    }
+
 
 
     std::ostringstream oss;
@@ -1178,6 +1230,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     HandleColliderDebugCommands(ctx);
 #endif
     Core::Input* input = GetInput();
+
+    if (m_videoBackgroundRenderer)
+    {
+        m_videoBackgroundRenderer->Update(ctx.dt);
+    }
     
     if (m_physicsBinder)
     {
@@ -1958,6 +2015,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     // scrollOffsetUsedForBackground is in world units (meters). pixelsPerUnit is derived from the active camera.
     float scrollOffsetUsedForBackground = 0.0f;
     float pixelsPerUnit = 1.0f;
+    DirectX::XMFLOAT2 backgroundViewport{ 0.0f, 0.0f };
 
     auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
     assert(baseCamera && "SceneGame background requires a BaseCamera.");
@@ -1973,6 +2031,10 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             RenderTarget* defaultRTV = GetDefaultRTV();
             if (defaultRTV)
             {
+                backgroundViewport = {
+                    static_cast<float>(defaultRTV->GetWidth()),
+                    static_cast<float>(defaultRTV->GetHeight())
+                };
                 const float viewportHeight = static_cast<float>(defaultRTV->GetHeight());
                 if (viewportHeight > 0.0f)
                 {
@@ -1998,7 +2060,17 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 }
             }
         }
-        if (m_backgroundRenderer)
+        if (m_videoBackgroundRenderer)
+        {
+            m_videoBackgroundRenderer->Draw(
+                scrollOffsetUsedForBackground,
+                pixelsPerUnit,
+                backgroundViewport,
+                kDefaultVideoBackgroundParallax,
+                kDefaultVideoBackgroundBaseOffset01,
+                kDefaultVideoBackgroundInvertScroll);
+        }
+        else if (m_backgroundRenderer)
         {
             m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, pixelsPerUnit);
         }
