@@ -88,7 +88,7 @@ namespace
         constexpr float kScoreToPointsMultiplier = 1.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
-        constexpr float kDefaultVideoBackgroundParallax = 0.05f;
+        constexpr float kDefaultVideoBackgroundParallax = 0.01f;
         constexpr float kDefaultVideoBackgroundBaseOffset01 = 0.5f;
         constexpr bool kDefaultVideoBackgroundInvertScroll = false;
         constexpr const char* kGameVideoBackgroundPath = "Assets/Video/Game.mp4";
@@ -2061,12 +2061,15 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         }
         if (m_videoBackgroundRenderer)
         {
+            const float videoBackgroundParallax = IsFiniteFloat(m_stageData.GetVideoBackgroundParallax())
+                ? m_stageData.GetVideoBackgroundParallax()
+                : kDefaultVideoBackgroundParallax;
             m_videoBackgroundRenderer->Draw(
                 scrollOffsetUsedForBackground,
                 pixelsPerUnit,
                 backgroundViewport.x,
                 backgroundViewport.y,
-                kDefaultVideoBackgroundParallax,
+                videoBackgroundParallax,
                 kDefaultVideoBackgroundBaseOffset01,
                 kDefaultVideoBackgroundInvertScroll);
         }

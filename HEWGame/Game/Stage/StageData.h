@@ -64,6 +64,7 @@ namespace Stage
         float GetGuidelineTimeBonusSeconds() const noexcept;
         float GetGuidelineMilestoneBonusSeconds() const noexcept;
         int GetGuidelineMilestoneInterval() const noexcept;
+        float GetVideoBackgroundParallax() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
     private:
         void ApplyDefaults();
@@ -107,6 +108,7 @@ namespace Stage
         float m_guidelineTimeBonusSeconds;
         float m_guidelineMilestoneBonusSeconds;
         int m_guidelineMilestoneInterval;
+        float m_videoBackgroundParallax;
         std::string m_backgroundTexturePath;
     };
 }

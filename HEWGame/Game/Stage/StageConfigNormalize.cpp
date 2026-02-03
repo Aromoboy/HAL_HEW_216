@@ -244,6 +244,7 @@ namespace Stage
         float guidelineTimeBonusSeconds = parsed.guidelineTimeBonusSeconds;
         float guidelineMilestoneBonusSeconds = parsed.guidelineMilestoneBonusSeconds;
         int guidelineMilestoneInterval = parsed.guidelineMilestoneInterval;
+        float videoBackgroundParallax = parsed.videoBackgroundParallax;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
 
         if (!planeZSet)
@@ -950,6 +951,31 @@ namespace Stage
             guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         }
 
+        if (!parsed.videoBackgroundParallaxSet)
+        {
+            videoBackgroundParallax = StageConfigDefaults::kDefaultVideoBackgroundParallax;
+            std::ostringstream oss;
+            oss << kLogPrefix << "videoBackgroundParallax not specified; defaulting to "
+                << videoBackgroundParallax << "\n";
+        }
+        else if (!std::isfinite(videoBackgroundParallax))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "videoBackgroundParallax invalid; using default "
+                << StageConfigDefaults::kDefaultVideoBackgroundParallax << "\n";
+            videoBackgroundParallax = StageConfigDefaults::kDefaultVideoBackgroundParallax;
+        }
+        else
+        {
+            const float clamped = std::clamp(videoBackgroundParallax, 0.0f, 1.0f);
+            if (clamped != videoBackgroundParallax)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix << "videoBackgroundParallax clamped to " << clamped << "\n";
+                videoBackgroundParallax = clamped;
+            }
+        }
+
         const std::size_t requiredMultiplierCount = thresholds.size() + 1;
         EnsureRewardMultiplierCoverage(rewardMultipliers, requiredMultiplierCount,
             kDefaultRewardMultipliers);
@@ -986,6 +1012,7 @@ namespace Stage
         normalized.guidelineTimeBonusSeconds = guidelineTimeBonusSeconds;
         normalized.guidelineMilestoneBonusSeconds = guidelineMilestoneBonusSeconds;
         normalized.guidelineMilestoneInterval = guidelineMilestoneInterval;
+        normalized.videoBackgroundParallax = videoBackgroundParallax;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
@@ -1036,6 +1063,7 @@ namespace Stage
         normalized.guidelineTimeBonusSeconds = StageConfigDefaults::kDefaultGuidelineTimeBonusSeconds;
         normalized.guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
         normalized.guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
+        normalized.videoBackgroundParallax = StageConfigDefaults::kDefaultVideoBackgroundParallax;
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
