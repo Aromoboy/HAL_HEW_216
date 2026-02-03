@@ -235,6 +235,11 @@ namespace Stage
         return m_guidelineMilestoneInterval;
     }
 
+    float StageData::GetVideoBackgroundParallax() const noexcept
+    {
+        return m_videoBackgroundParallax;
+    }
+
     const std::string& StageData::GetBackgroundTexturePath() const noexcept
     {
         return m_backgroundTexturePath;
@@ -281,6 +286,7 @@ namespace Stage
         m_guidelineTimeBonusSeconds = normalized.guidelineTimeBonusSeconds;
         m_guidelineMilestoneBonusSeconds = normalized.guidelineMilestoneBonusSeconds;
         m_guidelineMilestoneInterval = normalized.guidelineMilestoneInterval;
+        m_videoBackgroundParallax = normalized.videoBackgroundParallax;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
@@ -320,6 +326,7 @@ namespace Stage
             << " guidelineTimeBonusSeconds=" << m_guidelineTimeBonusSeconds
             << " guidelineMilestoneBonusSeconds=" << m_guidelineMilestoneBonusSeconds
             << " guidelineMilestoneInterval=" << m_guidelineMilestoneInterval
+            << " videoBackgroundParallax=" << m_videoBackgroundParallax
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " detail=" << detail << "\n";
 

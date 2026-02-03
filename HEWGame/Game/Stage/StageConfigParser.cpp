@@ -886,6 +886,21 @@ namespace Stage
                     result.parseError = true;
                 }
             }
+            else if (key == "videoBackgroundParallax")
+            {
+                try
+                {
+                    result.videoBackgroundParallax = std::stof(rawValue);
+                    result.videoBackgroundParallaxSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse videoBackgroundParallax on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
             else if (key == "backgroundTexture")
             {
                 if (rawValue.empty())

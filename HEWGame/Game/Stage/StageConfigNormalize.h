@@ -44,6 +44,7 @@ namespace Stage
         float guidelineTimeBonusSeconds = 0.0f;
         float guidelineMilestoneBonusSeconds = 0.0f;
         int guidelineMilestoneInterval = 0;
+        float videoBackgroundParallax = 0.0f;
         std::string backgroundTexturePath;
 
         bool parseError = false;
@@ -83,6 +84,7 @@ namespace Stage
         static constexpr float kDefaultGuidelineTimeBonusSeconds = 5.0f;
         static constexpr float kDefaultGuidelineMilestoneBonusSeconds = 30.0f;
         static constexpr int kDefaultGuidelineMilestoneInterval = 5;
+        static constexpr float kDefaultVideoBackgroundParallax = 0.01f;
 
         static float DefaultGuidelineWidthPaddingWorld();
         static float DefaultPlayerMoveSpeed();

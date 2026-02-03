@@ -87,6 +87,8 @@ namespace Stage
         bool guidelineMilestoneBonusSecondsSet = false;
         int guidelineMilestoneInterval = 0;
         bool guidelineMilestoneIntervalSet = false;
+        float videoBackgroundParallax = 0.0f;
+        bool videoBackgroundParallaxSet = false;
         std::string backgroundTexturePath;
         bool backgroundTextureSet = false;
     };
