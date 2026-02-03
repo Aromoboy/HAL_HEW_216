@@ -124,6 +124,7 @@ void TitleManager::DrawAll(TitleRenderer& a_titleRenderer)
 	SetDepthTest(false);
 	a_titleRenderer.Draw(m_backTexture, float2(0.0f, 0.0f), float2(SCREEN_WIDTH * kTitleBackMagnification.x, SCREEN_HEIGHT * kTitleBackMagnification.y));
 
+	SetBlendMode(BLEND_ALPHA);
 	for (auto it : m_nodes)
 	{
 		a_titleRenderer.Draw(it.nodeTexture, it.pos, it.size);
@@ -131,6 +132,6 @@ void TitleManager::DrawAll(TitleRenderer& a_titleRenderer)
 
 	
 	a_titleRenderer.Draw(m_selectNodes.at(m_cursor->GetCursorNum()).nodeTexture, m_selectNodes.at(m_cursor->GetCursorNum()).pos, m_selectNodes.at(m_cursor->GetCursorNum()).size);
+	SetBlendMode(BLEND_NONE);
 	SetDepthTest(true);
 }
-
