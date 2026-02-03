@@ -88,8 +88,8 @@ namespace
         constexpr float kScoreToPointsMultiplier = 1.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
-        constexpr float kDefaultVideoBackgroundParallax = 0.0001f;
-        constexpr float kDefaultVideoBackgroundBaseOffset01 = 4.00f;
+        constexpr float kDefaultVideoBackgroundParallax = 0.05f;
+        constexpr float kDefaultVideoBackgroundBaseOffset01 = 0.5f;
         constexpr bool kDefaultVideoBackgroundInvertScroll = false;
         constexpr const char* kGameVideoBackgroundPath = "Assets/Video/Game.mp4";
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
