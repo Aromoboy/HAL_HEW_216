@@ -386,6 +386,7 @@ void Draw()
 
         if (g_sceneManager)
         {
+                g_sceneManager->DrawOverlay();
                 DrawSceneFadeOverlay(g_sceneManager->GetFadeAlpha());
         }
 

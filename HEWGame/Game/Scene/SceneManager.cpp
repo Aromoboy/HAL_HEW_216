@@ -3,6 +3,7 @@
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 #include "Core/IUpdatable.h"
+#include "Scene.h"
 
 #include <cassert>
 #include <algorithm>
@@ -244,6 +245,18 @@ namespace SceneSpace
         {
             assert(m_sceneLoaded && m_sceneEntered);
             m_activeScene->Draw();
+        }
+    }
+
+    void SceneManager::DrawOverlay()
+    {
+        if (m_activeScene)
+        {
+            assert(m_sceneLoaded && m_sceneEntered);
+            if (auto* scene = dynamic_cast<Scene*>(m_activeScene.get()))
+            {
+                scene->RootDrawOverlay();
+            }
         }
     }
 

@@ -74,6 +74,7 @@ namespace SceneSpace
         void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings);
         void Update();
         void Draw();
+        void DrawOverlay();
         void GameEndRequest();
         bool IsGameEnd();
         IScene* GetActiveScene();

@@ -21,6 +21,7 @@ class Scene
 public:
 void RootUpdate(Core::StepTimer& timer, Core::Input& input);
 void RootDraw();
+void RootDrawOverlay();
 std::shared_ptr<::CameraSpace::ICamera> GetActiveCamera() const;
 
 Scene();

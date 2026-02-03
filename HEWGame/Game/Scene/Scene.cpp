@@ -91,6 +91,10 @@ void Scene::RootDraw()
         auto activeCamera = m_cameraManager.GetActiveCamera();
 
         DrawWorld(activeCamera);
+}
+
+void Scene::RootDrawOverlay()
+{
         RenderTarget* defaultRTV = GetDefaultRTV();
         SetRenderTargets(1, &defaultRTV, nullptr);
         DrawOverlay();
