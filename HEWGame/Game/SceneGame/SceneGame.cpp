@@ -2008,14 +2008,17 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
         {
+            auto& dxContext = App::Game::Instance().GetDXContext();
+            RenderTarget* sceneColorRTV = dxContext.GetSceneColorTarget();
             RenderTarget* defaultRTV = GetDefaultRTV();
-            if (defaultRTV)
+            RenderTarget* viewportRTV = sceneColorRTV ? sceneColorRTV : defaultRTV;
+            if (viewportRTV)
             {
                 backgroundViewport = {
-                    static_cast<float>(defaultRTV->GetWidth()),
-                    static_cast<float>(defaultRTV->GetHeight())
+                    static_cast<float>(std::max<UINT>(1u, viewportRTV->GetWidth())),
+                    static_cast<float>(std::max<UINT>(1u, viewportRTV->GetHeight()))
                 };
-                const float viewportHeight = static_cast<float>(defaultRTV->GetHeight());
+                const float viewportHeight = backgroundViewport.y;
                 if (viewportHeight > 0.0f)
                 {
                     float3 planeSample{ 0.0f, 0.0f, 0.0f };
