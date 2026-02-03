@@ -296,12 +296,13 @@ namespace SceneSpace
             float x = baseX + spacingx * i;
             float y = baseY + spacingy * i;
             float3 color(1.0f, 1.0f, 1.0f);
+
+            m_resultRenderer->Draw(m_menuTextures[i], float2(x, y), float2(5.0f, 4.0f), color);
+
             if (i == m_cursorIndex)
             {
                 m_resultRenderer->Draw(m_menuSelectNodes, float2(baseX, y), float2(4.5f, 4.0f), float3(1.0f, 1.0f, 1.0f));
             }
-
-            m_resultRenderer->Draw(m_menuTextures[i], float2(x, y), float2(5.0f, 4.0f), color);
         }
         
        
