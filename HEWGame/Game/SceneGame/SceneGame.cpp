@@ -2043,6 +2043,22 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 }
             }
         }
+        if (backgroundViewport.x <= 0.0f || backgroundViewport.y <= 0.0f)
+        {
+            ID3D11DeviceContext* context = GetContext();
+            if (context)
+            {
+                UINT viewportCount = 0;
+                context->RSGetViewports(&viewportCount, nullptr);
+                if (viewportCount > 0)
+                {
+                    std::vector<D3D11_VIEWPORT> viewports(viewportCount);
+                    context->RSGetViewports(&viewportCount, viewports.data());
+                    const D3D11_VIEWPORT& viewport = viewports.front();
+                    backgroundViewport = { viewport.Width, viewport.Height };
+                }
+            }
+        }
         if (m_videoBackgroundRenderer)
         {
             m_videoBackgroundRenderer->Draw(
