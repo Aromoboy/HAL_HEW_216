@@ -259,6 +259,13 @@ namespace SceneSpace
 
     void SceneResult::Draw()
     {
+        if (m_videoPlayer)
+        {
+            SetBlendMode(BLEND_ALPHA);
+            m_videoPlayer->Draw();
+            SetBlendMode(BLEND_NONE);
+        }
+
         SetDepthTest(false);
         Sprite::ScopedPassDefaults spritePass;
 
@@ -271,13 +278,6 @@ namespace SceneSpace
 
     void SceneResult::Draw(const std::shared_ptr<CameraSpace::ICamera>&)
     {
-        if (m_videoPlayer)
-        {
-            SetBlendMode(BLEND_ALPHA);
-            m_videoPlayer->Draw();
-            SetBlendMode(BLEND_NONE);
-        }
-
         SetBlendMode(BLEND_ALPHA);
         Sprite::ScopedPassDefaults spritePass;
         SetBlendMode(BLEND_ALPHA);
