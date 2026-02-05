@@ -364,6 +364,11 @@ namespace SceneSpace
         SetDepthTest(true);
     }
 
+    void SceneResult::DrawOverlay()
+    {
+    }
+
+    
 }
     
     
