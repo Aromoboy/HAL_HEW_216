@@ -277,11 +277,8 @@ namespace SceneSpace
             m_videoPlayer->Draw();
             SetBlendMode(BLEND_NONE);
         }
-    }
 
-    void SceneResult::DrawOverlay()
-    {
-        SetDepthTest(false);
+        SetBlendMode(BLEND_ALPHA);
         Sprite::ScopedPassDefaults spritePass;
         SetBlendMode(BLEND_ALPHA);
 
@@ -363,10 +360,13 @@ namespace SceneSpace
 
         float2 meterPos(kResultTowerOffset.x + 1.2f, kResultTowerOffset.y);
         float2 meterScale(1.4f, 1.4f);
-        m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0F, 1.0F), 1.0F);
+        m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0f, 1.0f), 1.0f);
+    }
 
         SetBlendMode(BLEND_NONE);
         SetDepthTest(true);
+    void SceneResult::DrawOverlay()
+    {
     }
 
     
