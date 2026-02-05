@@ -21,8 +21,8 @@ constexpr float2 kTitleStartNodeOffset	 = {  3.0f,  0.0f };
 constexpr float2 kTitlePowerUpNodeOffset = { -2.1f, -0.1f };
 constexpr float2 kTitleEndNodeOffset	 = { -1.7f,  0.1f };
 
-constexpr float2 kSelectStartNodeOffset		= { 0.0f, -0.15f };
-constexpr float2 kSelectPowerUpNodeOffset	= { 0.275f, -0.105f };
+constexpr float2 kSelectStartNodeOffset		= { 0.0f, -0.02f };
+constexpr float2 kSelectPowerUpNodeOffset	= { 0.4f, -0.7f };
 constexpr float2 kSelectEndNodeOffset		= { 0.0f, 0.0f };
 
 TitleManager::TitleManager(Core::UpdateScheduler* a_scheduler, TextureCache& a_cache, const TitleCursor::NodeFormat& a_format, Core::Input& a_input)
@@ -120,15 +120,13 @@ void TitleManager::SetFormat(const TitleCursor::NodeFormat& a_format)
 void TitleManager::DrawAll(TitleRenderer& a_titleRenderer)
 {
 	SetDepthTest(false);
+	a_titleRenderer.Draw(m_backTexture, float2(0.0f, 0.0f), float2(SCREEN_WIDTH * kTitleBackMagnification.x, SCREEN_HEIGHT * kTitleBackMagnification.y));	
+	a_titleRenderer.Draw(m_selectNodes.at(m_cursor->GetCursorNum()).nodeTexture, m_selectNodes.at(m_cursor->GetCursorNum()).pos, m_selectNodes.at(m_cursor->GetCursorNum()).size, 1.0f);
 
 	SetBlendMode(BLEND_ALPHA);
 	for (auto it : m_nodes)
 	{
 		a_titleRenderer.Draw(it.nodeTexture, it.pos, it.size);
 	}
-
-	
-	a_titleRenderer.Draw(m_selectNodes.at(m_cursor->GetCursorNum()).nodeTexture, m_selectNodes.at(m_cursor->GetCursorNum()).pos, m_selectNodes.at(m_cursor->GetCursorNum()).size);
-	SetBlendMode(BLEND_NONE);
 	SetDepthTest(true);
 }

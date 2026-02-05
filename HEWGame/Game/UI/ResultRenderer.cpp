@@ -274,20 +274,7 @@ void ResultRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, fl
     DrawMatrix::CreateWorldMatrix(world, pos, size, float3(0.0f, 0.0f, 0.0f), false);
 
     DrawMatrix::CreateViewMatrix(view, float3(0.0f, 0.0f, -10.0f), float3(0.0f, 0.0f, 1000.0f), float3(0.0f, 1.0f, 0.0f));
-
-    auto& dxContext = App::Game::Instance().GetDXContext();
-    const float viewportWidth = std::max(1.0f, static_cast<float>(dxContext.GetWidth()));
-    const float viewportHeight = std::max(1.0f, static_cast<float>(dxContext.GetHeight()));
-    DirectX::XMStoreFloat4x4(
-        &proj,
-        DirectX::XMMatrixOrthographicOffCenterLH(
-            0.0f,
-            viewportWidth,
-            viewportHeight,
-            0.0f,
-            0.0f,
-            1.0f)
-    );
+    DrawMatrix::CreateProjectionMatrix(proj, 60.0f, 16.0f / 9.0f, 0.0001f, 1000.0f);
     DrawSprite(a_texture, world, view, proj, DrawSpriteData(a_uvPos, a_uvScale, a_pos, a_size, a_color, a_alpha));
 }
 
