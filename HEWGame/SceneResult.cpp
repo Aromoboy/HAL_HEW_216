@@ -1,4 +1,4 @@
-
+﻿
 #include "SceneResult.h"
 
 #include "DirectX.h"
@@ -10,7 +10,7 @@
 #include "AppGame.h"
 
 
-constexpr float2 kResultCostOffset  = {  0.0f, -1.2f };
+constexpr float2 kResultCostOffset = { 0.0f, -1.2f };
 constexpr float2 kResultTowerOffset = { -1.2f,  1.1f };
 
 
@@ -46,7 +46,7 @@ namespace SceneSpace
 
         // UI テクスチャ
         TextureCache& cache = TextureCache::Instance();
-        
+
         std::string keys[3] =
         {
             "Assets/Texture/basket_UI_remake2.png",
@@ -62,7 +62,7 @@ namespace SceneSpace
         };
 
 
-        
+
         for (int i = 0; i < 3; i++)
         {
             m_menuTextures[i] = cache.Load(keys[i], GetDevice(), paths[i]);
@@ -71,11 +71,11 @@ namespace SceneSpace
         m_pointAmount = cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");
 
         m_menuSelectNodes = cache.Load("ResultSelect", GetDevice(), L"Assets/Texture/basket_UI_backeffect_remake.png");
-        
+
         m_backTexture = cache.Load("ResultBack", GetDevice(), L"Assets/Texture/background_UI_remake.png");
 
         m_meter = cache.Load("Meter", GetDevice(), L"Assets/Texture/m.png");
-       
+
         return true;
     }
 
@@ -132,7 +132,7 @@ namespace SceneSpace
         );
 
         Sprite::SetProjection(proj);
-        
+
     }
 
     void SceneResult::OnExit()
@@ -259,11 +259,19 @@ namespace SceneSpace
 
     void SceneResult::Draw()
     {
-        if (m_videoPlayer)
+        SetDepthTest(false);
+
+        Sprite::ScopedPassDefaults spritePass;
+
         {
-            m_videoPlayer->Draw();
+            if (m_videoPlayer)
+            {
+                m_videoPlayer->Draw();
+            }
+
+            RootDraw();   // ← Draw(const Camera&) が呼ばれる
         }
-        RootDraw();
+        SetDepthTest(true);
     }
 
     void SceneResult::Draw(const std::shared_ptr<CameraSpace::ICamera>&)
@@ -274,6 +282,7 @@ namespace SceneSpace
         data.remainingSeconds = 0.0f;
         data.score = 12345;
         data.sweetsCount = 12;
+
 
         const float baseX = 2.9f;   // 画面右側
         const float baseY = 1.7f;
@@ -287,14 +296,14 @@ namespace SceneSpace
             float x = baseX + spacingx * i;
             float y = baseY + spacingy * i;
             float3 color(1.0f, 1.0f, 1.0f);
-
-            m_resultRenderer->Draw(m_menuTextures[i], float2(x, y), float2(5.0f, 4.0f), color);
-
             if (i == m_cursorIndex)
             {
                 m_resultRenderer->Draw(m_menuSelectNodes, float2(baseX, y), float2(4.5f, 4.0f), float3(1.0f, 1.0f, 1.0f));
             }
+
+            m_resultRenderer->Draw(m_menuTextures[i], float2(x, y), float2(5.0f, 4.0f), color);
         }
+
 
         int costCount = 0;
         int cost = m_getCost;
@@ -344,9 +353,11 @@ namespace SceneSpace
 
         float2 meterPos(kResultTowerOffset.x + 1.2f, kResultTowerOffset.y);
         float2 meterScale(1.4f, 1.4f);
-        m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0f, 1.0f), 1.0f);
+        m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0F, 1.0F), 1.0F);
+
     }
 
+
 }
-    
-    
+
+
