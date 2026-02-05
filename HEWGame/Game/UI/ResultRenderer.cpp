@@ -333,7 +333,11 @@ void ResultRenderer::UpdateBitmap(const ResultDisplayData& data)
         return;
     }
 
-    PatBlt(m_memoryDC, 0, 0, static_cast<int>(m_config.textureWidth), static_cast<int>(m_config.textureHeight), BLACKNESS);
+    if (m_rawBits)
+    {
+        const size_t pixelCount = static_cast<size_t>(m_config.textureWidth) * static_cast<size_t>(m_config.textureHeight);
+        std::memset(m_rawBits, 0, pixelCount * 4);
+    }
 
     const std::string hudText = BuildHudString(data);
 
@@ -354,6 +358,21 @@ void ResultRenderer::UpdateBitmap(const ResultDisplayData& data)
 
     SetTextColor(m_memoryDC, RGB(255, 255, 255));
     DrawTextA(m_memoryDC, hudText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_NOPREFIX);
+
+    if (m_rawBits)
+    {
+        const size_t pixelCount = static_cast<size_t>(m_config.textureWidth) * static_cast<size_t>(m_config.textureHeight);
+        uint8_t* pixels = static_cast<uint8_t*>(m_rawBits);
+        for (size_t i = 0; i < pixelCount; ++i)
+        {
+            const uint8_t b = pixels[0];
+            const uint8_t g = pixels[1];
+            const uint8_t r = pixels[2];
+            const uint8_t alpha = std::max({ r, g, b });
+            pixels[3] = alpha;
+            pixels += 4;
+        }
+    }
 
     GdiFlush();
     m_textureDirty = true;
@@ -377,11 +396,11 @@ void ResultRenderer::UploadTexture()
         const uint8_t b = src[0];
         const uint8_t g = src[1];
         const uint8_t r = src[2];
-        const uint8_t intensity = std::max({ r, g, b });
-        dst[0] = 255;
-        dst[1] = 255;
-        dst[2] = 255;
-        dst[3] = intensity;
+        const uint8_t a = src[3];
+        dst[0] = r;
+        dst[1] = g;
+        dst[2] = b;
+        dst[3] = a;
         src += 4;
         dst += 4;
     }
