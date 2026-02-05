@@ -5,6 +5,7 @@
 #include "Texture.h"
 #include "ShaderList.h"
 #include "DrawMatrix.h"
+#include "AppGame.h"
 
 #include <algorithm>
 #include <array>
@@ -273,7 +274,20 @@ void ResultRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, fl
     DrawMatrix::CreateWorldMatrix(world, pos, size, float3(0.0f, 0.0f, 0.0f), false);
 
     DrawMatrix::CreateViewMatrix(view, float3(0.0f, 0.0f, -10.0f), float3(0.0f, 0.0f, 1000.0f), float3(0.0f, 1.0f, 0.0f));
-    DrawMatrix::CreateProjectionMatrix(proj, 60.0f, 16.0f / 9.0f, 0.0001f, 1000.0f);
+
+    auto& dxContext = App::Game::Instance().GetDXContext();
+    const float viewportWidth = std::max(1.0f, static_cast<float>(dxContext.GetWidth()));
+    const float viewportHeight = std::max(1.0f, static_cast<float>(dxContext.GetHeight()));
+    DirectX::XMStoreFloat4x4(
+        &proj,
+        DirectX::XMMatrixOrthographicOffCenterLH(
+            0.0f,
+            viewportWidth,
+            viewportHeight,
+            0.0f,
+            0.0f,
+            1.0f)
+    );
     DrawSprite(a_texture, world, view, proj, DrawSpriteData(a_uvPos, a_uvScale, a_pos, a_size, a_color, a_alpha));
 }
 
@@ -429,8 +443,8 @@ void ResultRenderer::RenderFream(const ResultDisplayData& data)
         DirectX::XMStoreFloat4x4(
             &proj,
             DirectX::XMMatrixOrthographicOffCenterLH(
-                0.0f, 1280.0f,
-                720.0f, 0.0f,
+                0.0f, viewportWidth,
+                viewportHeight, 0.0f,
                 0.0f, 1.0f)
         );
         Sprite::SetWorld(m_identityMatrix);
@@ -441,8 +455,8 @@ void ResultRenderer::RenderFream(const ResultDisplayData& data)
         Sprite::SetUVScale(DirectX::XMFLOAT2(1.0f, 1.0f));*/
         Sprite::SetColor({ 1,1,1,1 });
      /*   Sprite::SetColor(m_config.normalTextColor);*/
-        Sprite::SetSize(DirectX::XMFLOAT2(512.0f, 256.0f));
-        Sprite::SetOffset(DirectX::XMFLOAT2(640.0f, 360.0f));
+        Sprite::SetSize(DirectX::XMFLOAT2(static_cast<float>(m_config.textureWidth), static_cast<float>(m_config.textureHeight)));
+        Sprite::SetOffset(DirectX::XMFLOAT2(viewportWidth * 0.5f, viewportHeight * 0.5f));
         Sprite::Draw();
 
         SetDepthTest(true);
