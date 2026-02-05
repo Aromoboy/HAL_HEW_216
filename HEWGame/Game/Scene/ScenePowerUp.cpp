@@ -355,6 +355,7 @@ namespace SceneSpace
                 {
                     m_videoBackground->Draw();
                 }
+                SetBlendMode(BLEND_ALPHA);
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpRenderer->DrawCost(m_cost, *activeCamera);
                 SetDepthTest(true);
@@ -362,6 +363,7 @@ namespace SceneSpace
                 SetDepthTest(false);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
                 m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
+                SetBlendMode(BLEND_NONE);
         }
 
         bool ScenePowerUp::LoadPowerUpFile()
