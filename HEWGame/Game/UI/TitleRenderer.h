@@ -56,7 +56,7 @@ public:
 		}
 	};
 
-	void Draw(std::shared_ptr<Texture2D> a_texture, float2 pos, float2 size, float alpha = 1.0f);
+	void Draw(std::shared_ptr<Texture2D> a_texture, float2 pos, float2 size);
 	
 private:
 

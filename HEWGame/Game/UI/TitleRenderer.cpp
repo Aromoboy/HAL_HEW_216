@@ -89,7 +89,7 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 }
 
-void TitleRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size, float alpha)
+void TitleRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size)
 {
 	float3 pos(0.0f, 0.0f, 1.0f);
 	float3 size(1.0f, 1.0f, 1.0f);
@@ -103,7 +103,7 @@ void TitleRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, flo
 
 	DrawMatrix::CreateViewMatrix(view, float3(0.0f, 0.0f, -10.0f), float3(0.0f, 0.0f, 1000.0f), float3(0.0f, 1.0f, 0.0f));
 	DrawMatrix::CreateProjectionMatrix(proj, 60.0f, 16.0f / 9.0f, 0.0001f, 1000.0f);
-	DrawSprite(a_texture, world, view, proj, DrawSpriteData(float2(0.0f, 0.0f), float2(1.0f, 1.0f), a_pos, a_size, float3(1.0f, 1.0f, 1.0f), alpha));
+	DrawSprite(a_texture, world, view, proj, DrawSpriteData(float2(0.0f, 0.0f), float2(1.0f, 1.0f), a_pos, a_size));
 }
 
 void TitleRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)
