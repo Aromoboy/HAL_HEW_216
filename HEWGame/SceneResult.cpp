@@ -262,7 +262,9 @@ namespace SceneSpace
         SetDepthTest(false);
         Sprite::ScopedPassDefaults spritePass;
 
+        SetBlendMode(BLEND_ALPHA);
         RootDraw();   // ← DrawWorld(const Camera&) が呼ばれる
+        SetBlendMode(BLEND_NONE);
 
         SetDepthTest(true);
     }
