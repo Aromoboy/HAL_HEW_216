@@ -263,7 +263,8 @@ namespace SceneSpace
         {
             m_videoPlayer->Draw();
         }
-        RootDraw();
+
+        RootDraw();   // ← DrawWorld(const Camera&) が呼ばれる
     }
 
     void SceneResult::Draw(const std::shared_ptr<CameraSpace::ICamera>&)
