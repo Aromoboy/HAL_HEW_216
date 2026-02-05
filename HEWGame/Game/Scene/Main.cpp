@@ -330,10 +330,10 @@ void Draw()
         float invHeight = 0.0f;
         if (auto defaultRTV = GetDefaultRTV())
         {
-            const UINT screenWidth = defaultRTV->GetWidth();
-            const UINT screenHeight = defaultRTV->GetHeight();
-            invWidth = screenWidth > 0 ? 1.0f / static_cast<float>(screenWidth) : 0.0f;
-            invHeight = screenHeight > 0 ? 1.0f / static_cast<float>(screenHeight) : 0.0f;
+                if (auto* activeScene = g_sceneManager->GetActiveScene())
+                {
+                        sceneHandlesPostprocess = dynamic_cast<SceneGame*>(activeScene) != nullptr;
+                }
         }
         const DirectX::XMFLOAT2 invScreenSize(invWidth, invHeight);
         float postTime = static_cast<float>(g_stepTimer.FrameIndex()) * g_stepTimer.DeltaTime();
