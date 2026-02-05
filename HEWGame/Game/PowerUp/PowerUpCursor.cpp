@@ -17,8 +17,11 @@ PowerUpCursor::PowerUpCursor(std::shared_ptr<Texture2D> a_texture, PowerUpManage
 	, m_format(a_format)
 	, m_cost(a_cost)
 	, m_texture(a_texture)
-	, m_moveTimer(0.0f)
 	, m_keyTimer(0.0f)
+	, m_prevLeft(false)
+	, m_prevRight(false)
+	, m_prevUp(false)
+	, m_prevDown(false)
 	, m_flicker(0.0f)
 	, m_alpha(0.0f)
 	, m_effectSystem(a_effectSystem)
@@ -30,7 +33,6 @@ void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 {
 	(void)ctx;
 
-	m_moveTimer -= ctx.dt;
 	m_keyTimer -= ctx.dt;
 	m_flicker = std::fmod(m_flicker + ctx.dt, 2 * PI);
 
@@ -39,14 +41,11 @@ void PowerUpCursor::OnUpdate(const Core::UpdateContext& ctx)
 	m_alpha = std::abs(sinAlpha) * 0.5f + 0.5f;
 
 
-	if (m_moveTimer <= 0.0f)
-	{
-		m_moveTimer = maxMoveSecond;
 		if (m_input)
 		{
 			MoveInput(*m_input);
 		}
-	}
+	
 	
 	
 	if (m_input && m_keyTimer <= 0.0f && m_input->IsTrigger(Core::ActionId::Select))
@@ -113,31 +112,40 @@ float2 PowerUpCursor::GetDrawPos()
 }
 
 
-
 void PowerUpCursor::MoveInput(Core::Input& input)
 {
 	float controllerX = input.GetAxis(Core::ActionId::MoveX);
 	float controllerY = input.GetAxis(Core::ActionId::RotateYaw);
 
+	bool left = (controllerX < -kPowerUpInputDeadzone) || input.IsTrigger('A');
+	bool right = (controllerX > kPowerUpInputDeadzone) || input.IsTrigger('D');
+	bool up = (controllerY > kPowerUpInputDeadzone) || input.IsTrigger('W');
+	bool down = (controllerY < -kPowerUpInputDeadzone) || input.IsTrigger('S');
+
 	bool moved = false;
 
-	if (controllerX < -kPowerUpInputDeadzone || input.IsPress('A'))
+	if (left && !m_prevLeft)
 	{
-		if (m_index - m_format.y >= 0) m_index -= m_format.y; moved = true;
+		if (m_index - m_format.y >= 0) { m_index -= m_format.y; moved = true; }
 	}
-	else if (controllerX > kPowerUpInputDeadzone || input.IsPress('D'))
+	else if (right && !m_prevRight)
 	{
-		if (m_index + m_format.y < m_powerUpManager->GetNodeCount()) m_index += m_format.y; moved = true;
+		if (m_index + m_format.y < m_powerUpManager->GetNodeCount()) { m_index += m_format.y; moved = true; }
 	}
 
-	if (controllerY > kPowerUpInputDeadzone || input.IsPress('W'))
+	if (up && !m_prevUp)
 	{
-		if (m_index - 1 >= 0 && m_index % m_format.y != 0) m_index--; moved = true;
+		if (m_index - 1 >= 0 && m_index % m_format.y != 0) { m_index--; moved = true; }
 	}
-	else if (controllerY < -kPowerUpInputDeadzone || input.IsPress('S'))
+	else if (down && !m_prevDown)
 	{
-		if (m_index + 1 < m_powerUpManager->GetNodeCount() && (m_index + 1) % m_format.y != 0)	m_index++; moved = true;
+		if (m_index + 1 < m_powerUpManager->GetNodeCount() && (m_index + 1) % m_format.y != 0) { m_index++; moved = true; }
 	}
+
+	m_prevLeft = left;
+	m_prevRight = right;
+	m_prevUp = up;
+	m_prevDown = down;
 
 	if (moved)
 	{
@@ -146,8 +154,9 @@ void PowerUpCursor::MoveInput(Core::Input& input)
 			soundMgr->PlaySoundEX("Assets/Audio/SE_Enter.wav", false, 0.5f);
 		}
 	}
-
 }
+
+
 
 float3 GetDrawPos()
 {

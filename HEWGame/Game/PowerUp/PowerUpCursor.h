@@ -32,11 +32,14 @@ private:
 	CursorIndex m_index;
 	PowerUpManager::NodeFormat m_format;
 	std::shared_ptr<Texture2D> m_texture;
-	float m_moveTimer;
 	float m_keyTimer;
 	int& m_cost;
 	float m_flicker;
 	float m_alpha;
+	bool m_prevLeft;
+	bool m_prevRight;
+	bool m_prevUp;
+	bool m_prevDown;
 	EffectSystem& m_effectSystem;
 	std::function<void(int)> m_onPurchase;
 
