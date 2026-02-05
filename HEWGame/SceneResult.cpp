@@ -364,8 +364,8 @@ namespace SceneSpace
         float2 meterScale(1.4f, 1.4f);
         m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0F, 1.0F), 1.0F);
 
-    void SceneResult::DrawOverlay()
-    {
+        SetBlendMode(BLEND_NONE);
+        SetDepthTest(true);
     }
 
     
