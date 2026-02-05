@@ -283,6 +283,7 @@ namespace SceneSpace
     {
         SetDepthTest(false);
         Sprite::ScopedPassDefaults spritePass;
+        SetBlendMode(BLEND_ALPHA);
 
         // リザルト情報
         ResultDisplayData data{};
@@ -364,6 +365,7 @@ namespace SceneSpace
         float2 meterScale(1.4f, 1.4f);
         m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0F, 1.0F), 1.0F);
 
+        SetBlendMode(BLEND_NONE);
         SetDepthTest(true);
     }
 
