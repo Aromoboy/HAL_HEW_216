@@ -260,28 +260,22 @@ namespace SceneSpace
     void SceneResult::Draw()
     {
         SetDepthTest(false);
+       
         Sprite::ScopedPassDefaults spritePass;
 
-        RootDraw();   // ← DrawWorld(const Camera&) が呼ばれる
+        {
+            if (m_videoPlayer)
+            {
+                m_videoPlayer->Draw();
+            }
 
+            RootDraw();   // ← Draw(const Camera&) が呼ばれる
+        }
         SetDepthTest(true);
     }
 
     void SceneResult::Draw(const std::shared_ptr<CameraSpace::ICamera>&)
     {
-        if (m_videoPlayer)
-        {
-            SetBlendMode(BLEND_ALPHA);
-            m_videoPlayer->Draw();
-            SetBlendMode(BLEND_NONE);
-        }
-    }
-
-    void SceneResult::DrawOverlay()
-    {
-        SetDepthTest(false);
-        Sprite::ScopedPassDefaults spritePass;
-
         // リザルト情報
         ResultDisplayData data{};
         data.timeUp = true;
@@ -361,8 +355,7 @@ namespace SceneSpace
         float2 meterPos(kResultTowerOffset.x + 1.2f, kResultTowerOffset.y);
         float2 meterScale(1.4f, 1.4f);
         m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0F, 1.0F), 1.0F);
-
-        SetDepthTest(true);
+        
     }
 
     
