@@ -347,19 +347,34 @@ namespace SceneSpace
 
         void ScenePowerUp::Draw(const std::shared_ptr<CameraSpace::ICamera>& activeCamera)
         {
-                if (!m_powerUpRenderer || !m_powerUpManager || !m_cursor)
-                {
-                        return;
-                }
                 if (m_videoBackground)
                 {
                     m_videoBackground->Draw();
                 }
+                if (m_effectSystem)
+                {
+                    SetDepthTest(true);
+                    m_effectSystem->Draw(activeCamera.get());
+                    SetDepthTest(false);
+                }
+        }
+
+        void ScenePowerUp::DrawOverlay()
+        {
+                if (!m_powerUpRenderer || !m_powerUpManager || !m_cursor)
+                {
+                        return;
+                }
+
+                auto activeCamera = GetActiveCamera();
+                if (!activeCamera)
+                {
+                        return;
+                }
+
+                SetDepthTest(false);
                 m_powerUpRenderer->DrawHud(*activeCamera);
                 m_powerUpRenderer->DrawCost(m_cost, *activeCamera);
-                SetDepthTest(true);
-                m_effectSystem->Draw(activeCamera.get());
-                SetDepthTest(false);
                 m_cursor->Draw(*m_powerUpRenderer, *activeCamera);
                 m_powerUpManager->DrawAll(*m_powerUpRenderer, *activeCamera);
         }
