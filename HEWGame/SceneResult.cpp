@@ -277,8 +277,11 @@ namespace SceneSpace
             m_videoPlayer->Draw();
             SetBlendMode(BLEND_NONE);
         }
+    }
 
-        SetBlendMode(BLEND_ALPHA);
+    void SceneResult::DrawOverlay()
+    {
+        SetDepthTest(false);
         Sprite::ScopedPassDefaults spritePass;
 
         // リザルト情報
@@ -359,8 +362,7 @@ namespace SceneSpace
 
         float2 meterPos(kResultTowerOffset.x + 1.2f, kResultTowerOffset.y);
         float2 meterScale(1.4f, 1.4f);
-        m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0f, 1.0f), 1.0f);
-    }
+        m_resultRenderer->Draw(m_meter, meterPos, meterScale, float3(1.0F, 1.0F, 1.0F), 1.0F);
 
     void SceneResult::DrawOverlay()
     {
