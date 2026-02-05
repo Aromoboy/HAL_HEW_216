@@ -20,6 +20,7 @@
 #include "ShaderList.h"
 #include "AppGame.h"
 #include "SceneGame.h"
+#include "SceneResult.h"
 #include "PerspectiveCamera.h"
 #include "DebugConsole.h"
 #include "Core/StepTimer.h"
@@ -284,7 +285,9 @@ void Draw()
         {
                 if (auto* activeScene = g_sceneManager->GetActiveScene())
                 {
-                        sceneHandlesPostprocess = dynamic_cast<SceneGame*>(activeScene) != nullptr;
+                        sceneHandlesPostprocess =
+                                dynamic_cast<SceneGame*>(activeScene) != nullptr
+                                || dynamic_cast<SceneSpace::SceneResult*>(activeScene) != nullptr;
                 }
         }
 
