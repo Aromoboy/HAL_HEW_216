@@ -273,7 +273,9 @@ namespace SceneSpace
     {
         if (m_videoPlayer)
         {
+            SetBlendMode(BLEND_ALPHA);
             m_videoPlayer->Draw();
+            SetBlendMode(BLEND_NONE);
         }
     }
 
