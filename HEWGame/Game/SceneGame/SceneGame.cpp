@@ -1412,8 +1412,12 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
             m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+
             if (guidelineDelta != 0.0f)
             {
+                m_isOsaraCounting = true;
+                m_OsaraToAddRemaining += guidelineDelta;
+
                 if (m_sweetsManager)
                 {
                     m_sweetsManager->OffsetSpawnOriginsY(guidelineDelta);
@@ -1426,8 +1430,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         continue;
                     }
 
-                    obj.baseY += guidelineDelta;
-                    obj.transform.position.y += guidelineDelta;
+
+                //    obj.baseY += guidelineDelta;
+                //    obj.transform.position.y += guidelineDelta;
 
                     if (obj.physicsEntity)
                     {
@@ -1456,7 +1461,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         //        m_scoreAddTimer = 0.0;
         //    }
         //}
-
+        UpdateOsaraGradualMove(ctx);
         break;
     }
     case StageState::TimeUp:
@@ -2814,4 +2819,43 @@ int SceneGame::GetSweetsCount() const
 bool SceneGame::IsOsara(const StageObject& obj)
 {
     return obj.modelPath.find("osara") != std::string::npos;
+}
+
+void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
+{
+    if (!m_isOsaraCounting || m_OsaraToAddRemaining <= 0.0f)
+    {
+        return;
+    }
+    //徐々に上に移動したい
+
+    if (m_isOsaraCounting && m_OsaraToAddRemaining > 0.0f)
+    {
+        float deltaY = osaraMoveSpeed * ctx.dt;
+
+        if (deltaY > m_OsaraToAddRemaining)
+        {
+            deltaY = m_OsaraToAddRemaining;
+        }
+        //  float moveY = guidelineDelta - deltaY;
+
+        for (auto& obj : m_stageObjects)
+        {
+            if (!IsOsara(obj)) continue;
+
+            obj.baseY += deltaY;
+            obj.transform.position.y += deltaY;
+
+            if (obj.physicsEntity)
+            {
+                obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+            }
+        }
+        m_OsaraToAddRemaining -= deltaY;
+
+        if (m_OsaraToAddRemaining <= 0.0f)
+        {
+            m_isOsaraCounting = false;
+        }
+    }
 }

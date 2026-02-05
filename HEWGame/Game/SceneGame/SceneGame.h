@@ -121,6 +121,7 @@ private:
     int GetSweetsCount() const;
     int m_gameBGMHandle = -1;
     void Initialize(const Stage::StageData& stageData);
+    void UpdateOsaraGradualMove(const Core::UpdateContext& ctx);
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -213,9 +214,11 @@ protected:
     int m_realtimeScore = 100;
     float m_lastApprovePeakHeight = 0.0f;
     //カウントアップ型スコア加算（ゲームにスコア表示するなら、、、）
-    bool m_isScoreCounting = false;
-    int  m_scoreToAddRemaining = 0;
-    float m_scoreAddTimer = 0.0f;
+    bool m_isOsaraCounting = false;
+    int  m_OsaraToAddRemaining = 0;
+    float m_OsaraAddTimer = 0.0f;
+
+    float osaraMoveSpeed = 200.09f;
 };
 
 #endif
