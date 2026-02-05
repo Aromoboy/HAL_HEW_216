@@ -90,7 +90,7 @@ namespace
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kDefaultVideoBackgroundParallax = 0.01f;
         constexpr float kDefaultVideoBackgroundBaseOffset01 = 0.5f;
-        constexpr bool kDefaultVideoBackgroundInvertScroll = false;
+        constexpr bool kDefaultVideoBackgroundInvertScroll = true;
         constexpr const char* kGameVideoBackgroundPath = "Assets/Video/Game.mp4";
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
