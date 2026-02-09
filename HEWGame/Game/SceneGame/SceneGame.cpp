@@ -435,7 +435,7 @@ bool SceneGame::Load(Core::Input& input)
 
     m_effectMap.clear();
     m_effectMap.try_emplace("explosion", EffectCreateData(u"Assets/Effect/slum_effect.efkefc", 0.75f));
-    m_effectMap.try_emplace("meteor_trail", EffectCreateData(u"Assets/Effect/Nowis337_Trail.efkefc", 0.5f));
+    m_effectMap.try_emplace("meteor_trail", EffectCreateData(u"Assets/Effect/Nowis337_Shot.efkefc", 0.5f));
 
     ID3D11Device* device = GetDevice();
     if (device)
