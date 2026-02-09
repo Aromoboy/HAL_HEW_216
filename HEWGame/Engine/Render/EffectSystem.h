@@ -61,6 +61,9 @@ public:
 	~EffectSystem();
 
 	void SpawnEffect(const EffectCreateRequest& a_request);
+	Effekseer::Handle SpawnEffectHandle(const EffectCreateRequest& a_request);
+	bool SetEffectPosition(Effekseer::Handle handle, const float3& position);
+	bool StopEffect(Effekseer::Handle handle);
 
 	void OnUpdate(const Core::UpdateContext& ctx) override final;
 	void Draw(const CameraSpace::ICamera* a_camera);
