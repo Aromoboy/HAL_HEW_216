@@ -1,4 +1,5 @@
 #include "EffectSystem.h"
+#include "Debug.h"
 
 
 
@@ -33,7 +34,11 @@ Effekseer::Handle EffectSystem::SpawnEffectHandle(const EffectCreateRequest& a_r
 {
 	std::string nameKey = a_request.effectName;
 	auto pathIt = m_effectCache.find(nameKey);
-	if (pathIt == m_effectCache.end()) return -1;
+	if (pathIt == m_effectCache.end())
+	{
+		DebugLog::DebugMessage(std::string("[EffectSystem] Effect cache miss: '") + nameKey + "'.\n");
+		return -1;
+	}
 
 	// Effectを取得
 	Effekseer::EffectRef effect = m_effectCache.at(nameKey);
