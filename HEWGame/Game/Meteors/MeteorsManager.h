@@ -35,6 +35,8 @@
 #include "Systems/Physics/ContactEventInfo.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
+class EffectSystem;
+
 namespace Core
 {
     class UpdateScheduler;
@@ -98,6 +100,7 @@ namespace MeteorsSpace
         void ClearAllMeteors();
 
         void SetPhaseChangeCallback(PhaseChangeCallback callback);
+        void SetEffectSystem(EffectSystem* effectSystem);
         bool LoadPhaseSpawnConfig(const std::string& path);
         void SetSpawnOrigins(
             const std::vector<float3>& primary,
@@ -157,6 +160,7 @@ namespace MeteorsSpace
         MeteorsContacts m_contacts;
         MeteorsLifecycle m_lifecycle;
         MeteorsRenderer m_renderer;
+        EffectSystem* m_effectSystem = nullptr;
         float3 m_cachedPlayerPosition{ 0.0f, 0.0f, 0.0f };
         bool m_hasCachedPlayerPosition{ false };
         std::mt19937 m_random;

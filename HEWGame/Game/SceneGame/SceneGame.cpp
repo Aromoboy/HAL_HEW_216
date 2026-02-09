@@ -435,6 +435,7 @@ bool SceneGame::Load(Core::Input& input)
 
     m_effectMap.clear();
     m_effectMap.try_emplace("explosion", EffectCreateData(u"Assets/Effect/slum_effect.efkefc", 0.75f));
+    m_effectMap.try_emplace("meteor_trail", EffectCreateData(u"Assets/Effect/Nowis337_Trail.efkefc", 0.5f));
 
     ID3D11Device* device = GetDevice();
     if (device)
@@ -998,10 +999,18 @@ void SceneGame::InitializeEffectSystem()
     m_effectManager->SetCurveLoader(Effekseer::MakeRefPtr<Effekseer::CurveLoader>());
 
     m_effectSystem = std::make_unique<EffectSystem>(m_effectRenderer, m_effectManager, m_effectMap);
+    if (m_meteorsManager)
+    {
+        m_meteorsManager->SetEffectSystem(m_effectSystem.get());
+    }
 }
 
 void SceneGame::ShutdownEffectSystem()
 {
+    if (m_meteorsManager)
+    {
+        m_meteorsManager->SetEffectSystem(nullptr);
+    }
     m_effectSystem.reset();
     m_effectManager.Reset();
     m_effectRenderer.Reset();

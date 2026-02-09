@@ -13,6 +13,7 @@
 #endif
 
 #include "Core/UpdateScheduler.h"
+#include "EffectSystem.h"
 #include "Meteors/BaseMeteors.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
@@ -31,6 +32,59 @@ namespace
 #endif
 
     constexpr const char* kLogPrefix = "[MeteorsManager] ";
+    constexpr const char* kMeteorTrailEffectName = "meteor_trail";
+
+    Effekseer::Handle SpawnTrailEffect(EffectSystem* effectSystem, const MeteorsSpace::ActiveMeteors& meteors)
+    {
+        if (!effectSystem)
+        {
+            return MeteorsSpace::BaseMeteors::kInvalidEffectHandle;
+        }
+
+        const float3 position = meteors.GetVisualTransform().position;
+        return effectSystem->SpawnEffectHandle(EffectSystem::EffectCreateRequest(
+            kMeteorTrailEffectName,
+            position,
+            float3{ 0.0f, 0.0f, 0.0f }));
+    }
+
+    void StopTrailEffect(EffectSystem* effectSystem, const std::shared_ptr<MeteorsSpace::ActiveMeteors>& meteors)
+    {
+        if (!effectSystem || !meteors || !meteors->HasTrailEffectHandle())
+        {
+            return;
+        }
+
+        effectSystem->StopEffect(meteors->GetTrailEffectHandle());
+        meteors->ClearTrailEffectHandle();
+    }
+
+    void UpdateTrailEffectPosition(EffectSystem* effectSystem,
+        const std::shared_ptr<MeteorsSpace::ActiveMeteors>& meteors,
+        Systems::PhysicsMachine* physicsMachine)
+    {
+        if (!effectSystem || !meteors || !meteors->HasTrailEffectHandle())
+        {
+            return;
+        }
+
+        float3 position = meteors->GetVisualTransform().position;
+        if (physicsMachine)
+        {
+            const b2BodyId bodyId = physicsMachine->FindBody(*meteors);
+            if (b2Body_IsValid(bodyId))
+            {
+                const b2Vec2 physicsPosition = b2Body_GetPosition(bodyId);
+                position.x = physicsPosition.x;
+                position.y = physicsPosition.y;
+            }
+        }
+
+        if (!effectSystem->SetEffectPosition(meteors->GetTrailEffectHandle(), position))
+        {
+            meteors->ClearTrailEffectHandle();
+        }
+    }
 
     const MeteorsSpace::PhaseSpawnConfig* GetActiveSpawnConfig(const MeteorsSpace::MeteorsSpawner& spawner)
     {
@@ -220,6 +274,28 @@ namespace MeteorsSpace
 
         m_lifecycle.OnUpdate(ctx);
         m_contacts.TickDebugStats(ctx.dt);
+
+        if (m_effectSystem)
+        {
+            for (auto& entry : m_registry.MutableStateMap())
+            {
+                for (auto& meteors : entry.second)
+                {
+                    if (!meteors)
+                    {
+                        continue;
+                    }
+
+                    if (meteors->IsPendingDestroy())
+                    {
+                        StopTrailEffect(m_effectSystem, meteors);
+                        continue;
+                    }
+
+                    UpdateTrailEffectPosition(m_effectSystem, meteors, m_physicsMachine);
+                }
+            }
+        }
     }
 
     void MeteorsManager::OnLateUpdate(const Core::UpdateContext& ctx)
@@ -310,6 +386,7 @@ namespace MeteorsSpace
         {
             m_meteorsHitCounts.erase(meteors.get());
             m_spawnHomingTimers.erase(meteors.get());
+            StopTrailEffect(m_effectSystem, meteors);
         }
         m_lifecycle.Erase(meteors);
     }
@@ -318,6 +395,16 @@ namespace MeteorsSpace
     {
         m_meteorsHitCounts.clear();
         m_spawnHomingTimers.clear();
+        if (m_effectSystem)
+        {
+            for (auto& entry : m_registry.MutableStateMap())
+            {
+                for (auto& meteors : entry.second)
+                {
+                    StopTrailEffect(m_effectSystem, meteors);
+                }
+            }
+        }
         m_lifecycle.ClearAllMeteors();
     }
 
@@ -325,6 +412,47 @@ namespace MeteorsSpace
     {
         m_phaseChangeCallback = std::move(callback);
         m_warnedMissingPhaseCallback = false;
+    }
+
+    void MeteorsManager::SetEffectSystem(EffectSystem* effectSystem)
+    {
+        if (m_effectSystem == effectSystem)
+        {
+            return;
+        }
+
+        if (m_effectSystem && effectSystem == nullptr)
+        {
+            for (auto& entry : m_registry.MutableStateMap())
+            {
+                for (auto& meteors : entry.second)
+                {
+                    StopTrailEffect(m_effectSystem, meteors);
+                }
+            }
+        }
+
+        m_effectSystem = effectSystem;
+
+        if (m_effectSystem)
+        {
+            for (auto& entry : m_registry.MutableStateMap())
+            {
+                for (auto& meteors : entry.second)
+                {
+                    if (!meteors || meteors->IsPendingDestroy() || meteors->HasTrailEffectHandle())
+                    {
+                        continue;
+                    }
+
+                    const Effekseer::Handle handle = SpawnTrailEffect(m_effectSystem, *meteors);
+                    if (handle != BaseMeteors::kInvalidEffectHandle)
+                    {
+                        meteors->SetTrailEffectHandle(handle);
+                    }
+                }
+            }
+        }
     }
 
     void MeteorsManager::NotifyPhaseChanged(int newPhase)
@@ -456,6 +584,15 @@ namespace MeteorsSpace
                         m_spawnHomingTimers[meteors.get()] = config.initialHomingSeconds;
                     }
                 }
+            }
+        }
+
+        if (m_effectSystem && meteors)
+        {
+            const Effekseer::Handle handle = SpawnTrailEffect(m_effectSystem, *meteors);
+            if (handle != BaseMeteors::kInvalidEffectHandle)
+            {
+                meteors->SetTrailEffectHandle(handle);
             }
         }
 

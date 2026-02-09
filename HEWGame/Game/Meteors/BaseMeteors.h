@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 
+#include <Effekseer.h>
+
 #include "Entities/PhysicalEntity.h"
 #include "VisualTransform.h"
 
@@ -12,6 +14,9 @@ namespace MeteorsSpace
     class BaseMeteors : public Entities::PhysicalEntity
     {
     public:
+        using EffectHandle = Effekseer::Handle;
+        static constexpr EffectHandle kInvalidEffectHandle = static_cast<EffectHandle>(-1);
+
         BaseMeteors(const std::string& tag,
             const Transform& transform,
             std::shared_ptr<Render::Model> model = nullptr,
@@ -71,6 +76,26 @@ namespace MeteorsSpace
             m_wasEverCarried = value;
         }
 
+        EffectHandle GetTrailEffectHandle() const noexcept
+        {
+            return m_trailEffectHandle;
+        }
+
+        bool HasTrailEffectHandle() const noexcept
+        {
+            return m_trailEffectHandle != kInvalidEffectHandle;
+        }
+
+        void SetTrailEffectHandle(EffectHandle handle) noexcept
+        {
+            m_trailEffectHandle = handle;
+        }
+
+        void ClearTrailEffectHandle() noexcept
+        {
+            m_trailEffectHandle = kInvalidEffectHandle;
+        }
+
     private:
         void SyncFromPhysics();
         void RefreshRenderTransform();
@@ -79,6 +104,7 @@ namespace MeteorsSpace
         bool m_safeToDelete = true;
         bool m_missingModelWarned = false;
         bool m_wasEverCarried = false;
+        EffectHandle m_trailEffectHandle = kInvalidEffectHandle;
         VisualTransform m_visual{};
         Transform m_renderTransform{};
     };
