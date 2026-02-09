@@ -122,7 +122,7 @@ void EffectSystem::UpdateEffectTransform(const PlayingEffect& effect, float dt)
 
 bool EffectSystem::SetEffectPosition(Effekseer::Handle handle, const float3& position)
 {
-	if (!m_manager || !m_manager->Exists(handle))
+	if (m_manager == nullptr || !m_manager->Exists(handle))
 	{
 		return false;
 	}
@@ -133,7 +133,7 @@ bool EffectSystem::SetEffectPosition(Effekseer::Handle handle, const float3& pos
 
 bool EffectSystem::StopEffect(Effekseer::Handle handle)
 {
-	if (!m_manager || !m_manager->Exists(handle))
+	if (m_manager == nullptr || !m_manager->Exists(handle))
 	{
 		return false;
 	}
