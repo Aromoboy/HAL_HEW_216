@@ -3141,6 +3141,20 @@ namespace SceneGameConfig
                     settings.fovDegrees = *parsed;
                 }
             }
+            else if (key == GameplayConfig::kCameraRigKeyIntroStartZoomMultiplier)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.introStartZoomMultiplier = std::max(1.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyIntroDurationSeconds)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    settings.introDurationSeconds = std::max(0.0f, *parsed);
+                }
+            }
             else if (key == GameplayConfig::kCameraRigKeyYawDegrees)
             {
                 if (auto parsed = TryParseFloatToken(value))
