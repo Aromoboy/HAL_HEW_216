@@ -108,6 +108,8 @@ private:
     };
 
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
+    void BeginCameraIntro();
+    void UpdateCameraIntro(float dt);
     void UpdateCameraBoundsForPhase(float heightMeters);
     void ApplyPlayerWrapDeltaY(float wrapDeltaY);
 #if defined(_DEBUG)
@@ -204,6 +206,11 @@ protected:
     // 仮で作った何回フェーズを超えたらクリアになるかの判定
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
+    bool m_cameraIntroActive = false;
+    float m_cameraIntroElapsedSeconds = 0.0f;
+    float m_cameraIntroDurationSeconds = 0.0f;
+    float m_cameraIntroStartMultiplier = 1.0f;
+    float3 m_cameraBaseOffset{ 0.0f, 0.0f, 0.0f };
     bool m_isComposed = false;
     float m_resultElapsedSeconds = 0.0f;
     bool m_resultReturnQueued = false;
