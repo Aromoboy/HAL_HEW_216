@@ -335,7 +335,7 @@ void CameraRig::OnUpdate(const Core::UpdateContext& ctx)
                 return;
         }
 
-        const auto& targetTransform = targetEntity->GetTransform();
+        const Transform targetTransform = targetEntity->GetRenderTransform();
         const float3 targetRotation = m_inheritRotation ? targetTransform.rotation : float3{ 0.0f, 0.0f, 0.0f };
         float3 targetPosition = targetTransform.position;
         const float rawTargetY = targetPosition.y;
