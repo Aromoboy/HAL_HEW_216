@@ -3215,6 +3215,20 @@ namespace SceneGameConfig
                     config.offsetY = *parsed;
                 }
             }
+            else if (key == GameplayConfig::kCameraRigKeyIntroZoomScale)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.introZoomScale = std::max(1.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyIntroDurationSeconds)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.introDurationSeconds = std::max(0.0f, *parsed);
+                }
+            }
         }
 
         return config;

@@ -1265,6 +1265,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         break;
     case StageState::Playing:
     {
+        UpdateIntroCamera(ctx.dt);
+
         if (input)
         {
             PlayerController::SpeedInput speedInput{
@@ -2275,6 +2277,9 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
 
     SceneGameConfig::CameraRigSettings resolvedSettings = ApplyGameplayCameraOverrides(settings);
+    m_introBaseCameraOffset = resolvedSettings.offset;
+    m_introCameraElapsedSeconds = 0.0f;
+    m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && m_gameCameraConfig.introZoomScale > 1.0f;
 
     // Clamp bounds come from stage config (StageData / gameplay.cfg), not decoration objects.
     std::optional<float> visualMinY = settings.clamp.minY;
@@ -2377,7 +2382,13 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     if (m_cameraRig)
     {
-        m_cameraRig->SetOffset(resolvedSettings.offset);
+        const float introZoomScale = std::max(1.0f, m_gameCameraConfig.introZoomScale);
+        const float3 initialOffset{
+            resolvedSettings.offset.x * introZoomScale,
+            resolvedSettings.offset.y * introZoomScale,
+            resolvedSettings.offset.z * introZoomScale
+        };
+        m_cameraRig->SetOffset(m_introCameraActive ? initialOffset : resolvedSettings.offset);
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
         m_cameraRig->SetFollowSpeed(resolvedSettings.followSpeed);
@@ -2568,6 +2579,47 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
     }
 }
 
+void SceneGame::UpdateIntroCamera(float deltaSeconds)
+{
+    if (!m_introCameraActive || !m_cameraRig)
+    {
+        return;
+    }
+
+    const float duration = std::max(0.0f, m_gameCameraConfig.introDurationSeconds);
+    if (duration <= 0.0f)
+    {
+        m_cameraRig->SetOffset(m_introBaseCameraOffset);
+        m_introCameraActive = false;
+        return;
+    }
+
+    m_introCameraElapsedSeconds = std::min(m_introCameraElapsedSeconds + std::max(0.0f, deltaSeconds), duration);
+    const float t = m_introCameraElapsedSeconds / duration;
+    const float eased = t * t * (3.0f - 2.0f * t);
+    const float introZoomScale = std::max(1.0f, m_gameCameraConfig.introZoomScale);
+
+    const float3 startOffset{
+        m_introBaseCameraOffset.x * introZoomScale,
+        m_introBaseCameraOffset.y * introZoomScale,
+        m_introBaseCameraOffset.z * introZoomScale
+    };
+
+    const float3 blendedOffset{
+        startOffset.x + (m_introBaseCameraOffset.x - startOffset.x) * eased,
+        startOffset.y + (m_introBaseCameraOffset.y - startOffset.y) * eased,
+        startOffset.z + (m_introBaseCameraOffset.z - startOffset.z) * eased
+    };
+
+    m_cameraRig->SetOffset(blendedOffset);
+
+    if (m_introCameraElapsedSeconds >= duration)
+    {
+        m_cameraRig->SetOffset(m_introBaseCameraOffset);
+        m_introCameraActive = false;
+    }
+}
+
 void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
 {
     (void)wrapDeltaY;
@@ -2609,6 +2661,25 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
+
+    m_introCameraElapsedSeconds = 0.0f;
+    m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && m_gameCameraConfig.introZoomScale > 1.0f;
+    if (m_cameraRig)
+    {
+        if (m_introCameraActive)
+        {
+            const float introZoomScale = std::max(1.0f, m_gameCameraConfig.introZoomScale);
+            m_cameraRig->SetOffset(float3{
+                m_introBaseCameraOffset.x * introZoomScale,
+                m_introBaseCameraOffset.y * introZoomScale,
+                m_introBaseCameraOffset.z * introZoomScale
+            });
+        }
+        else
+        {
+            m_cameraRig->SetOffset(m_introBaseCameraOffset);
+        }
+    }
 }
 
 void SceneGame::OnStageClear()

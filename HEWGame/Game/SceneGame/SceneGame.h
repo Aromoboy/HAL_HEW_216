@@ -108,6 +108,7 @@ private:
     };
 
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
+    void UpdateIntroCamera(float deltaSeconds);
     void UpdateCameraBoundsForPhase(float heightMeters);
     void ApplyPlayerWrapDeltaY(float wrapDeltaY);
 #if defined(_DEBUG)
@@ -183,6 +184,9 @@ protected:
     BlobShadowSettings m_blobShadowSettings{};
     GameCameraConfig m_gameCameraConfig{};
     CameraRigSettings m_cameraRigSettings{};
+    float3 m_introBaseCameraOffset{ 0.0f, 0.0f, 0.0f };
+    float m_introCameraElapsedSeconds = 0.0f;
+    bool m_introCameraActive = false;
     std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
