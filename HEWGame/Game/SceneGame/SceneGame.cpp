@@ -223,6 +223,31 @@ namespace
             return transform.rotation.y;
         }
 
+        std::optional<float3> GetCameraAnchorPosition(const Player* player, float followOffsetY = 0.0f)
+        {
+            if (!player)
+            {
+                return std::nullopt;
+            }
+
+            // Keep camera-event math anchored to the rendered model center,
+            // not to the physics origin/pivot used for collisions.
+            float3 anchorPosition = player->GetRenderTransform().position;
+            if (IsFiniteFloat(followOffsetY))
+            {
+                anchorPosition.y += followOffsetY;
+            }
+
+            if (!IsFiniteFloat(anchorPosition.x)
+                || !IsFiniteFloat(anchorPosition.y)
+                || !IsFiniteFloat(anchorPosition.z))
+            {
+                return std::nullopt;
+            }
+
+            return anchorPosition;
+        }
+
         float3 ForwardFromYaw(float yaw)
         {
             return float3{ std::cos(yaw), std::sin(yaw), 0.0f };
@@ -2158,13 +2183,16 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         {
             scrollOffsetUsedForBackground = axisPosition * parallaxScale;
         }
-        else if (player)
+        else
         {
-            const float3 playerPosition = player->GetTransform().position;
-            const float fallbackAxisPosition = scrollAlongY ? playerPosition.y : playerPosition.x;
-            if (IsFiniteFloat(fallbackAxisPosition))
+            const std::optional<float3> cameraAnchorPosition = GetCameraAnchorPosition(player.get());
+            if (cameraAnchorPosition)
             {
-                scrollOffsetUsedForBackground = fallbackAxisPosition * parallaxScale;
+                const float fallbackAxisPosition = scrollAlongY ? cameraAnchorPosition->y : cameraAnchorPosition->x;
+                if (IsFiniteFloat(fallbackAxisPosition))
+                {
+                    scrollOffsetUsedForBackground = fallbackAxisPosition * parallaxScale;
+                }
             }
         }
 
@@ -2176,11 +2204,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 const float viewportHeight = static_cast<float>(defaultRTV->GetHeight());
                 if (viewportHeight > 0.0f)
                 {
-                    float3 planeSample{ 0.0f, 0.0f, 0.0f };
-                    if (player)
-                    {
-                        planeSample = player->GetTransform().position;
-                    }
+                    float3 planeSample = GetCameraAnchorPosition(player.get()).value_or(float3{ 0.0f, 0.0f, 0.0f });
                     if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
                     {
                         planeSample.z = *m_stagePlaneZ;
@@ -2418,18 +2442,29 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     const float followSpeed = resolvedSettings.fixedPosition ? 0.0f : resolvedSettings.followSpeed;
     const float followSpeedY = resolvedSettings.fixedPosition ? 0.0f : gameCameraConfig.followSpeedY;
 
-    float3 targetPosition{ 0.0f, 0.0f, 0.0f };
-    bool hasTarget = false;
-    if (player)
+    const std::optional<float3> cameraAnchorPosition = GetCameraAnchorPosition(
+        player.get(),
+        resolvedSettings.fixedPosition ? 0.0f : gameCameraConfig.offsetY);
+    float3 targetPosition = cameraAnchorPosition.value_or(float3{ 0.0f, 0.0f, 0.0f });
+    const bool hasTarget = cameraAnchorPosition.has_value();
+
+    static bool loggedCameraAnchor = false;
+    if (!loggedCameraAnchor)
     {
-        // Event/gameplay follow-camera must keep the visual player model centered,
-        // so use render transform anchor instead of raw physics origin.
-        targetPosition = player->GetRenderTransform().position;
-        if (!resolvedSettings.fixedPosition)
+        std::ostringstream anchorLog;
+        anchorLog << kLogPrefix << "Camera anchor source=player.renderTransform(center-model)";
+        if (cameraAnchorPosition)
         {
-            targetPosition.y += gameCameraConfig.offsetY;
+            anchorLog << " pos=(" << cameraAnchorPosition->x << ',' << cameraAnchorPosition->y << ',' << cameraAnchorPosition->z << ')'
+                << " followOffsetY=" << (resolvedSettings.fixedPosition ? 0.0f : gameCameraConfig.offsetY);
         }
-        hasTarget = true;
+        else
+        {
+            anchorLog << " pos=<none>";
+        }
+        anchorLog << "\n";
+        ::DebugTrace(anchorLog.str());
+        loggedCameraAnchor = true;
     }
 
     float3 cameraRotation{ pitchRadians, yawRadians, 0.0f };
@@ -2632,7 +2667,7 @@ void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
     std::optional<float> halfViewHeightWorld = std::nullopt;
     if (m_gameCamera && player)
     {
-        float3 planeSample = player->GetTransform().position;
+        float3 planeSample = GetCameraAnchorPosition(player.get()).value_or(float3{ 0.0f, 0.0f, 0.0f });
         if (m_stagePlaneZ && IsFiniteFloat(*m_stagePlaneZ))
         {
             planeSample.z = *m_stagePlaneZ;
@@ -2732,6 +2767,10 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
     };
 
     m_cameraRig->SetOffset(blendedOffset);
+    if (const std::optional<float3> cameraAnchorPosition = GetCameraAnchorPosition(player.get(), m_gameCameraConfig.offsetY))
+    {
+        m_cameraRig->ResetVerticalScroll(*cameraAnchorPosition);
+    }
     if (m_gameCamera)
     {
         const float blendedFovDegrees = Lerp(m_introStartFovDegrees, m_introEndFovDegrees, eased);
@@ -2756,7 +2795,13 @@ void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
         return;
     }
 
-    const float targetRawY = player->GetRenderTransform().position.y;
+    const std::optional<float3> cameraAnchorPosition = GetCameraAnchorPosition(player.get());
+    if (!cameraAnchorPosition)
+    {
+        return;
+    }
+
+    const float targetRawY = cameraAnchorPosition->y;
     if (!IsFiniteFloat(wrapDeltaY) || !IsFiniteFloat(targetRawY))
     {
         return;
