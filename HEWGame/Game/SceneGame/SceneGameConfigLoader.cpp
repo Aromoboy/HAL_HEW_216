@@ -3229,6 +3229,13 @@ namespace SceneGameConfig
                     config.introDurationSeconds = std::max(0.0f, *parsed);
                 }
             }
+            else if (key == GameplayConfig::kCameraRigKeyBackgroundParallaxScale)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.backgroundParallaxScale = std::clamp(*parsed, 0.0f, 2.0f);
+                }
+            }
         }
 
         return config;
