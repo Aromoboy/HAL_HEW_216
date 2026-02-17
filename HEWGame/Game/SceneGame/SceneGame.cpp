@@ -533,8 +533,6 @@ namespace
 
 }
 
-float3 fRads = { 0.0f, 0.0f, 0.0f };
-
 bool SceneGame::Load(Core::Input& input)
 {
     m_inputService = &input;
@@ -1408,7 +1406,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         {
             SetStageState(StageState::Intro);
         }
-        fRads.z += 0.001f;
+#if defined(_DEBUG)
+        // Temporary debug-only animation phase used to validate stage update cadence.
+        static float s_debugAnimationPhaseRadians = 0.0f;
+        s_debugAnimationPhaseRadians += 0.001f;
+#endif
         break;
     }
     case StageState::TimeUp:
