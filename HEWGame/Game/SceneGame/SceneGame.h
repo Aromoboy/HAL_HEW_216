@@ -190,6 +190,7 @@ protected:
     float m_introEndFovDegrees = 45.0f;
     float m_introCameraElapsedSeconds = 0.0f;
     bool m_introCameraActive = false;
+    bool m_introCameraJustStarted = false;
     std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;

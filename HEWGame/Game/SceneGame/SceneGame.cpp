@@ -2420,6 +2420,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     m_introStartFovDegrees = ResolveIntroFovStartDegrees(m_introBaseGameplayFovDegrees, gameCameraConfig);
     m_introEndFovDegrees = ResolveIntroFovEndDegrees(m_introBaseGameplayFovDegrees, gameCameraConfig);
     m_introCameraElapsedSeconds = 0.0f;
+    m_introCameraJustStarted = false;
     const IntroCameraOffsetState introOffsetState = ResolveIntroCameraOffsetState(m_introBaseCameraOffset, gameCameraConfig);
     const bool introOffsetActive = introOffsetState.active;
     const bool introFovActive = std::abs(m_introStartFovDegrees - m_introEndFovDegrees) > kIntroFovNeutralEpsilon;
@@ -2751,6 +2752,7 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
             m_gameCamera->SetFieldOfViewDegrees(m_introBaseGameplayFovDegrees);
         }
         m_introCameraActive = false;
+        m_introCameraJustStarted = false;
         return;
     }
 
@@ -2767,9 +2769,13 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
     };
 
     m_cameraRig->SetOffset(blendedOffset);
-    if (const std::optional<float3> cameraAnchorPosition = GetCameraAnchorPosition(player.get(), m_gameCameraConfig.offsetY))
+    if (m_introCameraJustStarted)
     {
-        m_cameraRig->ResetVerticalScroll(*cameraAnchorPosition);
+        if (const std::optional<float3> cameraAnchorPosition = GetCameraAnchorPosition(player.get(), m_gameCameraConfig.offsetY))
+        {
+            m_cameraRig->ResetVerticalScroll(*cameraAnchorPosition);
+        }
+        m_introCameraJustStarted = false;
     }
     if (m_gameCamera)
     {
@@ -2785,6 +2791,7 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
             m_gameCamera->SetFieldOfViewDegrees(m_introBaseGameplayFovDegrees);
         }
         m_introCameraActive = false;
+        m_introCameraJustStarted = false;
     }
 }
 
@@ -2850,6 +2857,7 @@ void SceneGame::OnStageStart()
     ResetPlaySession();
 
     m_introCameraElapsedSeconds = 0.0f;
+    m_introCameraJustStarted = true;
     const IntroCameraOffsetState introOffsetState = ResolveIntroCameraOffsetState(m_introBaseCameraOffset, m_gameCameraConfig);
     const bool introOffsetActive = introOffsetState.active;
     const bool introFovActive = std::abs(m_introStartFovDegrees - m_introEndFovDegrees) > kIntroFovNeutralEpsilon;
