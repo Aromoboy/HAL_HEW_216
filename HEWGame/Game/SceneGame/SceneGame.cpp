@@ -2398,7 +2398,10 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetTranslationLocked(false);
         m_cameraRig->SetYawPitchLocked(true);
         // Event-camera requirement: keep the player model centered in-frame on gameplay movement.
-        m_cameraRig->SetFollowPositionAxes(true, true, false);
+        constexpr bool kFollowPlayerX = true;
+        constexpr bool kFollowPlayerY = true;
+        constexpr bool kFollowPlayerZ = false;
+        m_cameraRig->SetFollowPositionAxes(kFollowPlayerX, kFollowPlayerY, kFollowPlayerZ);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetComfortZoneY(comfortZoneTopY, comfortZoneBottomY);
         m_cameraRig->SetWrapY(canWrapY ? minScrollY : std::nullopt, canWrapY ? maxScrollY : std::nullopt);
@@ -2412,9 +2415,9 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
             m_cameraRig->SetClampY(std::nullopt, std::nullopt);
         }
 
-        const bool followAxesOk = m_cameraRig->IsFollowingPositionX()
-            && m_cameraRig->IsFollowingPositionY()
-            && !m_cameraRig->IsFollowingPositionZ();
+        const bool followAxesOk = m_cameraRig->IsFollowingPositionX() == kFollowPlayerX
+            && m_cameraRig->IsFollowingPositionY() == kFollowPlayerY
+            && m_cameraRig->IsFollowingPositionZ() == kFollowPlayerZ;
         const bool flagsOk = followAxesOk
             && !m_cameraRig->IsTranslationLocked()
             && m_cameraRig->IsYawPitchLocked()
@@ -2630,7 +2633,7 @@ void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
         return;
     }
 
-    const float targetRawY = player->GetTransform().position.y;
+    const float targetRawY = player->GetRenderTransform().position.y;
     if (!IsFiniteFloat(wrapDeltaY) || !IsFiniteFloat(targetRawY))
     {
         return;
@@ -2785,7 +2788,7 @@ void SceneGame::ResetPlaySession()
 
     if (player && m_cameraRig)
     {
-        m_cameraRig->ResetVerticalScroll(player->GetTransform().position);
+        m_cameraRig->ResetVerticalScroll(player->GetRenderTransform().position);
     }
     else if (!m_cameraRig)
     {
