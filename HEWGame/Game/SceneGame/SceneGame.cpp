@@ -85,6 +85,7 @@ namespace
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kShadowReceiverTolerance = 0.05f;
         constexpr float kIntroZoomNeutralEpsilon = 1.0e-4f;
+        constexpr float kIntroFovNeutralEpsilon = 1.0e-3f;
         constexpr uint16_t kPlayerCategoryMask = 0x0002;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
@@ -131,6 +132,22 @@ namespace
             state.active = gameCameraConfig.introDurationSeconds > 0.0f
                 && std::abs(gameCameraConfig.introZoomScale - 1.0f) > kIntroZoomNeutralEpsilon;
             return state;
+        }
+
+        float ResolveIntroFovStartDegrees(float gameplayFovDegrees,
+                                          const SceneGameConfig::GameCameraConfig& gameCameraConfig)
+        {
+            return gameCameraConfig.introStartFovDegrees > 0.0f
+                ? gameCameraConfig.introStartFovDegrees
+                : gameplayFovDegrees;
+        }
+
+        float ResolveIntroFovEndDegrees(float gameplayFovDegrees,
+                                        const SceneGameConfig::GameCameraConfig& gameCameraConfig)
+        {
+            return gameCameraConfig.introEndFovDegrees > 0.0f
+                ? gameCameraConfig.introEndFovDegrees
+                : gameplayFovDegrees;
         }
 
         float SmoothStep(float edge0, float edge1, float x)
@@ -2349,9 +2366,14 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     SceneGameConfig::CameraRigSettings resolvedSettings = ApplyGameplayCameraOverrides(settings);
     m_introBaseCameraOffset = resolvedSettings.offset;
+    m_introBaseGameplayFovDegrees = resolvedSettings.fovDegrees;
+    m_introStartFovDegrees = ResolveIntroFovStartDegrees(m_introBaseGameplayFovDegrees, gameCameraConfig);
+    m_introEndFovDegrees = ResolveIntroFovEndDegrees(m_introBaseGameplayFovDegrees, gameCameraConfig);
     m_introCameraElapsedSeconds = 0.0f;
-    const IntroCameraOffsetState introOffsetState = ResolveIntroCameraOffsetState(m_introBaseCameraOffset, m_gameCameraConfig);
-    m_introCameraActive = introOffsetState.active;
+    const IntroCameraOffsetState introOffsetState = ResolveIntroCameraOffsetState(m_introBaseCameraOffset, gameCameraConfig);
+    const bool introOffsetActive = introOffsetState.active;
+    const bool introFovActive = std::abs(m_introStartFovDegrees - m_introEndFovDegrees) > kIntroFovNeutralEpsilon;
+    m_introCameraActive = gameCameraConfig.introDurationSeconds > 0.0f && (introOffsetActive || introFovActive);
 
     // Clamp bounds come from stage config (StageData / gameplay.cfg), not decoration objects.
     std::optional<float> visualMinY = settings.clamp.minY;
@@ -2361,7 +2383,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     if (m_gameCamera)
     {
-        m_gameCamera->SetFieldOfViewDegrees(resolvedSettings.fovDegrees);
+        const float initialFovDegrees = m_introCameraActive ? m_introStartFovDegrees : m_introEndFovDegrees;
+        m_gameCamera->SetFieldOfViewDegrees(initialFovDegrees);
     }
 
     const float yawRadians = DirectX::XMConvertToRadians(resolvedSettings.yawDegrees);
@@ -2456,7 +2479,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     if (m_cameraRig)
     {
-        m_cameraRig->SetOffset(m_introCameraActive ? introOffsetState.startOffset : resolvedSettings.offset);
+        m_cameraRig->SetOffset(m_introCameraActive && introOffsetActive ? introOffsetState.startOffset : resolvedSettings.offset);
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
         m_cameraRig->SetFollowSpeed(resolvedSettings.followSpeed);
@@ -2662,6 +2685,10 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
     if (duration <= 0.0f)
     {
         m_cameraRig->SetOffset(m_introBaseCameraOffset);
+        if (m_gameCamera)
+        {
+            m_gameCamera->SetFieldOfViewDegrees(m_introBaseGameplayFovDegrees);
+        }
         m_introCameraActive = false;
         return;
     }
@@ -2679,10 +2706,19 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
     };
 
     m_cameraRig->SetOffset(blendedOffset);
+    if (m_gameCamera)
+    {
+        const float blendedFovDegrees = Lerp(m_introStartFovDegrees, m_introEndFovDegrees, eased);
+        m_gameCamera->SetFieldOfViewDegrees(blendedFovDegrees);
+    }
 
     if (m_introCameraElapsedSeconds >= duration)
     {
         m_cameraRig->SetOffset(m_introBaseCameraOffset);
+        if (m_gameCamera)
+        {
+            m_gameCamera->SetFieldOfViewDegrees(m_introBaseGameplayFovDegrees);
+        }
         m_introCameraActive = false;
     }
 }
@@ -2744,10 +2780,17 @@ void SceneGame::OnStageStart()
 
     m_introCameraElapsedSeconds = 0.0f;
     const IntroCameraOffsetState introOffsetState = ResolveIntroCameraOffsetState(m_introBaseCameraOffset, m_gameCameraConfig);
-    m_introCameraActive = introOffsetState.active;
+    const bool introOffsetActive = introOffsetState.active;
+    const bool introFovActive = std::abs(m_introStartFovDegrees - m_introEndFovDegrees) > kIntroFovNeutralEpsilon;
+    m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && (introOffsetActive || introFovActive);
     if (m_cameraRig)
     {
-        m_cameraRig->SetOffset(m_introCameraActive ? introOffsetState.startOffset : m_introBaseCameraOffset);
+        m_cameraRig->SetOffset(m_introCameraActive && introOffsetActive ? introOffsetState.startOffset : m_introBaseCameraOffset);
+        if (m_gameCamera)
+        {
+            const float startFovDegrees = m_introCameraActive ? m_introStartFovDegrees : m_introBaseGameplayFovDegrees;
+            m_gameCamera->SetFieldOfViewDegrees(startFovDegrees);
+        }
 
         static bool loggedIntroOffsets = false;
         if (!loggedIntroOffsets)
