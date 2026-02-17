@@ -3285,6 +3285,20 @@ namespace SceneGameConfig
                     config.backgroundParallaxScale = std::clamp(*parsed, 0.0f, 2.0f);
                 }
             }
+            else if (key == GameplayConfig::kCameraRigKeyIntroBackgroundParallaxBoost)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.introBackgroundParallaxBoost = std::max(1.0f, *parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyIntroBackgroundParallaxCurve)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.introBackgroundParallaxCurve = std::max(0.01f, *parsed);
+                }
+            }
         }
 
         return config;

@@ -176,6 +176,8 @@ namespace SceneGameConfig
         float introEndFovDegrees = 0.0f;
         float introDurationSeconds = 3.0f;
         float backgroundParallaxScale = 0.35f;
+        float introBackgroundParallaxBoost = 1.75f;
+        float introBackgroundParallaxCurve = 1.5f;
     };
 
 }
