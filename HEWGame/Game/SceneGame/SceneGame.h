@@ -64,7 +64,6 @@ public:
     enum class StageState
     {
         Intro,
-        PreStart,
         Playing,
         TimeUp,
         Cleared,
@@ -121,7 +120,6 @@ private:
     void ClearMissiles();
     void SetStageState(StageState newState);
     void OnStageStart();
-    void ActivateGameplaySession();
     void OnStageClear();
     void OnStageFail();
     void ResetPlaySession();
@@ -189,7 +187,6 @@ protected:
     float3 m_introBaseCameraOffset{ 0.0f, 0.0f, 0.0f };
     float m_introCameraElapsedSeconds = 0.0f;
     bool m_introCameraActive = false;
-    bool m_gameplaySystemsEnabled = false;
     std::optional<float> m_stagePlaneZ = std::nullopt;
     float m_playerBaseHorizontalSpeed = 0.0f;
     float m_playerBaseVerticalSpeed = 0.0f;
