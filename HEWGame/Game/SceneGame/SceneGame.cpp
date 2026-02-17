@@ -223,7 +223,7 @@ namespace
             return transform.rotation.y;
         }
 
-        std::optional<float3> GetCameraAnchorPosition(const Player* player, float followOffsetY = 0.0f)
+        std::optional<float3> GetCameraAnchorPosition(const Entities::Player* player, float followOffsetY = 0.0f)
         {
             if (!player)
             {
