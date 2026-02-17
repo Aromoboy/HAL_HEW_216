@@ -171,6 +171,8 @@ namespace SceneGameConfig
         float comfortZoneBottomPercentY = 0.1f;
         float followSpeedY = 5.0f;
         float offsetY = 0.0f;
+        float introZoomScale = 1.8f;
+        float introDurationSeconds = 3.0f;
     };
 
 }
