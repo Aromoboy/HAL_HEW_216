@@ -1020,7 +1020,7 @@ void SceneGame::ConfigureUpdates()
                 }
         }
 
-        SetStageState(StageState::Playing);
+        SetStageState(StageState::Intro);
 }
 
 void SceneGame::InitializeEffectSystem()
@@ -1310,11 +1310,15 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     switch (m_stageState)
     {
     case StageState::Intro:
+        UpdateIntroCamera(ctx.dt);
+        if (!m_introCameraActive)
+        {
+            ToggleGameplaySystems(true);
+            SetStageState(StageState::Playing);
+        }
         break;
     case StageState::Playing:
     {
-        UpdateIntroCamera(ctx.dt);
-
         if (input)
         {
             PlayerController::SpeedInput speedInput{
@@ -1336,7 +1340,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
         if (input && m_playerController.HandleManualRetryInput(*input, elapsedSeconds, peakHeight))
         {
-            SetStageState(StageState::Playing);
+            SetStageState(StageState::Intro);
         }
         fRads.z += 0.001f;
         break;
@@ -1366,7 +1370,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             : PlayerController::PostGameAction::None;
         if (action == PlayerController::PostGameAction::ConfirmRestart)
         {
-            SetStageState(StageState::Playing);
+            SetStageState(StageState::Intro);
             return;
         }
     }
@@ -2703,7 +2707,7 @@ void SceneGame::SetStageState(StageState newState)
 {
     if (m_stageState == newState)
     {
-        if (newState == StageState::Playing)
+        if (newState == StageState::Intro)
         {
             OnStageStart();
         }
@@ -2714,7 +2718,7 @@ void SceneGame::SetStageState(StageState newState)
 
     switch (newState)
     {
-    case StageState::Playing:
+    case StageState::Intro:
         OnStageStart();
         break;
     case StageState::Cleared:
@@ -2727,7 +2731,7 @@ void SceneGame::SetStageState(StageState newState)
         m_resultElapsedSeconds = 0.0f;
         m_resultReturnQueued = false;
         break;
-    case StageState::Intro:
+    case StageState::Playing:
         break;
     default:
         break;
@@ -2860,7 +2864,7 @@ void SceneGame::ResetPlaySession()
 
     m_gameplayRules.ResetSession();
     m_contactHandler.Reset();
-    ToggleGameplaySystems(true);
+    ToggleGameplaySystems(false);
     m_phaseManager.Reset();
 
     if (m_meteorsManager)
