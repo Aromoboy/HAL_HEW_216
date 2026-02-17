@@ -3219,7 +3219,7 @@ namespace SceneGameConfig
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
-                    config.introZoomScale = std::max(1.0f, *parsed);
+                    config.introZoomScale = std::max(0.05f, *parsed);
                 }
             }
             else if (key == GameplayConfig::kCameraRigKeyIntroDurationSeconds)
