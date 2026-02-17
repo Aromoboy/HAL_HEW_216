@@ -161,6 +161,30 @@ namespace
             return t * t * (3.0f - 2.0f * t);
         }
 
+        float ResolveIntroParallaxScale(const SceneGameConfig::GameCameraConfig& gameCameraConfig,
+                                        bool introCameraActive,
+                                        float introCameraElapsedSeconds)
+        {
+            const float baseScale = std::clamp(gameCameraConfig.backgroundParallaxScale, 0.0f, 2.0f);
+            if (!introCameraActive)
+            {
+                return baseScale;
+            }
+
+            const float duration = std::max(0.0f, gameCameraConfig.introDurationSeconds);
+            if (duration <= 0.0f)
+            {
+                return baseScale;
+            }
+
+            const float boost = std::max(1.0f, gameCameraConfig.introBackgroundParallaxBoost);
+            const float curve = std::max(0.01f, gameCameraConfig.introBackgroundParallaxCurve);
+            const float t = std::clamp(introCameraElapsedSeconds / duration, 0.0f, 1.0f);
+            const float fadeOut = 1.0f - std::pow(t, curve);
+            const float introMultiplier = 1.0f + (boost - 1.0f) * fadeOut;
+            return baseScale * introMultiplier;
+        }
+
         int ResolveKillScore(const std::optional<MeteorsSpace::MeteorsType>& meteorsType)
         {
             if (!meteorsType)
@@ -2127,7 +2151,9 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         const float3 cameraForward = ComputeCameraForward(baseCamera->GetRotation());
         const bool scrollAlongY = std::fabs(cameraForward.y) >= std::fabs(cameraForward.x);
         const float axisPosition = scrollAlongY ? cameraPosition.y : cameraPosition.x;
-        const float parallaxScale = std::clamp(m_gameCameraConfig.backgroundParallaxScale, 0.0f, 2.0f);
+        const float parallaxScale = ResolveIntroParallaxScale(m_gameCameraConfig,
+                                                             m_introCameraActive,
+                                                             m_introCameraElapsedSeconds);
         if (IsFiniteFloat(axisPosition) && IsFiniteFloat(parallaxScale))
         {
             scrollOffsetUsedForBackground = axisPosition * parallaxScale;
