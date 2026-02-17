@@ -84,6 +84,7 @@ namespace
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr float kIntroZoomNeutralEpsilon = 1.0e-4f;
         constexpr uint16_t kPlayerCategoryMask = 0x0002;
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
@@ -105,7 +106,7 @@ namespace
 
         float3 ComputeIntroStartOffset(const float3& baseOffset, float introZoomScale, bool startCloserToPlayer = true)
         {
-            const float scale = std::max(1.0f, introZoomScale);
+            const float scale = std::max(0.05f, introZoomScale);
             const float distanceScale = startCloserToPlayer ? (1.0f / scale) : scale;
 
             // intro starts closer to player model, then moves out to gameplay default
@@ -2292,7 +2293,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     SceneGameConfig::CameraRigSettings resolvedSettings = ApplyGameplayCameraOverrides(settings);
     m_introBaseCameraOffset = resolvedSettings.offset;
     m_introCameraElapsedSeconds = 0.0f;
-    m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && m_gameCameraConfig.introZoomScale > 1.0f;
+    m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && std::abs(m_gameCameraConfig.introZoomScale - 1.0f) > kIntroZoomNeutralEpsilon;
 
     // Clamp bounds come from stage config (StageData / gameplay.cfg), not decoration objects.
     std::optional<float> visualMinY = settings.clamp.minY;
@@ -2684,7 +2685,7 @@ void SceneGame::OnStageStart()
     ResetPlaySession();
 
     m_introCameraElapsedSeconds = 0.0f;
-    m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && m_gameCameraConfig.introZoomScale > 1.0f;
+    m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && std::abs(m_gameCameraConfig.introZoomScale - 1.0f) > kIntroZoomNeutralEpsilon;
     if (m_cameraRig)
     {
         if (m_introCameraActive)
