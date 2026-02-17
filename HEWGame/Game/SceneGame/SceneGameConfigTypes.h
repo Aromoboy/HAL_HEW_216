@@ -173,6 +173,7 @@ namespace SceneGameConfig
         float offsetY = 0.0f;
         float introZoomScale = 1.8f;
         float introDurationSeconds = 3.0f;
+        float backgroundParallaxScale = 0.35f;
     };
 
 }

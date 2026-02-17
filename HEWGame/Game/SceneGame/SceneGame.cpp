@@ -171,7 +171,7 @@ namespace
             return float3{ std::cos(yaw), std::sin(yaw), 0.0f };
         }
 
-        float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
+        float3 ComputeCameraForward(const float3& cameraRotation)
         {
             DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
                 cameraRotation.x,
@@ -180,14 +180,32 @@ namespace
 
             DirectX::XMVECTOR forward = DirectX::XMVector3TransformNormal(
                 DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotationMatrix);
+
+            return float3
+            {
+                DirectX::XMVectorGetX(forward),
+                DirectX::XMVectorGetY(forward),
+                DirectX::XMVectorGetZ(forward)
+            };
+        }
+
+        float ComputeViewDepth(const float3& cameraPosition, const float3& cameraRotation, const float3& worldPosition)
+        {
+            const float3 forwardDirection = ComputeCameraForward(cameraRotation);
+
+            DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(
+                cameraRotation.x,
+                cameraRotation.y,
+                cameraRotation.z);
+
             DirectX::XMVECTOR upVector = DirectX::XMVector3TransformNormal(
                 DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotationMatrix);
 
             float3 focus
             {
-                cameraPosition.x + DirectX::XMVectorGetX(forward),
-                cameraPosition.y + DirectX::XMVectorGetY(forward),
-                cameraPosition.z + DirectX::XMVectorGetZ(forward)
+                cameraPosition.x + forwardDirection.x,
+                cameraPosition.y + forwardDirection.y,
+                cameraPosition.z + forwardDirection.z
             };
 
             float3 up
@@ -2068,6 +2086,25 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
+        const float3 cameraPosition = baseCamera->GetPosition();
+        const float3 cameraForward = ComputeCameraForward(baseCamera->GetRotation());
+        const bool scrollAlongY = std::fabs(cameraForward.y) >= std::fabs(cameraForward.x);
+        const float axisPosition = scrollAlongY ? cameraPosition.y : cameraPosition.x;
+        const float parallaxScale = std::clamp(m_gameCameraConfig.backgroundParallaxScale, 0.0f, 2.0f);
+        if (IsFiniteFloat(axisPosition) && IsFiniteFloat(parallaxScale))
+        {
+            scrollOffsetUsedForBackground = axisPosition * parallaxScale;
+        }
+        else if (player)
+        {
+            const float3 playerPosition = player->GetTransform().position;
+            const float fallbackAxisPosition = scrollAlongY ? playerPosition.y : playerPosition.x;
+            if (IsFiniteFloat(fallbackAxisPosition))
+            {
+                scrollOffsetUsedForBackground = fallbackAxisPosition * parallaxScale;
+            }
+        }
+
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
         {
             RenderTarget* defaultRTV = GetDefaultRTV();
