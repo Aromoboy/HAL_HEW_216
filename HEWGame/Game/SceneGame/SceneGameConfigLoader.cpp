@@ -250,6 +250,13 @@ namespace
         return DirectX::XMFLOAT4{ components[0], components[1], components[2], components[3] };
     }
 
+
+    float NormalizeIntroZoomScale(float value)
+    {
+        // introZoomScale semantic: <1.0 starts closer to player, >1.0 starts farther.
+        return std::max(0.05f, value);
+    }
+
     bool ParseBool(const std::string& value, bool& outValue)
     {
         std::string lowered = value;
@@ -3219,7 +3226,7 @@ namespace SceneGameConfig
             {
                 if (auto parsed = TryParseFloatToken(value))
                 {
-                    config.introZoomScale = std::max(0.05f, *parsed);
+                    config.introZoomScale = NormalizeIntroZoomScale(*parsed);
                 }
             }
             else if (key == GameplayConfig::kCameraRigKeyIntroDurationSeconds)
