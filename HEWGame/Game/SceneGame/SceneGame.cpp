@@ -2622,7 +2622,18 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
 
 void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
 {
-    (void)wrapDeltaY;
+    if (!m_cameraRig || !player)
+    {
+        return;
+    }
+
+    const float targetRawY = player->GetTransform().position.y;
+    if (!IsFiniteFloat(wrapDeltaY) || !IsFiniteFloat(targetRawY))
+    {
+        return;
+    }
+
+    m_cameraRig->ApplyExternalWrapDeltaY(wrapDeltaY, targetRawY);
 }
 
 void SceneGame::SetStageState(StageState newState)
