@@ -28,8 +28,6 @@ namespace GameplayConfig
     inline constexpr const char* kCameraRigKeyOffsetY = "offsetY";
     inline constexpr const char* kCameraRigKeyOffset = "offset";
     inline constexpr const char* kCameraRigKeyFovDegrees = "fovDegrees";
-    inline constexpr const char* kCameraRigKeyIntroStartZoomMultiplier = "introStartZoomMultiplier";
-    inline constexpr const char* kCameraRigKeyIntroDurationSeconds = "introDurationSeconds";
     inline constexpr const char* kCameraRigKeyYawDegrees = "yawDegrees";
     inline constexpr const char* kCameraRigKeyPitchDegrees = "pitchDegrees";
     inline constexpr const char* kSectionMissileSettings = "missile.settings";

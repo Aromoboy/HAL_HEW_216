@@ -159,8 +159,6 @@ namespace SceneGameConfig
         float followSpeed = 5.0f;
         float3 offset{ 0.0f, 5.5f, -25.0f };
         float fovDegrees = 45.0f;
-        float introStartZoomMultiplier = 2.0f;
-        float introDurationSeconds = 3.0f;
         float yawDegrees = 0.0f;
         float pitchDegrees = -10.0f;
         bool wrapY = false;

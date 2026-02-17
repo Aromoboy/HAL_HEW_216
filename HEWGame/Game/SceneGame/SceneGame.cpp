@@ -1019,7 +1019,6 @@ void SceneGame::ShutdownEffectSystem()
 
 void SceneGame::Update(const Core::UpdateContext& ctx)
 {
-    UpdateCameraIntro(ctx.dt);
 #if defined(_DEBUG)
     HandleColliderDebugCommands(ctx);
 #endif
@@ -2375,9 +2374,6 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     m_cameraWrapMinY = canWrapY ? minScrollY : std::nullopt;
     m_cameraWrapMaxY = canWrapY ? maxScrollY : std::nullopt;
-    m_cameraBaseOffset = resolvedSettings.offset;
-    m_cameraIntroStartMultiplier = std::max(1.0f, resolvedSettings.introStartZoomMultiplier);
-    m_cameraIntroDurationSeconds = std::max(0.0f, resolvedSettings.introDurationSeconds);
 
     if (m_cameraRig)
     {
@@ -2577,60 +2573,6 @@ void SceneGame::ApplyPlayerWrapDeltaY(float wrapDeltaY)
     (void)wrapDeltaY;
 }
 
-void SceneGame::BeginCameraIntro()
-{
-    m_cameraIntroElapsedSeconds = 0.0f;
-    m_cameraIntroDurationSeconds = std::max(0.0f, m_cameraIntroDurationSeconds);
-    m_cameraIntroStartMultiplier = std::max(1.0f, m_cameraIntroStartMultiplier);
-    m_cameraIntroActive = (m_cameraRig != nullptr && m_cameraIntroDurationSeconds > 0.0f && m_cameraIntroStartMultiplier > 1.0f);
-
-    if (!m_cameraRig)
-    {
-        return;
-    }
-
-    if (!m_cameraIntroActive)
-    {
-        m_cameraRig->SetOffset(m_cameraBaseOffset);
-        return;
-    }
-
-    m_cameraRig->SetOffset(float3{
-        m_cameraBaseOffset.x * m_cameraIntroStartMultiplier,
-        m_cameraBaseOffset.y * m_cameraIntroStartMultiplier,
-        m_cameraBaseOffset.z * m_cameraIntroStartMultiplier });
-}
-
-void SceneGame::UpdateCameraIntro(float dt)
-{
-    if (!m_cameraIntroActive || !m_cameraRig)
-    {
-        return;
-    }
-
-    if (!std::isfinite(dt) || dt <= 0.0f)
-    {
-        return;
-    }
-
-    m_cameraIntroElapsedSeconds = std::min(m_cameraIntroElapsedSeconds + dt, m_cameraIntroDurationSeconds);
-    const float t = (m_cameraIntroDurationSeconds > 0.0f)
-        ? std::clamp(m_cameraIntroElapsedSeconds / m_cameraIntroDurationSeconds, 0.0f, 1.0f)
-        : 1.0f;
-    const float eased = SmoothStep(0.0f, 1.0f, t);
-    const float multiplier = Lerp(m_cameraIntroStartMultiplier, 1.0f, eased);
-    m_cameraRig->SetOffset(float3{
-        m_cameraBaseOffset.x * multiplier,
-        m_cameraBaseOffset.y * multiplier,
-        m_cameraBaseOffset.z * multiplier });
-
-    if (t >= 1.0f)
-    {
-        m_cameraIntroActive = false;
-        m_cameraRig->SetOffset(m_cameraBaseOffset);
-    }
-}
-
 void SceneGame::SetStageState(StageState newState)
 {
     if (m_stageState == newState)
@@ -2667,7 +2609,6 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
-    BeginCameraIntro();
 }
 
 void SceneGame::OnStageClear()
