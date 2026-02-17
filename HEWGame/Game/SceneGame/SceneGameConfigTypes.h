@@ -172,6 +172,8 @@ namespace SceneGameConfig
         float followSpeedY = 5.0f;
         float offsetY = 0.0f;
         float introZoomScale = 1.8f;
+        float introStartFovDegrees = 0.0f;
+        float introEndFovDegrees = 0.0f;
         float introDurationSeconds = 3.0f;
         float backgroundParallaxScale = 0.35f;
     };

@@ -185,6 +185,9 @@ protected:
     GameCameraConfig m_gameCameraConfig{};
     CameraRigSettings m_cameraRigSettings{};
     float3 m_introBaseCameraOffset{ 0.0f, 0.0f, 0.0f };
+    float m_introBaseGameplayFovDegrees = 45.0f;
+    float m_introStartFovDegrees = 45.0f;
+    float m_introEndFovDegrees = 45.0f;
     float m_introCameraElapsedSeconds = 0.0f;
     bool m_introCameraActive = false;
     std::optional<float> m_stagePlaneZ = std::nullopt;

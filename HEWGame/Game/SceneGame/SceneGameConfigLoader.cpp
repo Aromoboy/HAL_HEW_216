@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -255,6 +256,33 @@ namespace
     {
         // introZoomScale semantic: <1.0 starts closer to player, >1.0 starts farther.
         return std::max(0.05f, value);
+    }
+
+    float NormalizeIntroFovDegrees(float value, float fallbackValue, const char* keyName)
+    {
+        constexpr float kMinFovDegrees = 1.0f;
+        constexpr float kMaxFovDegrees = 179.0f;
+        if (!std::isfinite(value))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Invalid camera intro FOV for key '" << keyName
+                << "' (non-finite). Using fallback=" << fallbackValue << ".\n";
+            ::DebugTrace(oss.str());
+            return fallbackValue;
+        }
+
+        if (value < kMinFovDegrees || value > kMaxFovDegrees)
+        {
+            const float clampedValue = std::clamp(value, kMinFovDegrees, kMaxFovDegrees);
+            std::ostringstream oss;
+            oss << kLogPrefix << "Camera intro FOV key '" << keyName
+                << "' out of range [" << kMinFovDegrees << ", " << kMaxFovDegrees
+                << "] value=" << value << "; clamped to " << clampedValue << ".\n";
+            ::DebugTrace(oss.str());
+            return clampedValue;
+        }
+
+        return value;
     }
 
     bool ParseBool(const std::string& value, bool& outValue)
@@ -3227,6 +3255,20 @@ namespace SceneGameConfig
                 if (auto parsed = TryParseFloatToken(value))
                 {
                     config.introZoomScale = NormalizeIntroZoomScale(*parsed);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyIntroStartFovDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.introStartFovDegrees = NormalizeIntroFovDegrees(*parsed, config.introStartFovDegrees, GameplayConfig::kCameraRigKeyIntroStartFovDegrees);
+                }
+            }
+            else if (key == GameplayConfig::kCameraRigKeyIntroEndFovDegrees)
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    config.introEndFovDegrees = NormalizeIntroFovDegrees(*parsed, config.introEndFovDegrees, GameplayConfig::kCameraRigKeyIntroEndFovDegrees);
                 }
             }
             else if (key == GameplayConfig::kCameraRigKeyIntroDurationSeconds)
