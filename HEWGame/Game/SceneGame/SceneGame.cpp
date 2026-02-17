@@ -103,6 +103,19 @@ namespace
             return from + (to - from) * t;
         }
 
+        float3 ComputeIntroStartOffset(const float3& baseOffset, float introZoomScale, bool startCloserToPlayer = true)
+        {
+            const float scale = std::max(1.0f, introZoomScale);
+            const float distanceScale = startCloserToPlayer ? (1.0f / scale) : scale;
+
+            // intro starts closer to player model, then moves out to gameplay default
+            return float3{
+                baseOffset.x * distanceScale,
+                baseOffset.y * distanceScale,
+                baseOffset.z * distanceScale
+            };
+        }
+
         float SmoothStep(float edge0, float edge1, float x)
         {
             if (!IsFiniteFloat(edge0) || !IsFiniteFloat(edge1) || !IsFiniteFloat(x) || edge0 == edge1)
@@ -2384,12 +2397,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
 
     if (m_cameraRig)
     {
-        const float introZoomScale = std::max(1.0f, m_gameCameraConfig.introZoomScale);
-        const float3 initialOffset{
-            resolvedSettings.offset.x * introZoomScale,
-            resolvedSettings.offset.y * introZoomScale,
-            resolvedSettings.offset.z * introZoomScale
-        };
+        const float3 initialOffset = ComputeIntroStartOffset(resolvedSettings.offset, m_gameCameraConfig.introZoomScale);
         m_cameraRig->SetOffset(m_introCameraActive ? initialOffset : resolvedSettings.offset);
         m_cameraRig->SetYaw(yawRadians);
         m_cameraRig->SetPitch(pitchRadians);
@@ -2603,13 +2611,7 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
     m_introCameraElapsedSeconds = std::min(m_introCameraElapsedSeconds + std::max(0.0f, deltaSeconds), duration);
     const float t = m_introCameraElapsedSeconds / duration;
     const float eased = t * t * (3.0f - 2.0f * t);
-    const float introZoomScale = std::max(1.0f, m_gameCameraConfig.introZoomScale);
-
-    const float3 startOffset{
-        m_introBaseCameraOffset.x * introZoomScale,
-        m_introBaseCameraOffset.y * introZoomScale,
-        m_introBaseCameraOffset.z * introZoomScale
-    };
+    const float3 startOffset = ComputeIntroStartOffset(m_introBaseCameraOffset, m_gameCameraConfig.introZoomScale);
 
     const float3 blendedOffset{
         startOffset.x + (m_introBaseCameraOffset.x - startOffset.x) * eased,
@@ -2685,12 +2687,7 @@ void SceneGame::OnStageStart()
     {
         if (m_introCameraActive)
         {
-            const float introZoomScale = std::max(1.0f, m_gameCameraConfig.introZoomScale);
-            m_cameraRig->SetOffset(float3{
-                m_introBaseCameraOffset.x * introZoomScale,
-                m_introBaseCameraOffset.y * introZoomScale,
-                m_introBaseCameraOffset.z * introZoomScale
-            });
+            m_cameraRig->SetOffset(ComputeIntroStartOffset(m_introBaseCameraOffset, m_gameCameraConfig.introZoomScale));
         }
         else
         {
