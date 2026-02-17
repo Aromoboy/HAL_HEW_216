@@ -246,9 +246,9 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         // Aspect is corrected via UVs; geometry stays in NDC.
         Sprite::SetSize(DirectX::XMFLOAT2(2.0f, 2.0f));
         Sprite::SetTexture(layer.texture.get());
-        (void)scrollOffset;
+        // scrollOffset is world-space displacement coming from the active scene/camera.
         const float scrollDirection = layer.config.invertScroll ? -1.0f : 1.0f;
-        const float adjustedScrollOffset = scrollDirection * 0.0f;
+        const float adjustedScrollOffset = scrollDirection * scrollOffset;
         const float layerPixelsPerUnit = layer.config.scrollOffsetInPixels ? 1.0f : pixelsPerUnit;
         const float textureWidth = static_cast<float>(layer.texture->GetWidth());
         const float textureHeight = static_cast<float>(layer.texture->GetHeight());
