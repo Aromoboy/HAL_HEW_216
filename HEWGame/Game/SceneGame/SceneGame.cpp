@@ -1263,6 +1263,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
     case StageState::Intro:
         break;
+    case StageState::PreStart:
     case StageState::Playing:
     {
         UpdateIntroCamera(ctx.dt);
@@ -2597,6 +2598,7 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
     {
         m_cameraRig->SetOffset(m_introBaseCameraOffset);
         m_introCameraActive = false;
+        ActivateGameplaySession();
         return;
     }
 
@@ -2623,6 +2625,7 @@ void SceneGame::UpdateIntroCamera(float deltaSeconds)
     {
         m_cameraRig->SetOffset(m_introBaseCameraOffset);
         m_introCameraActive = false;
+        ActivateGameplaySession();
     }
 }
 
@@ -2657,6 +2660,7 @@ void SceneGame::SetStageState(StageState newState)
 
     switch (newState)
     {
+    case StageState::PreStart:
     case StageState::Playing:
         OnStageStart();
         break;
@@ -2681,6 +2685,7 @@ void SceneGame::OnStageStart()
 
     m_introCameraElapsedSeconds = 0.0f;
     m_introCameraActive = m_gameCameraConfig.introDurationSeconds > 0.0f && m_gameCameraConfig.introZoomScale > 1.0f;
+
     if (m_cameraRig)
     {
         if (m_introCameraActive)
@@ -2697,6 +2702,30 @@ void SceneGame::OnStageStart()
             m_cameraRig->SetOffset(m_introBaseCameraOffset);
         }
     }
+
+    if (m_introCameraActive)
+    {
+        m_stageState = StageState::PreStart;
+        ToggleGameplaySystems(false);
+    }
+    else
+    {
+        ActivateGameplaySession();
+    }
+}
+
+void SceneGame::ActivateGameplaySession()
+{
+    if (m_stageState != StageState::Playing)
+    {
+        m_stageState = StageState::Playing;
+    }
+
+    ToggleGameplaySystems(true);
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";
+    ::DebugTrace(oss.str());
 }
 
 void SceneGame::OnStageClear()
@@ -2797,7 +2826,6 @@ void SceneGame::ResetPlaySession()
 
     m_gameplayRules.ResetSession();
     m_contactHandler.Reset();
-    ToggleGameplaySystems(true);
     m_phaseManager.Reset();
 
     if (m_meteorsManager)
@@ -2808,16 +2836,19 @@ void SceneGame::ResetPlaySession()
     {
         DebugTrace(std::string(kLogPrefix) + "MeteorsManager missing during ResetPlaySession; phase reset not broadcast.\n");
     }
-
-    std::ostringstream oss;
-    oss << kLogPrefix << "[Countdown] start duration=" << m_gameplayRules.GetTotalPlaySeconds() << "s\n";
-    ::DebugTrace(oss.str());
 }
 
 
 
 void SceneGame::ToggleGameplaySystems(bool enabled)
 {
+    if (m_gameplaySystemsEnabled == enabled)
+    {
+        return;
+    }
+
+    m_gameplaySystemsEnabled = enabled;
+
     if (m_physicsBinder)
     {
         m_physicsBinder->Enable(enabled);
