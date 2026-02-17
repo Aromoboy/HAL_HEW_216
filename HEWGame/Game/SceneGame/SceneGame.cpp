@@ -2301,7 +2301,9 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     bool hasTarget = false;
     if (player)
     {
-        targetPosition = player->GetTransform().position;
+        // Event/gameplay follow-camera must keep the visual player model centered,
+        // so use render transform anchor instead of raw physics origin.
+        targetPosition = player->GetRenderTransform().position;
         if (!resolvedSettings.fixedPosition)
         {
             targetPosition.y += gameCameraConfig.offsetY;
@@ -2395,7 +2397,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
         m_cameraRig->SetFollowSpeedY(followSpeedY);
         m_cameraRig->SetTranslationLocked(false);
         m_cameraRig->SetYawPitchLocked(true);
-        m_cameraRig->SetFollowPositionAxes(false, true, false);
+        // Event-camera requirement: keep the player model centered in-frame on gameplay movement.
+        m_cameraRig->SetFollowPositionAxes(true, true, false);
         m_cameraRig->SetInheritRotation(false);
         m_cameraRig->SetComfortZoneY(comfortZoneTopY, comfortZoneBottomY);
         m_cameraRig->SetWrapY(canWrapY ? minScrollY : std::nullopt, canWrapY ? maxScrollY : std::nullopt);
@@ -2409,7 +2412,7 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
             m_cameraRig->SetClampY(std::nullopt, std::nullopt);
         }
 
-        const bool followAxesOk = !m_cameraRig->IsFollowingPositionX()
+        const bool followAxesOk = m_cameraRig->IsFollowingPositionX()
             && m_cameraRig->IsFollowingPositionY()
             && !m_cameraRig->IsFollowingPositionZ();
         const bool flagsOk = followAxesOk
