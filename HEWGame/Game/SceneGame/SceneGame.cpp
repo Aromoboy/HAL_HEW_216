@@ -2670,6 +2670,8 @@ void SceneGame::SetStageState(StageState newState)
         m_resultElapsedSeconds = 0.0f;
         m_resultReturnQueued = false;
         break;
+    case StageState::Intro:
+        break;
     default:
         break;
     }
