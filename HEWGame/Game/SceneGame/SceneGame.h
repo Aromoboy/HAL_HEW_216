@@ -31,6 +31,7 @@
 #include <box2d/types.h>
 #include <cstddef>
 #include <memory>
+#include <deque>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -133,6 +134,9 @@ private:
     std::shared_ptr<Entities::PhysicalEntity> FindMissileByEntity(Entities::PhysicalEntity* missile) const;
     void InitializeEffectSystem();
     void ShutdownEffectSystem();
+    void ResetPlayerTrail();
+    void UpdatePlayerTrail(float deltaSeconds);
+    void DrawPlayerTrail(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -175,6 +179,16 @@ protected:
     ::EffekseerRendererDX11::RendererRef m_effectRenderer;
     ::Effekseer::ManagerRef m_effectManager;
     std::unordered_map<std::string, EffectCreateData> m_effectMap;
+    struct PlayerTrailPoint
+    {
+        float3 position{ 0.0f, 0.0f, 0.0f };
+        float ageSeconds = 0.0f;
+    };
+    std::deque<PlayerTrailPoint> m_playerTrailPoints;
+    float m_playerTrailMinSegmentDistance = 0.08f;
+    float m_playerTrailLifetimeSeconds = 1.1f;
+    float m_playerTrailTailOffset = 0.7f;
+    float m_playerTrailMinAlpha = 0.1f;
     std::optional<float> m_cameraWrapMinY = std::nullopt;
     std::optional<float> m_cameraWrapMaxY = std::nullopt;
     float m_heightBonusThresholdMeters = 0.0f;

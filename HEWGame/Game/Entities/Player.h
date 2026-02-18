@@ -1,4 +1,4 @@
-// プレイヤー本体の動きと持ち上げをまとめたクラスだ
+﻿// プレイヤー本体の動きと持ち上げをまとめたクラスだ
 // 入力に合わせて移動や向きが変わり拾ったスイーツの状態も変える
 // 取得した判定結果はスイーツ側やゲーム進行の判断に使われる
 #pragma once
@@ -7,7 +7,6 @@
 #include <optional>
 #include <string>
 
-#include <Effekseer.h>
 
 #include "Entities/PhysicalEntity.h"
 #include "Entities/PlayerModel.h"
@@ -24,9 +23,6 @@ namespace Entities
     class Player : public PhysicalEntity
     {
     public:
-        using EffectHandle = Effekseer::Handle;
-        static constexpr EffectHandle kInvalidEffectHandle = static_cast<EffectHandle>(-1);
-
         struct WrapEvent
         {
             float deltaY = 0.0f;
@@ -67,26 +63,6 @@ namespace Entities
         std::optional<WrapEvent> ConsumeWrapEvent();
         Transform GetRenderTransform() const override;
 
-        EffectHandle GetTrailEffectHandle() const noexcept
-        {
-            return m_trailEffectHandle;
-        }
-
-        bool HasTrailEffectHandle() const noexcept
-        {
-            return m_trailEffectHandle != kInvalidEffectHandle;
-        }
-
-        void SetTrailEffectHandle(EffectHandle handle) noexcept
-        {
-            m_trailEffectHandle = handle;
-        }
-
-        void ClearTrailEffectHandle() noexcept
-        {
-            m_trailEffectHandle = kInvalidEffectHandle;
-        }
-
     private:
         friend class PlayerModel;
         friend class PlayerMovement;
@@ -99,7 +75,6 @@ namespace Entities
         PlayerPhysicsBinder m_physicsBinder;
         Core::Input* m_input = nullptr;
         std::optional<WrapEvent> m_pendingWrapEvent = std::nullopt;
-        EffectHandle m_trailEffectHandle = kInvalidEffectHandle;
         float m_renderAlpha = 1.0f;
         bool m_invulnerable = false;
     };

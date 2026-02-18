@@ -540,6 +540,8 @@ bool SceneGame::Load(Core::Input& input)
     oss << kLogPrefix << "Load scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
 
+    ResetPlayerTrail();
+
     if (m_isComposed)
     {
         return !m_loadFailed;
@@ -548,7 +550,6 @@ bool SceneGame::Load(Core::Input& input)
     m_effectMap.clear();
     m_effectMap.try_emplace("explosion", EffectCreateData(u"Assets/Effect/slum_effect.efkefc", 0.75f));
     m_effectMap.try_emplace("meteor_trail", EffectCreateData(u"Assets/Effect/Nowis337_Shot.efkefc", 0.5f));
-    m_effectMap.try_emplace("player_trail", EffectCreateData(u"Assets/Effect/Nowis337_Laser.efkefc", 0.35f));
 
     ID3D11Device* device = GetDevice();
     if (device)
@@ -839,21 +840,7 @@ void SceneGame::OnEnter()
     ::DebugTrace(oss.str());
 
     InitializeEffectSystem();
-
-    if (m_effectSystem && player)
-    {
-        const float3 playerPosition = player->GetRenderTransform().position;
-        const Effekseer::Handle trailHandle = m_effectSystem->SpawnEffectHandle(
-            EffectSystem::EffectCreateRequest("player_trail", playerPosition, float3{ 0.0f, 0.0f, 0.0f }));
-        if (trailHandle != Entities::Player::kInvalidEffectHandle)
-        {
-            player->SetTrailEffectHandle(trailHandle);
-        }
-        else
-        {
-            player->ClearTrailEffectHandle();
-        }
-    }
+    ResetPlayerTrail();
 
     // BGMを再生（ループあり、音量1%）
     if (auto* sound = SoundManagerEX::GetInstance())
@@ -867,12 +854,6 @@ void SceneGame::OnExit()
     std::ostringstream oss;
     oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
-
-    if (m_effectSystem && player && player->HasTrailEffectHandle())
-    {
-        m_effectSystem->StopEffect(player->GetTrailEffectHandle());
-        player->ClearTrailEffectHandle();
-    }
 
     if (m_effectManager != nullptr)
     {
@@ -941,12 +922,6 @@ SceneGame::~SceneGame()
             }
         }
         m_contactDispatchRegistered = false;
-    }
-
-    if (m_effectSystem && player && player->HasTrailEffectHandle())
-    {
-        m_effectSystem->StopEffect(player->GetTrailEffectHandle());
-        player->ClearTrailEffectHandle();
     }
 
     if (m_effectManager != nullptr)
@@ -1112,21 +1087,6 @@ void SceneGame::ConfigureUpdates()
                 }
         }
 
-        if (player && m_effectSystem && !player->HasTrailEffectHandle())
-        {
-                const float3 playerPosition = player->GetRenderTransform().position;
-                const Effekseer::Handle trailHandle = m_effectSystem->SpawnEffectHandle(
-                    EffectSystem::EffectCreateRequest("player_trail", playerPosition, float3{ 0.0f, 0.0f, 0.0f }));
-                if (trailHandle != Entities::Player::kInvalidEffectHandle)
-                {
-                    player->SetTrailEffectHandle(trailHandle);
-                }
-                else
-                {
-                    player->ClearTrailEffectHandle();
-                }
-        }
-
         SetStageState(StageState::Intro);
 }
 
@@ -1162,12 +1122,7 @@ void SceneGame::InitializeEffectSystem()
 
 void SceneGame::ShutdownEffectSystem()
 {
-    if (m_effectSystem && player && player->HasTrailEffectHandle())
-    {
-        m_effectSystem->StopEffect(player->GetTrailEffectHandle());
-        player->ClearTrailEffectHandle();
-    }
-
+    ResetPlayerTrail();
     if (m_meteorsManager)
     {
         m_meteorsManager->SetEffectSystem(nullptr);
@@ -1185,14 +1140,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 #endif
     Core::Input* input = GetInput();
 
-    if (m_effectSystem && player && player->HasTrailEffectHandle())
-    {
-        const float3 trailPosition = player->GetRenderTransform().position;
-        if (!m_effectSystem->SetEffectPosition(player->GetTrailEffectHandle(), trailPosition))
-        {
-            player->ClearTrailEffectHandle();
-        }
-    }
+    UpdatePlayerTrail(ctx.timer.DeltaTime());
 
     if (m_physicsBinder)
     {
@@ -2418,12 +2366,101 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         m_effectSystem->Draw(activeCamera.get());
     }
 
+    DrawPlayerTrail(activeCamera);
+
     m_drawSystem->DebugDrawQueued(activeCamera);
 
 #if defined(_DEBUG)
         DrawPhysicsDebugOverlay(activeCamera);
 #endif
 
+}
+
+
+void SceneGame::ResetPlayerTrail()
+{
+    m_playerTrailPoints.clear();
+}
+
+void SceneGame::UpdatePlayerTrail(float deltaSeconds)
+{
+    if (!player)
+    {
+        m_playerTrailPoints.clear();
+        return;
+    }
+
+    for (auto& point : m_playerTrailPoints)
+    {
+        point.ageSeconds += std::max(0.0f, deltaSeconds);
+    }
+
+    Transform trailTransform = player->GetRenderTransform();
+    const float yaw = ResolvePlayerYaw(trailTransform);
+    const float3 backward{ -std::sin(yaw), 0.0f, -std::cos(yaw) };
+    const float3 tailPosition{
+        trailTransform.position.x + backward.x * m_playerTrailTailOffset,
+        trailTransform.position.y + backward.y * m_playerTrailTailOffset,
+        trailTransform.position.z + backward.z * m_playerTrailTailOffset
+    };
+
+    const bool hasSample = !m_playerTrailPoints.empty();
+    bool shouldAppend = !hasSample;
+    if (hasSample)
+    {
+        const float3 last = m_playerTrailPoints.back().position;
+        const float dx = tailPosition.x - last.x;
+        const float dy = tailPosition.y - last.y;
+        const float dz = tailPosition.z - last.z;
+        const float distSq = dx * dx + dy * dy + dz * dz;
+        shouldAppend = distSq >= m_playerTrailMinSegmentDistance * m_playerTrailMinSegmentDistance;
+    }
+
+    if (shouldAppend)
+    {
+        m_playerTrailPoints.push_back(SceneGame::PlayerTrailPoint{ tailPosition, 0.0f });
+    }
+    else if (hasSample)
+    {
+        m_playerTrailPoints.back().position = tailPosition;
+        m_playerTrailPoints.back().ageSeconds = 0.0f;
+    }
+
+    while (!m_playerTrailPoints.empty() && m_playerTrailPoints.front().ageSeconds > m_playerTrailLifetimeSeconds)
+    {
+        m_playerTrailPoints.pop_front();
+    }
+}
+
+void SceneGame::DrawPlayerTrail(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+{
+    (void)activeCamera;
+
+    if (m_playerTrailPoints.size() < 2)
+    {
+        return;
+    }
+
+    Geometory::SetView(activeCamera->GetView());
+    Geometory::SetProjection(activeCamera->GetProjection());
+
+    for (size_t i = 1; i < m_playerTrailPoints.size(); ++i)
+    {
+        const auto& prev = m_playerTrailPoints[i - 1];
+        const auto& curr = m_playerTrailPoints[i];
+
+        const float alphaPrev = std::clamp(1.0f - (prev.ageSeconds / std::max(0.05f, m_playerTrailLifetimeSeconds)), m_playerTrailMinAlpha, 1.0f);
+        const float alphaCurr = std::clamp(1.0f - (curr.ageSeconds / std::max(0.05f, m_playerTrailLifetimeSeconds)), m_playerTrailMinAlpha, 1.0f);
+        const float alpha = std::min(alphaPrev, alphaCurr);
+        const DirectX::XMFLOAT4 color(0.35f, 0.85f, 1.0f, alpha);
+
+        Geometory::AddLine(
+            DirectX::XMFLOAT3(prev.position.x, prev.position.y, prev.position.z),
+            DirectX::XMFLOAT3(curr.position.x, curr.position.y, curr.position.z),
+            color);
+    }
+
+    Geometory::DrawLines();
 }
 
 void SceneGame::DrawOverlay()
@@ -2999,15 +3036,10 @@ void SceneGame::ResetPlaySession()
     }
 
     ClearMissiles();
+    ResetPlayerTrail();
 
     if (player)
     {
-        if (m_effectSystem && player->HasTrailEffectHandle())
-        {
-            m_effectSystem->StopEffect(player->GetTrailEffectHandle());
-            player->ClearTrailEffectHandle();
-        }
-
         if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
         {
             m_playerSpeedMultiplier = 1.0f;
@@ -3023,20 +3055,6 @@ void SceneGame::ResetPlaySession()
         player->SetRenderAlpha(m_playerBlinkAlpha);
         player->SetInvulnerable(m_playerInvulnerable);
 
-        if (m_effectSystem)
-        {
-            const float3 playerPosition = player->GetRenderTransform().position;
-            const Effekseer::Handle trailHandle = m_effectSystem->SpawnEffectHandle(
-                EffectSystem::EffectCreateRequest("player_trail", playerPosition, float3{ 0.0f, 0.0f, 0.0f }));
-            if (trailHandle != Entities::Player::kInvalidEffectHandle)
-            {
-                player->SetTrailEffectHandle(trailHandle);
-            }
-            else
-            {
-                player->ClearTrailEffectHandle();
-            }
-        }
     }
 
     if (player && m_cameraRig)
