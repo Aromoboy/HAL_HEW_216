@@ -53,7 +53,6 @@ namespace Core
 
 namespace MeteorsSpace
 {
-    class ActiveMeteors;
     class MeteorsManager;
 }
 
