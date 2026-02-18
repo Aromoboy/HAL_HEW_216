@@ -31,14 +31,8 @@ namespace Diagnostics
 		HANDLE stderrHandle = ::GetStdHandle(STD_ERROR_HANDLE);
 		canWriteToConsole = stderrHandle != INVALID_HANDLE_VALUE && stderrHandle != nullptr && _isatty(_fileno(stderr)) != 0;
 
-		// UX requirement: release builds must not attach or spawn a new console window.
 		#if defined(_DEBUG)
-		constexpr bool kAllowConsoleAttach = true;
-		#else
-		constexpr bool kAllowConsoleAttach = false;
-		#endif
-
-		if (kAllowConsoleAttach && !canWriteToConsole)
+		if (!canWriteToConsole)
 		{
 			FILE* newStderr = nullptr;
 			if (::AllocConsole() && freopen_s(&newStderr, "CONOUT$", "w", stderr) == 0)
@@ -46,6 +40,9 @@ namespace Diagnostics
 				canWriteToConsole = true;
 			}
 		}
+		#else
+		// Release build must never create a console window.
+		#endif
 #endif
 
 		if (canWriteToConsole)
