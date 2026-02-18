@@ -548,6 +548,7 @@ bool SceneGame::Load(Core::Input& input)
     m_effectMap.clear();
     m_effectMap.try_emplace("explosion", EffectCreateData(u"Assets/Effect/slum_effect.efkefc", 0.75f));
     m_effectMap.try_emplace("meteor_trail", EffectCreateData(u"Assets/Effect/Nowis337_Shot.efkefc", 0.5f));
+    m_effectMap.try_emplace("player_trail", EffectCreateData(u"Assets/Effect/Nowis337_Laser.efkefc", 0.35f));
 
     ID3D11Device* device = GetDevice();
     if (device)
@@ -839,6 +840,21 @@ void SceneGame::OnEnter()
 
     InitializeEffectSystem();
 
+    if (m_effectSystem && player)
+    {
+        const float3 playerPosition = player->GetRenderTransform().position;
+        const Effekseer::Handle trailHandle = m_effectSystem->SpawnEffectHandle(
+            EffectSystem::EffectCreateRequest("player_trail", playerPosition, float3{ 0.0f, 0.0f, 0.0f }));
+        if (trailHandle != Entities::Player::kInvalidEffectHandle)
+        {
+            player->SetTrailEffectHandle(trailHandle);
+        }
+        else
+        {
+            player->ClearTrailEffectHandle();
+        }
+    }
+
     // BGMを再生（ループあり、音量1%）
     if (auto* sound = SoundManagerEX::GetInstance())
     {
@@ -851,6 +867,12 @@ void SceneGame::OnExit()
     std::ostringstream oss;
     oss << kLogPrefix << "Exit scenePtr=" << this << "\n";
     ::DebugTrace(oss.str());
+
+    if (m_effectSystem && player && player->HasTrailEffectHandle())
+    {
+        m_effectSystem->StopEffect(player->GetTrailEffectHandle());
+        player->ClearTrailEffectHandle();
+    }
 
     if (m_effectManager != nullptr)
     {
@@ -919,6 +941,12 @@ SceneGame::~SceneGame()
             }
         }
         m_contactDispatchRegistered = false;
+    }
+
+    if (m_effectSystem && player && player->HasTrailEffectHandle())
+    {
+        m_effectSystem->StopEffect(player->GetTrailEffectHandle());
+        player->ClearTrailEffectHandle();
     }
 
     if (m_effectManager != nullptr)
@@ -1084,6 +1112,21 @@ void SceneGame::ConfigureUpdates()
                 }
         }
 
+        if (player && m_effectSystem && !player->HasTrailEffectHandle())
+        {
+                const float3 playerPosition = player->GetRenderTransform().position;
+                const Effekseer::Handle trailHandle = m_effectSystem->SpawnEffectHandle(
+                    EffectSystem::EffectCreateRequest("player_trail", playerPosition, float3{ 0.0f, 0.0f, 0.0f }));
+                if (trailHandle != Entities::Player::kInvalidEffectHandle)
+                {
+                    player->SetTrailEffectHandle(trailHandle);
+                }
+                else
+                {
+                    player->ClearTrailEffectHandle();
+                }
+        }
+
         SetStageState(StageState::Intro);
 }
 
@@ -1119,6 +1162,12 @@ void SceneGame::InitializeEffectSystem()
 
 void SceneGame::ShutdownEffectSystem()
 {
+    if (m_effectSystem && player && player->HasTrailEffectHandle())
+    {
+        m_effectSystem->StopEffect(player->GetTrailEffectHandle());
+        player->ClearTrailEffectHandle();
+    }
+
     if (m_meteorsManager)
     {
         m_meteorsManager->SetEffectSystem(nullptr);
@@ -1135,7 +1184,16 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     HandleColliderDebugCommands(ctx);
 #endif
     Core::Input* input = GetInput();
-    
+
+    if (m_effectSystem && player && player->HasTrailEffectHandle())
+    {
+        const float3 trailPosition = player->GetRenderTransform().position;
+        if (!m_effectSystem->SetEffectPosition(player->GetTrailEffectHandle(), trailPosition))
+        {
+            player->ClearTrailEffectHandle();
+        }
+    }
+
     if (m_physicsBinder)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
@@ -2944,6 +3002,12 @@ void SceneGame::ResetPlaySession()
 
     if (player)
     {
+        if (m_effectSystem && player->HasTrailEffectHandle())
+        {
+            m_effectSystem->StopEffect(player->GetTrailEffectHandle());
+            player->ClearTrailEffectHandle();
+        }
+
         if (m_playerBaseHorizontalSpeed > 0.0f || m_playerBaseVerticalSpeed > 0.0f)
         {
             m_playerSpeedMultiplier = 1.0f;
@@ -2958,6 +3022,21 @@ void SceneGame::ResetPlaySession()
         m_playerBlinkAlpha = 1.0f;
         player->SetRenderAlpha(m_playerBlinkAlpha);
         player->SetInvulnerable(m_playerInvulnerable);
+
+        if (m_effectSystem)
+        {
+            const float3 playerPosition = player->GetRenderTransform().position;
+            const Effekseer::Handle trailHandle = m_effectSystem->SpawnEffectHandle(
+                EffectSystem::EffectCreateRequest("player_trail", playerPosition, float3{ 0.0f, 0.0f, 0.0f }));
+            if (trailHandle != Entities::Player::kInvalidEffectHandle)
+            {
+                player->SetTrailEffectHandle(trailHandle);
+            }
+            else
+            {
+                player->ClearTrailEffectHandle();
+            }
+        }
     }
 
     if (player && m_cameraRig)
