@@ -84,9 +84,8 @@ void DebugLog::DebugMessage(const std::string& message)
         ::OutputDebugStringW(wide.c_str());
 #endif
 
+#if defined(_WIN32) && defined(_DEBUG)
         bool canWriteToConsole = true;
-
-#if defined(_WIN32)
         HANDLE stdoutHandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
         canWriteToConsole = stdoutHandle != INVALID_HANDLE_VALUE && stdoutHandle != nullptr && _isatty(_fileno(stdout)) != 0;
 
@@ -99,11 +98,9 @@ void DebugLog::DebugMessage(const std::string& message)
                         canWriteToConsole = true;
                 }
         }
-#endif
 
         if (canWriteToConsole)
         {
-#if defined(_WIN32)
                 if (IsConsoleHandle(stdoutHandle))
                 {
                         DWORD written = 0;
@@ -116,9 +113,12 @@ void DebugLog::DebugMessage(const std::string& message)
                                 return;
                         }
                 }
-#endif
 
                 std::cout << formatted;
                 std::cout.flush();
         }
+#elif !defined(_WIN32)
+        std::cout << formatted;
+        std::cout.flush();
+#endif
 }
