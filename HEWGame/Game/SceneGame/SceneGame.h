@@ -53,6 +53,7 @@ namespace Core
 
 namespace MeteorsSpace
 {
+    class ActiveMeteors;
     class MeteorsManager;
 }
 
@@ -137,6 +138,8 @@ private:
     void ResetPlayerTrail();
     void UpdatePlayerTrail(float deltaSeconds);
     void DrawPlayerTrail(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
+    void UpdateMeteorTrails(float deltaSeconds);
+    void DrawMeteorTrails(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera);
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -184,11 +187,16 @@ protected:
         float3 position{ 0.0f, 0.0f, 0.0f };
         float ageSeconds = 0.0f;
     };
+    using MeteorTrailPoint = PlayerTrailPoint;
     std::deque<PlayerTrailPoint> m_playerTrailPoints;
+    std::unordered_map<const MeteorsSpace::ActiveMeteors*, std::deque<MeteorTrailPoint>> m_meteorTrailPoints;
     float m_playerTrailMinSegmentDistance = 0.08f;
     float m_playerTrailLifetimeSeconds = 1.1f;
     float m_playerTrailTailOffset = 0.7f;
     float m_playerTrailMinAlpha = 0.1f;
+    float m_meteorTrailMinSegmentDistance = 0.05f;
+    float m_meteorTrailLifetimeSeconds = 0.7f;
+    float m_meteorTrailMinAlpha = 0.08f;
     std::optional<float> m_cameraWrapMinY = std::nullopt;
     std::optional<float> m_cameraWrapMaxY = std::nullopt;
     float m_heightBonusThresholdMeters = 0.0f;

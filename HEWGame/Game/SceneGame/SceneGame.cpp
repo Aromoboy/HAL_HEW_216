@@ -44,6 +44,7 @@
 #include <limits>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <optional>
 #include <cstdlib>
 #include <sstream>
@@ -1141,6 +1142,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     Core::Input* input = GetInput();
 
     UpdatePlayerTrail(ctx.timer.DeltaTime());
+    UpdateMeteorTrails(ctx.timer.DeltaTime());
 
     if (m_physicsBinder)
     {
@@ -2367,6 +2369,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
 
     DrawPlayerTrail(activeCamera);
+    DrawMeteorTrails(activeCamera);
 
     m_drawSystem->DebugDrawQueued(activeCamera);
 
@@ -2380,6 +2383,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 void SceneGame::ResetPlayerTrail()
 {
     m_playerTrailPoints.clear();
+    m_meteorTrailPoints.clear();
 }
 
 void SceneGame::UpdatePlayerTrail(float deltaSeconds)
@@ -2430,6 +2434,134 @@ void SceneGame::UpdatePlayerTrail(float deltaSeconds)
     {
         m_playerTrailPoints.pop_front();
     }
+}
+
+
+void SceneGame::UpdateMeteorTrails(float deltaSeconds)
+{
+    if (!m_meteorsManager)
+    {
+        m_meteorTrailPoints.clear();
+        return;
+    }
+
+    const float dt = std::max(0.0f, deltaSeconds);
+
+    for (auto& [_, trail] : m_meteorTrailPoints)
+    {
+        for (auto& point : trail)
+        {
+            point.ageSeconds += dt;
+        }
+
+        while (!trail.empty() && trail.front().ageSeconds > m_meteorTrailLifetimeSeconds)
+        {
+            trail.pop_front();
+        }
+    }
+
+    std::unordered_set<const MeteorsSpace::ActiveMeteors*> aliveMeteors;
+    const auto sampleState = [&](MeteorsSpace::MeteorsState state)
+    {
+        for (const auto& meteors : m_meteorsManager->GetByState(state))
+        {
+            if (!meteors || meteors->IsPendingDestroy())
+            {
+                continue;
+            }
+
+            const auto* meteorsKey = meteors.get();
+            aliveMeteors.insert(meteorsKey);
+
+            std::deque<MeteorTrailPoint>& trail = m_meteorTrailPoints[meteorsKey];
+            const float3 position = meteors->GetRenderTransform().position;
+
+            const bool hasSample = !trail.empty();
+            bool shouldAppend = !hasSample;
+            if (hasSample)
+            {
+                const float3 last = trail.back().position;
+                const float dx = position.x - last.x;
+                const float dy = position.y - last.y;
+                const float dz = position.z - last.z;
+                const float distSq = dx * dx + dy * dy + dz * dz;
+                shouldAppend = distSq >= m_meteorTrailMinSegmentDistance * m_meteorTrailMinSegmentDistance;
+            }
+
+            if (shouldAppend)
+            {
+                trail.push_back(MeteorTrailPoint{ position, 0.0f });
+            }
+            else if (hasSample)
+            {
+                trail.back().position = position;
+                trail.back().ageSeconds = 0.0f;
+            }
+
+            while (!trail.empty() && trail.front().ageSeconds > m_meteorTrailLifetimeSeconds)
+            {
+                trail.pop_front();
+            }
+        }
+    };
+
+    sampleState(MeteorsSpace::MeteorsState::Active);
+    sampleState(MeteorsSpace::MeteorsState::Stacked);
+    sampleState(MeteorsSpace::MeteorsState::Ground);
+    sampleState(MeteorsSpace::MeteorsState::Carried);
+
+    for (auto it = m_meteorTrailPoints.begin(); it != m_meteorTrailPoints.end();)
+    {
+        const bool keepByMeteors = aliveMeteors.find(it->first) != aliveMeteors.end();
+        const bool keepByFadeOut = !it->second.empty();
+        if (!keepByMeteors && !keepByFadeOut)
+        {
+            it = m_meteorTrailPoints.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+void SceneGame::DrawMeteorTrails(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
+{
+    (void)activeCamera;
+
+    if (m_meteorTrailPoints.empty())
+    {
+        return;
+    }
+
+    Geometory::SetView(activeCamera->GetView());
+    Geometory::SetProjection(activeCamera->GetProjection());
+
+    for (const auto& [_, trail] : m_meteorTrailPoints)
+    {
+        if (trail.size() < 2)
+        {
+            continue;
+        }
+
+        for (size_t i = 1; i < trail.size(); ++i)
+        {
+            const auto& prev = trail[i - 1];
+            const auto& curr = trail[i];
+
+            const float alphaPrev = std::clamp(1.0f - (prev.ageSeconds / std::max(0.05f, m_meteorTrailLifetimeSeconds)), m_meteorTrailMinAlpha, 1.0f);
+            const float alphaCurr = std::clamp(1.0f - (curr.ageSeconds / std::max(0.05f, m_meteorTrailLifetimeSeconds)), m_meteorTrailMinAlpha, 1.0f);
+            const float alpha = std::min(alphaPrev, alphaCurr);
+            const DirectX::XMFLOAT4 color(1.0f, 0.45f, 0.12f, alpha);
+
+            Geometory::AddLine(
+                DirectX::XMFLOAT3(prev.position.x, prev.position.y, prev.position.z),
+                DirectX::XMFLOAT3(curr.position.x, curr.position.y, curr.position.z),
+                color);
+        }
+    }
+
+    Geometory::DrawLines();
 }
 
 void SceneGame::DrawPlayerTrail(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)
