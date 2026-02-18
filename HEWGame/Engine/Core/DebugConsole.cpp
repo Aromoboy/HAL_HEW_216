@@ -9,6 +9,11 @@ HWND DebugConsole::m_hMainWindow = nullptr;
 
 void DebugConsole::InitDebugConsole(HWND a_hWindow)
 {
+#if !defined(_DEBUG)
+    // UX requirement: release builds must never create/attach the debug console.
+    (void)a_hWindow;
+    return;
+#endif
     DebugConsole::m_hConsole = GetConsoleWindow();
     DebugConsole::m_hMainWindow = a_hWindow;
 
@@ -40,6 +45,10 @@ void DebugConsole::SetDrawPos(int x, int y)
 
 void DebugConsole::ToggleConsole()
 {
+#if !defined(_DEBUG)
+    // UX requirement: release builds must not toggle or reveal a console window.
+    return;
+#endif
     static bool visible = true;
     if (visible)
     {
