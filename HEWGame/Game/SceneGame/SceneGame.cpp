@@ -1413,11 +1413,17 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
 
-            if (guidelineDelta != 0.0f)
+   //         DebugTrace("guidelineDelta = " + std::to_string(guidelineDelta) + "\n");
+   //         DebugTrace("Remaining set to = " + std::to_string(m_OsaraToAddRemaining) + "\n");
+
+            if (guidelineDelta > 0.01f)
             {
                 m_isOsaraCounting = true;
-                m_OsaraToAddRemaining += guidelineDelta;
-
+                m_OsaraToAddRemaining = guidelineDelta;
+   //             DebugTrace("Remaining SET = " + std::to_string(m_OsaraToAddRemaining) + "\n");
+            }
+            if (guidelineDelta != 0.0f)
+            {
                 if (m_sweetsManager)
                 {
                     m_sweetsManager->OffsetSpawnOriginsY(guidelineDelta);
@@ -1461,7 +1467,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         //        m_scoreAddTimer = 0.0;
         //    }
         //}
-        UpdateOsaraGradualMove(ctx);
+       
         break;
     }
     case StageState::TimeUp:
@@ -1482,6 +1488,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     case StageState::ShowingResult:
         break;
     }
+
+    UpdateOsaraGradualMove(ctx);
 
     for (auto& obj : m_stageObjects)
     {
@@ -2829,10 +2837,10 @@ void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
     }
     //徐々に上に移動したい
 
-    if (m_isOsaraCounting && m_OsaraToAddRemaining > 0.0f)
-    {
-        float deltaY = osaraMoveSpeed * ctx.dt;
 
+        float deltaY = osaraMoveSpeed * ctx.dt;
+     //   DebugTrace("deltaY = " + std::to_string(deltaY) + "\n");
+     //   DebugTrace("Remaining BEFORE = " + std::to_string(m_OsaraToAddRemaining) + "\n");
         if (deltaY > m_OsaraToAddRemaining)
         {
             deltaY = m_OsaraToAddRemaining;
@@ -2844,18 +2852,20 @@ void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
             if (!IsOsara(obj)) continue;
 
             obj.baseY += deltaY;
-            obj.transform.position.y += deltaY;
+          //  obj.transform.position.y += deltaY;
 
-            if (obj.physicsEntity)
-            {
-                obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
-            }
+            //if (obj.physicsEntity)
+            //{
+            //    obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+            //}
         }
         m_OsaraToAddRemaining -= deltaY;
 
         if (m_OsaraToAddRemaining <= 0.0f)
         {
+      //      m_OsaraToAddRemaining = 0.0f;
             m_isOsaraCounting = false;
         }
-    }
+  
+  
 }

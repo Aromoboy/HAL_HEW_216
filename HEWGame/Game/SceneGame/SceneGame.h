@@ -215,10 +215,10 @@ protected:
     float m_lastApprovePeakHeight = 0.0f;
     //カウントアップ型スコア加算（ゲームにスコア表示するなら、、、）
     bool m_isOsaraCounting = false;
-    int  m_OsaraToAddRemaining = 0;
+    float  m_OsaraToAddRemaining = 0.0f;
     float m_OsaraAddTimer = 0.0f;
 
-    float osaraMoveSpeed = 200.09f;
+    float osaraMoveSpeed = 0.5f;
 };
 
 #endif
