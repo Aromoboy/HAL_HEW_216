@@ -13,6 +13,8 @@
 #include <sstream>
 #include <string>
 
+#include <wrl/client.h>
+
 #if defined(_WIN32)
 #       ifndef NOMINMAX
 #               define NOMINMAX
@@ -33,6 +35,55 @@ namespace
         (void)message;
     }
 #endif
+
+    class ScopedTransitionVideoOverlayState final
+    {
+    public:
+        explicit ScopedTransitionVideoOverlayState(ID3D11DeviceContext* context)
+            : m_context(context)
+        {
+            if (!m_context)
+            {
+                return;
+            }
+
+            m_context->OMGetDepthStencilState(m_prevDepthStencilState.GetAddressOf(), &m_prevStencilRef);
+            m_context->OMGetBlendState(m_prevBlendState.GetAddressOf(), m_prevBlendFactor, &m_prevSampleMask);
+            m_context->OMGetRenderTargets(1, m_prevRenderTargetView.GetAddressOf(), m_prevDepthStencilView.GetAddressOf());
+
+            RenderTarget* backBufferRtv = GetDefaultRTV();
+            DepthStencil* backBufferDsv = GetDefaultDSV();
+            SetRenderTargets(1, &backBufferRtv, backBufferDsv);
+            SetDepthTest(false);
+            SetBlendMode(BLEND_ALPHA);
+        }
+
+        ~ScopedTransitionVideoOverlayState()
+        {
+            if (!m_context)
+            {
+                return;
+            }
+
+            m_context->OMSetDepthStencilState(m_prevDepthStencilState.Get(), m_prevStencilRef);
+            m_context->OMSetBlendState(m_prevBlendState.Get(), m_prevBlendFactor, m_prevSampleMask);
+            ID3D11RenderTargetView* prevRenderTarget = m_prevRenderTargetView.Get();
+            m_context->OMSetRenderTargets(1, &prevRenderTarget, m_prevDepthStencilView.Get());
+        }
+
+        ScopedTransitionVideoOverlayState(const ScopedTransitionVideoOverlayState&) = delete;
+        ScopedTransitionVideoOverlayState& operator=(const ScopedTransitionVideoOverlayState&) = delete;
+
+    private:
+        ID3D11DeviceContext* m_context = nullptr;
+        Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_prevDepthStencilState;
+        UINT m_prevStencilRef = 0;
+        Microsoft::WRL::ComPtr<ID3D11BlendState> m_prevBlendState;
+        float m_prevBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        UINT m_prevSampleMask = 0xffffffff;
+        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_prevRenderTargetView;
+        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_prevDepthStencilView;
+    };
 }
 
 namespace SceneSpace
@@ -251,6 +302,8 @@ namespace SceneSpace
 
         if (m_transitionVideo && m_pendingScene)
         {
+            DebugTrace("transition video draw tick\n");
+            ScopedTransitionVideoOverlayState overlayStateGuard(GetContext());
             m_transitionVideo->Draw();
         }
     }
