@@ -30,8 +30,7 @@ namespace SceneSpace
             FadingOut,
             Holding,
             Switching,
-            FadingIn,
-            PlayingTransitionVideo,
+            FadingIn
         };
 
         SceneTransitionController();

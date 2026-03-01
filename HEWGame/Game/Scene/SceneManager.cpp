@@ -102,7 +102,6 @@ namespace SceneSpace
             case SceneTransitionController::State::Holding: return "Holding";
             case SceneTransitionController::State::Switching: return "Switching";
             case SceneTransitionController::State::FadingIn: return "FadingIn";
-            case SceneTransitionController::State::PlayingTransitionVideo: return "PlayingTransitionVideo";
             default: return "Unknown";
             }
         }
@@ -434,7 +433,6 @@ namespace SceneSpace
         case SceneTransitionController::State::FadingOut:
         case SceneTransitionController::State::Holding:
         case SceneTransitionController::State::FadingIn:
-        case SceneTransitionController::State::PlayingTransitionVideo:
         default:
             break;
         }
@@ -464,10 +462,6 @@ namespace SceneSpace
                 stateAfter = SceneTransitionController::State::Idle;
                 m_transition.Reset();
             }
-            else
-            {
-                stateAfter = SceneTransitionController::State::PlayingTransitionVideo;
-            }
         }
 
         if (m_lastTransitionState == SceneTransitionController::State::Idle
@@ -489,15 +483,25 @@ namespace SceneSpace
 
         if (m_lastTransitionState != stateAfter)
         {
+            const bool videoActive = IsVideoTransitionActive();
             std::ostringstream oss;
             oss << "[SceneManager] transition state " << ToTransitionStateName(m_lastTransitionState)
                 << " -> " << ToTransitionStateName(stateAfter)
                 << " frame=" << frameIndex
                 << " pending=" << std::boolalpha << static_cast<bool>(m_pendingScene)
-                << " videoActive=" << IsVideoTransitionActive()
+                << " videoActive=" << videoActive
                 << " fadeAlpha=" << m_transition.GetAlpha()
                 << "\n";
             DebugTrace(oss.str());
+
+            std::ostringstream invariantOss;
+            invariantOss << "[SceneManager] transition invariant frame=" << frameIndex
+                         << " state=" << ToTransitionStateName(stateAfter)
+                         << " videoActive=" << videoActive
+                         << " pending=" << std::boolalpha << static_cast<bool>(m_pendingScene)
+                         << " videoRenderer=" << static_cast<bool>(m_transitionVideo)
+                         << "\n";
+            DebugTrace(invariantOss.str());
         }
 
         m_lastTransitionState = stateAfter;
@@ -516,11 +520,6 @@ namespace SceneSpace
 
     SceneTransitionController::State SceneManager::GetTransitionState() const
     {
-        if (m_transitionVideo && m_pendingScene)
-        {
-            return SceneTransitionController::State::PlayingTransitionVideo;
-        }
-
         return m_transition.GetState();
     }
 
