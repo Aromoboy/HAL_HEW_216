@@ -10,6 +10,7 @@
 #include <Effekseer.h>
 #include <EffekseerRendererDX11.h>
 #include <memory>
+#include <string>
 
 namespace Core
 {
@@ -73,7 +74,8 @@ namespace SceneSpace
         SceneManager(Core::StepTimer& timer, Core::Input& input, ::EffekseerRendererDX11::RendererRef m_renderer, ::Effekseer::ManagerRef m_manager);
         void SetInitialScene(std::unique_ptr<IScene> scene);
         void RequestSceneChange(std::unique_ptr<IScene> scene);
-        void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings);
+        void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings,
+                                 const SceneGameConfig::RenderTransitionVideoSettings& transitionVideoSettings);
         void Update();
         void Draw();
         void GameEndRequest();
@@ -106,6 +108,7 @@ namespace SceneSpace
         bool m_isEnd;
         SceneTransitionController m_transition;
         bool m_transitionVideoEnabled;
+        std::string m_transitionVideoPath;
         std::unique_ptr<VideoBackgroundRenderer> m_transitionVideo;
         SceneTransitionController::State m_lastTransitionState;
     };

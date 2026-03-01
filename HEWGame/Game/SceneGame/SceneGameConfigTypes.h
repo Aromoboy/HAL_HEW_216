@@ -69,6 +69,12 @@ namespace SceneGameConfig
         RenderFadeEasing easing = RenderFadeEasing::Linear;
     };
 
+    struct RenderTransitionVideoSettings
+    {
+        bool enable = true;
+        std::string path = "Assets/Video/Fade.mp4";
+    };
+
     struct LightingSettings
     {
         int mode = 1;

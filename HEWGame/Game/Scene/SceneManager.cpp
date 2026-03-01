@@ -267,6 +267,7 @@ namespace SceneSpace
         , m_isEnd(false)
         , m_lastTransitionState(SceneTransitionController::State::Idle)
         , m_transitionVideoEnabled(true)
+        , m_transitionVideoPath("Assets/Video/Fade.mp4")
         , m_renderer(a_renderer)
         , m_manager(a_manager)
     {
@@ -333,10 +334,12 @@ namespace SceneSpace
         return m_transition.GetAlpha();
     }
 
-    void SceneManager::ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings)
+    void SceneManager::ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings,
+                                           const SceneGameConfig::RenderTransitionVideoSettings& transitionVideoSettings)
     {
         m_transition.Configure(settings);
-        m_transitionVideoEnabled = settings.enable;
+        m_transitionVideoEnabled = transitionVideoSettings.enable;
+        m_transitionVideoPath = transitionVideoSettings.path.empty() ? "Assets/Video/Fade.mp4" : transitionVideoSettings.path;
     }
 
     void SceneManager::AdvanceTransition()
@@ -357,16 +360,19 @@ namespace SceneSpace
                         };
 
                         m_transitionVideo = std::make_unique<VideoBackgroundRenderer>();
-                        if (!m_transitionVideo->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Fade.mp4"))
+                        if (!m_transitionVideo->Initialize(GetDevice(), GetContext(), shaderPaths, m_transitionVideoPath))
                         {
+                            std::ostringstream oss;
+                            oss << "[SceneManager] transition start mode=color-fade(fallback) reason=video-init-failed path='" << m_transitionVideoPath << "'\n";
+                            DebugTrace(oss.str());
                             m_transitionVideo.reset();
-                            m_transitionVideoEnabled = false;
                             m_transition.BeginFadeOut();
                             break;
                         }
                         m_transitionVideo->SetAutoLoop(false);
                     }
 
+                    DebugTrace("[SceneManager] transition start mode=video\n");
                     m_transition.Reset();
                     m_transition.Update(0.0f);
                 }
@@ -376,6 +382,10 @@ namespace SceneSpace
                 }
                 else if (m_activeScene)
                 {
+                    if (!m_transitionVideoEnabled)
+                    {
+                        DebugTrace("[SceneManager] transition start mode=color-fade(fallback) reason=video-disabled\n");
+                    }
                     m_transition.BeginFadeOut();
                 }
                 else
