@@ -374,38 +374,33 @@ namespace SceneSpace
         case SceneTransitionController::State::Idle:
             if (m_pendingScene)
             {
-                if (m_transitionVideoEnabled && m_activeScene)
+                if (!IsVideoTransitionActive() && m_transitionVideoEnabled && m_activeScene)
                 {
-                    if (!m_transitionVideo)
+                    VideoBackgroundRenderer::ShaderPaths shaderPaths{
+                        "Assets/shaders/video_vs.cso",
+                        "Assets/shaders/video_ps.cso"
+                    };
+
+                    m_transitionVideo = std::make_unique<VideoBackgroundRenderer>();
+                    if (!m_transitionVideo->Initialize(GetDevice(), GetContext(), shaderPaths, m_transitionVideoPath))
                     {
-                        VideoBackgroundRenderer::ShaderPaths shaderPaths{
-                            "Assets/shaders/video_vs.cso",
-                            "Assets/shaders/video_ps.cso"
-                        };
-
-                        m_transitionVideo = std::make_unique<VideoBackgroundRenderer>();
-                        if (!m_transitionVideo->Initialize(GetDevice(), GetContext(), shaderPaths, m_transitionVideoPath))
-                        {
-                            std::ostringstream oss;
-                            oss << "[SceneManager] transition start mode=color-fade(fallback) reason=video-init-failed path='" << m_transitionVideoPath << "'\n";
-                            DebugTrace(oss.str());
-                            m_transitionVideo.reset();
-                            m_transition.BeginFadeOut();
-                            break;
-                        }
-                        m_transitionVideo->SetAutoLoop(false);
-                        m_lastTransitionVideoProgressLogFrame = frameIndex;
-                        m_transitionVideoDrawLogged = false;
-
                         std::ostringstream oss;
-                        oss << "[SceneManager] transition video initialized frame=" << frameIndex
-                            << " path='" << m_transitionVideoPath << "'\n";
+                        oss << "[SceneManager] transition start mode=color-fade(fallback) reason=video-init-failed path='" << m_transitionVideoPath << "'\n";
                         DebugTrace(oss.str());
+                        m_transitionVideo.reset();
+                        m_transition.BeginFadeOut();
+                        break;
                     }
+                    m_transitionVideo->SetAutoLoop(false);
+                    m_lastTransitionVideoProgressLogFrame = frameIndex;
+                    m_transitionVideoDrawLogged = false;
 
+                    std::ostringstream oss;
+                    oss << "[SceneManager] transition video initialized frame=" << frameIndex
+                        << " path='" << m_transitionVideoPath << "'\n";
+                    DebugTrace(oss.str());
                     DebugTrace("[SceneManager] transition start mode=video\n");
                     m_transition.Reset();
-                    m_transition.Update(0.0f);
                 }
                 else if (!m_transition.IsEnabled())
                 {
