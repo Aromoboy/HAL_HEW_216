@@ -9,6 +9,7 @@
 
 #include <Effekseer.h>
 #include <EffekseerRendererDX11.h>
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -112,6 +113,8 @@ namespace SceneSpace
         std::string m_transitionVideoPath;
         std::unique_ptr<VideoBackgroundRenderer> m_transitionVideo;
         SceneTransitionController::State m_lastTransitionState;
+        std::uint64_t m_lastTransitionVideoProgressLogFrame;
+        bool m_transitionVideoDrawLogged;
     };
 }
 
