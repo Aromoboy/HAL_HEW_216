@@ -382,7 +382,7 @@ namespace SceneSpace
         {
             if (!m_transitionVideo || !m_pendingScene)
             {
-                CleanupTransitionVideo("video-transition-invariant-broken");
+                CleanupTransitionVideo("abort");
                 m_transition.Reset();
             }
             else
@@ -432,7 +432,10 @@ namespace SceneSpace
             {
                 if (m_transitionVideoEnabled && m_activeScene)
                 {
-                    CleanupTransitionVideo("start-new-video-transition");
+                    if (m_transitionVideo != nullptr)
+                    {
+                        CleanupTransitionVideo("replace-active");
+                    }
 
                     VideoBackgroundRenderer::ShaderPaths shaderPaths{
                         "Assets/shaders/video_vs.cso",
@@ -445,7 +448,7 @@ namespace SceneSpace
                         std::ostringstream oss;
                         oss << "[SceneManager] transition start mode=color-fade(fallback) reason=video-init-failed path='" << m_transitionVideoPath << "'\n";
                         DebugTrace(oss.str());
-                        CleanupTransitionVideo("video-init-failed");
+                        CleanupTransitionVideo("abort");
                         m_transition.BeginFadeOut();
                         break;
                     }
@@ -470,18 +473,18 @@ namespace SceneSpace
                 }
                 else if (!m_transition.IsEnabled())
                 {
-                    CleanupTransitionVideo("fade-disabled-activate-directly");
+                    CleanupTransitionVideo("abort");
                     ActivatePendingScene();
                 }
                 else if (m_activeScene)
                 {
-                    CleanupTransitionVideo("video-disabled-fallback-to-fade");
+                    CleanupTransitionVideo("abort");
                     DebugTrace("[SceneManager] transition start mode=color-fade(fallback) reason=video-disabled\n");
                     m_transition.BeginFadeOut();
                 }
                 else
                 {
-                    CleanupTransitionVideo("no-active-scene-activate-directly");
+                    CleanupTransitionVideo("abort");
                     ActivatePendingScene();
                 }
             }
@@ -491,7 +494,7 @@ namespace SceneSpace
             {
                 break;
             }
-            CleanupTransitionVideo("switching-phase");
+            CleanupTransitionVideo("abort");
             ActivatePendingScene();
             if (m_transition.IsEnabled())
             {
@@ -641,7 +644,7 @@ namespace SceneSpace
         std::unique_ptr<IScene> nextScene = std::move(m_pendingScene);
         if (!nextScene->Load(m_input))
         {
-            CleanupTransitionVideo("scene-load-failed");
+            CleanupTransitionVideo("abort");
             LogSceneEvent("Scene load failed; activation canceled.", nextScene.get());
             if (m_activeScene)
             {
