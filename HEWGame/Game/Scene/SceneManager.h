@@ -24,9 +24,6 @@ namespace SceneSpace
     class SceneTransitionController
     {
     public:
-        // NOTE:
-        // Video transition ownership is in SceneManager (m_transitionVideo + m_pendingScene),
-        // so SceneTransitionController::State tracks only color-fade lifecycle states.
         enum class State
         {
             Idle,
