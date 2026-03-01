@@ -287,6 +287,8 @@ namespace SceneSpace
         , m_manager(a_manager)
         , m_lastTransitionVideoProgressLogFrame(0)
         , m_transitionVideoDrawLogged(false)
+        , m_transitionVideoStartLogged(false)
+        , m_videoTransitionInProgress(false)
     {
     }
 
@@ -318,7 +320,7 @@ namespace SceneSpace
             m_activeScene->Draw();
         }
 
-        if (m_transitionVideo && m_pendingScene)
+        if (IsVideoTransitionActive() && m_transitionVideo && m_pendingScene)
         {
             if (!m_transitionVideoDrawLogged)
             {
@@ -372,57 +374,49 @@ namespace SceneSpace
 
         if (IsVideoTransitionActive())
         {
-            m_transitionVideo->Update(m_timer.DeltaTime());
-            if (frameIndex - m_lastTransitionVideoProgressLogFrame >= kTransitionVideoProgressLogIntervalFrames)
+            if (!m_transitionVideo || !m_pendingScene)
             {
-                std::ostringstream oss;
-                oss << "[SceneManager] transition video progress frame=" << frameIndex
-                    << " dt=" << m_timer.DeltaTime() << "\n";
-                DebugTrace(oss.str());
-                m_lastTransitionVideoProgressLogFrame = frameIndex;
-            }
-
-            if (m_transitionVideo->IsFinished())
-            {
-                std::ostringstream oss;
-                oss << "[SceneManager] transition video finished frame=" << frameIndex << "\n";
-                DebugTrace(oss.str());
-                m_transitionVideo->Shutdown();
-                m_transitionVideo.reset();
-                m_transitionVideoDrawLogged = false;
-                ActivatePendingScene();
+                CleanupTransitionVideo("video-transition-invariant-broken");
                 m_transition.Reset();
             }
-
-            const SceneTransitionController::State stateAfterVideo = GetTransitionState();
-            if (m_lastTransitionState == SceneTransitionController::State::Idle
-                && stateAfterVideo != SceneTransitionController::State::Idle)
+            else
             {
-                if (m_activeScene)
+                m_transitionVideo->Update(m_timer.DeltaTime());
+                if (frameIndex - m_lastTransitionVideoProgressLogFrame >= kTransitionVideoProgressLogIntervalFrames)
                 {
                     std::ostringstream oss;
-                    oss << "[SceneManager] transition begin frame=" << frameIndex
-                        << " from=" << typeid(*m_activeScene).name();
-                    if (m_pendingScene)
-                    {
-                        oss << " to=" << typeid(*m_pendingScene).name();
-                    }
-                    oss << " state=" << ToTransitionStateName(stateAfterVideo) << "\n";
+                    oss << "[SceneManager] transition video progress frame=" << frameIndex
+                        << " dt=" << m_timer.DeltaTime() << "\n";
                     DebugTrace(oss.str());
+                    m_lastTransitionVideoProgressLogFrame = frameIndex;
                 }
+
+                if (m_transitionVideo->IsFinished())
+                {
+                    std::ostringstream oss;
+                    oss << "[SceneManager] transition video finished frame=" << frameIndex << "\n";
+                    DebugTrace(oss.str());
+                    CleanupTransitionVideo("finished");
+                    ActivatePendingScene();
+                    m_transition.Reset();
+                }
+
+                const SceneTransitionController::State stateAfterVideo = GetTransitionState();
+                if (stateAfterVideo != m_lastTransitionState)
+                {
+                    std::ostringstream oss;
+                    oss << "[SceneManager] transition state "
+                        << ToTransitionStateName(m_lastTransitionState)
+                        << " -> "
+                        << ToTransitionStateName(stateAfterVideo)
+                        << " frame=" << frameIndex << "\n";
+                    DebugTrace(oss.str());
+                    m_lastTransitionState = stateAfterVideo;
+                }
+
+                m_input.Enable(stateAfterVideo == SceneTransitionController::State::Idle);
+                return;
             }
-            if (stateAfterVideo != m_lastTransitionState)
-            {
-                std::ostringstream oss;
-                oss << "[SceneManager] transition state "
-                    << ToTransitionStateName(m_lastTransitionState)
-                    << " -> "
-                    << ToTransitionStateName(stateAfterVideo)
-                    << " frame=" << frameIndex << "\n";
-                DebugTrace(oss.str());
-                m_lastTransitionState = stateAfterVideo;
-            }
-            return;
         }
 
         switch (stateBefore)
@@ -430,8 +424,10 @@ namespace SceneSpace
         case SceneTransitionController::State::Idle:
             if (m_pendingScene)
             {
-                if (!IsVideoTransitionActive() && m_transitionVideoEnabled && m_activeScene)
+                if (m_transitionVideoEnabled && m_activeScene)
                 {
+                    CleanupTransitionVideo("start-new-video-transition");
+
                     VideoBackgroundRenderer::ShaderPaths shaderPaths{
                         "Assets/shaders/video_vs.cso",
                         "Assets/shaders/video_ps.cso"
@@ -443,36 +439,43 @@ namespace SceneSpace
                         std::ostringstream oss;
                         oss << "[SceneManager] transition start mode=color-fade(fallback) reason=video-init-failed path='" << m_transitionVideoPath << "'\n";
                         DebugTrace(oss.str());
-                        m_transitionVideo.reset();
+                        CleanupTransitionVideo("video-init-failed");
                         m_transition.BeginFadeOut();
                         break;
                     }
+
                     m_transitionVideo->SetAutoLoop(false);
+                    m_videoTransitionInProgress = true;
                     m_lastTransitionVideoProgressLogFrame = frameIndex;
                     m_transitionVideoDrawLogged = false;
+                    m_transitionVideoStartLogged = false;
 
-                    std::ostringstream oss;
-                    oss << "[SceneManager] transition video initialized frame=" << frameIndex
-                        << " path='" << m_transitionVideoPath << "'\n";
-                    DebugTrace(oss.str());
-                    DebugTrace("[SceneManager] transition start mode=video\n");
+                    std::ostringstream initOss;
+                    initOss << "[SceneManager] transition video initialized frame=" << frameIndex
+                            << " path='" << m_transitionVideoPath << "'\n";
+                    DebugTrace(initOss.str());
+
+                    if (!m_transitionVideoStartLogged)
+                    {
+                        DebugTrace("[SceneManager] transition start mode=video\n");
+                        m_transitionVideoStartLogged = true;
+                    }
                     m_transition.Reset();
                 }
                 else if (!m_transition.IsEnabled())
                 {
+                    CleanupTransitionVideo("fade-disabled-activate-directly");
                     ActivatePendingScene();
                 }
                 else if (m_activeScene)
                 {
-                    if (m_transitionVideoEnabled)
-                    {
-                        break;
-                    }
+                    CleanupTransitionVideo("video-disabled-fallback-to-fade");
                     DebugTrace("[SceneManager] transition start mode=color-fade(fallback) reason=video-disabled\n");
                     m_transition.BeginFadeOut();
                 }
                 else
                 {
+                    CleanupTransitionVideo("no-active-scene-activate-directly");
                     ActivatePendingScene();
                 }
             }
@@ -482,6 +485,7 @@ namespace SceneSpace
             {
                 break;
             }
+            CleanupTransitionVideo("switching-phase");
             ActivatePendingScene();
             if (m_transition.IsEnabled())
             {
@@ -541,6 +545,28 @@ namespace SceneSpace
     }
 
 
+    void SceneManager::CleanupTransitionVideo(const char* reason)
+    {
+        if (m_transitionVideo)
+        {
+            m_transitionVideo->Shutdown();
+            m_transitionVideo.reset();
+        }
+
+        m_transitionVideoDrawLogged = false;
+        m_transitionVideoStartLogged = false;
+        m_videoTransitionInProgress = false;
+
+        if (reason && reason[0] != '\0')
+        {
+            std::ostringstream oss;
+            oss << "[SceneManager] transition video cleanup reason=" << reason
+                << " frame=" << m_timer.FrameIndex() << "\n";
+            DebugTrace(oss.str());
+        }
+    }
+
+
     void SceneManager::UpdateActiveSceneIfAllowed()
     {
         if (m_activeScene && !IsTransitioning())
@@ -566,7 +592,7 @@ namespace SceneSpace
 
     bool SceneManager::IsVideoTransitionActive() const
     {
-        return m_transitionVideo && m_pendingScene;
+        return m_videoTransitionInProgress;
     }
 
     bool SceneManager::IsUsingVideoTransition() const
@@ -609,6 +635,7 @@ namespace SceneSpace
         std::unique_ptr<IScene> nextScene = std::move(m_pendingScene);
         if (!nextScene->Load(m_input))
         {
+            CleanupTransitionVideo("scene-load-failed");
             LogSceneEvent("Scene load failed; activation canceled.", nextScene.get());
             if (m_activeScene)
             {
