@@ -39,6 +39,7 @@ namespace
     constexpr const char* kTechnicalConfigPath = "Assets/Config/technical.cfg";
     constexpr const char* kRenderSettingsSection = "render.settings";
     constexpr const char* kRenderFadeSection = "render.fade";
+    constexpr const char* kRenderTransitionVideoSection = "render.transitionVideo";
     constexpr const char* kGameplayConfigPath = GameplayConfig::kConfigPath;
     constexpr float kDefaultGeneratedThicknessPadding = 1.1f;
     constexpr float3 kDefaultPlayerColliderPadding{ 0.02f, 0.05f, 0.02f };
@@ -1196,6 +1197,92 @@ namespace SceneGameConfig
         {
             std::ostringstream oss;
             oss << kLogPrefix << "[RenderFade] easing not found; using default (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+
+        return settings;
+    }
+
+    RenderTransitionVideoSettings LoadRenderTransitionVideoSettings()
+    {
+        RenderTransitionVideoSettings settings{};
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kTechnicalConfigPath, kRenderTransitionVideoSection, lines))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderTransitionVideo] Missing config; defaulting transition-video settings section='"
+                << kRenderTransitionVideoSection << "' path='" << kTechnicalConfigPath << "'\n";
+            DebugTrace(oss.str());
+            return settings;
+        }
+
+        bool parsedEnable = false;
+        bool parsedPath = false;
+
+        for (const auto& entry : lines)
+        {
+            std::string key = TrimWhitespace(entry.key);
+            std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+            { return static_cast<char>(std::tolower(c)); });
+
+            if (key == "enable")
+            {
+                bool parsedValue = false;
+                if (ParseBool(value, parsedValue))
+                {
+                    settings.enable = parsedValue;
+                    parsedEnable = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderTransitionVideo] Parsed enable=" << std::boolalpha << settings.enable
+                        << " from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderTransitionVideo] Invalid enable value='" << value
+                        << "' on line=" << lineNumber << "; keeping default=" << std::boolalpha << settings.enable << "\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "path")
+            {
+                if (!value.empty())
+                {
+                    settings.path = value;
+                    parsedPath = true;
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderTransitionVideo] Parsed path='" << settings.path
+                        << "' from line=" << lineNumber << " path='" << kTechnicalConfigPath << "'\n";
+                    DebugTrace(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "[RenderTransitionVideo] Invalid path value='" << value
+                        << "' on line=" << lineNumber << "; keeping default='" << settings.path << "'\n";
+                    DebugTrace(oss.str());
+                }
+                continue;
+            }
+        }
+
+        if (!parsedEnable)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderTransitionVideo] enable not found; using default=" << std::boolalpha << settings.enable
+                << " (path='" << kTechnicalConfigPath << "')\n";
+            DebugTrace(oss.str());
+        }
+        if (!parsedPath)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[RenderTransitionVideo] path not found; using default='" << settings.path
+                << "' (path='" << kTechnicalConfigPath << "')\n";
             DebugTrace(oss.str());
         }
 

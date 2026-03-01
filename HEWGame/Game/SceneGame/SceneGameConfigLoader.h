@@ -41,6 +41,7 @@ namespace SceneGameConfig
     bool LoadModelTextureLoadingSetting();
     RenderPostProcessSettings LoadRenderPostProcessSettings();
     RenderFadeSettings LoadRenderFadeSettings();
+    RenderTransitionVideoSettings LoadRenderTransitionVideoSettings();
     LightingSettings LoadLightingSettings();
     BlobShadowSettings LoadBlobShadowSettings();
     MaterialTuningSettings LoadMaterialTuningSettings();
