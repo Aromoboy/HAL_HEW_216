@@ -238,7 +238,8 @@ void Update()
                 FullscreenManager::Toggle();
         }
 
-        if (g_input.IsTrigger(VK_ESCAPE) || g_input.IsTrigger(Core::ActionId::Cancel))
+        if ((!g_sceneManager || !g_sceneManager->IsTransitioning())
+                && (g_input.IsTrigger(VK_ESCAPE) || g_input.IsTrigger(Core::ActionId::Cancel)))
         {
                 std::ostringstream oss;
                 oss << "[Input] Exit hotkey triggered at frame " << g_stepTimer.FrameIndex();

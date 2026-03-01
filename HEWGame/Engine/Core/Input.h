@@ -26,6 +26,7 @@ namespace Core
 
         HRESULT Initialize();
         void Shutdown();
+        void Enable(bool value);
 
         void OnUpdate(const UpdateContext& ctx) override;
 
