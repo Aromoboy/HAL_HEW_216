@@ -474,7 +474,12 @@ namespace SceneSpace
 
     bool SceneManager::IsTransitioning() const
     {
-        return m_transition.IsTransitioning() || (m_transitionVideo && m_pendingScene);
+        return m_transition.IsTransitioning() || IsVideoTransitionActive();
+    }
+
+    bool SceneManager::IsVideoTransitionActive() const
+    {
+        return m_transitionVideo && m_pendingScene;
     }
 
     bool SceneManager::IsUsingVideoTransition() const

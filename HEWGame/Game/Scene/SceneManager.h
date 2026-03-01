@@ -85,6 +85,7 @@ namespace SceneSpace
         float GetFadeAlpha() const;
         SceneTransitionController::State GetTransitionState() const;
         bool IsTransitioning() const;
+        bool IsVideoTransitionActive() const;
         bool IsUsingVideoTransition() const;
         ::EffekseerRendererDX11::RendererRef GetEffectRenderer();
         ::Effekseer::ManagerRef GetEffectManager();
