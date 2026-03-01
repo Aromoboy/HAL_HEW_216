@@ -387,6 +387,11 @@ void Draw()
                 context->PSSetShaderResources(0, 2, nullSRVs);
         }
 
+        if (g_sceneManager)
+        {
+                g_sceneManager->DrawTransitionOverlay();
+        }
+
         if (g_sceneManager && !g_sceneManager->IsVideoTransitionActive())
         {
                 DrawSceneFadeOverlay(g_sceneManager->GetFadeAlpha());

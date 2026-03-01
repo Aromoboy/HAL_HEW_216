@@ -79,6 +79,7 @@ namespace SceneSpace
                                  const SceneGameConfig::RenderTransitionVideoSettings& transitionVideoSettings);
         void Update();
         void Draw();
+        void DrawTransitionOverlay();
         void GameEndRequest();
         bool IsGameEnd();
         IScene* GetActiveScene();

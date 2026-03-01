@@ -319,19 +319,25 @@ namespace SceneSpace
             assert(m_sceneLoaded && m_sceneEntered);
             m_activeScene->Draw();
         }
+    }
 
-        if (IsVideoTransitionActive() && m_transitionVideo && m_pendingScene)
+    void SceneManager::DrawTransitionOverlay()
+    {
+        if (!(IsVideoTransitionActive() && m_transitionVideo && m_pendingScene))
         {
-            if (!m_transitionVideoDrawLogged)
-            {
-                std::ostringstream oss;
-                oss << "[SceneManager] transition video draw begin frame=" << m_timer.FrameIndex() << "\n";
-                DebugTrace(oss.str());
-                m_transitionVideoDrawLogged = true;
-            }
-            ScopedTransitionVideoOverlayState overlayStateGuard(GetContext());
-            m_transitionVideo->Draw();
+            return;
         }
+
+        if (!m_transitionVideoDrawLogged)
+        {
+            std::ostringstream oss;
+            oss << "[SceneManager] transition video draw begin frame=" << m_timer.FrameIndex() << "\n";
+            DebugTrace(oss.str());
+            m_transitionVideoDrawLogged = true;
+        }
+
+        ScopedTransitionVideoOverlayState overlayStateGuard(GetContext());
+        m_transitionVideo->Draw();
     }
 
     void SceneManager::GameEndRequest()
