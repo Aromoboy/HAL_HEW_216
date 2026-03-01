@@ -46,6 +46,18 @@ namespace Core
                 m_lastPolledFrame = 0;
         }
 
+        void Input::Enable(bool value)
+        {
+                const bool wasEnabled = IsEnabled();
+                UpdateNode::Enable(value);
+
+                if (wasEnabled && !value)
+                {
+                        // 無効化中は previous を current に追従させ、再開時に trigger が古い差分で発火しないようにする
+                        m_previousKeys = m_currentKeys;
+                }
+        }
+
         void Input::OnUpdate(const UpdateContext& ctx)
         {
                 const std::uint64_t frameIndex = ctx.timer.FrameIndex();
