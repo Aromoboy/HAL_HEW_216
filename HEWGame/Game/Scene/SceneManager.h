@@ -96,6 +96,7 @@ namespace SceneSpace
         void UpdateActiveSceneIfAllowed();
         void ActivatePendingScene();
         void LogSceneEvent(const char* eventLabel, const IScene* scene) const;
+        void CleanupTransitionVideo(const char* reason);
 
         Core::StepTimer& m_timer;
         Core::Input& m_input;
@@ -115,6 +116,8 @@ namespace SceneSpace
         SceneTransitionController::State m_lastTransitionState;
         std::uint64_t m_lastTransitionVideoProgressLogFrame;
         bool m_transitionVideoDrawLogged;
+        bool m_transitionVideoStartLogged;
+        bool m_videoTransitionInProgress;
     };
 }
 
