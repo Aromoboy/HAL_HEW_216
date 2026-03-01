@@ -3,6 +3,8 @@
 #include "Core/StepTimer.h"
 #include "Core/Input.h"
 #include "Core/IUpdatable.h"
+#include "VideoBackgroundRenderer.h"
+#include "DirectX.h"
 
 #include <cassert>
 #include <algorithm>
@@ -213,6 +215,7 @@ namespace SceneSpace
         , m_sceneEntered(false)
         , m_isEnd(false)
         , m_lastTransitionState(SceneTransitionController::State::Idle)
+        , m_transitionVideoEnabled(true)
         , m_renderer(a_renderer)
         , m_manager(a_manager)
     {
@@ -245,6 +248,11 @@ namespace SceneSpace
             assert(m_sceneLoaded && m_sceneEntered);
             m_activeScene->Draw();
         }
+
+        if (m_transitionVideo && m_pendingScene)
+        {
+            m_transitionVideo->Draw();
+        }
     }
 
     void SceneManager::GameEndRequest()
@@ -275,6 +283,7 @@ namespace SceneSpace
     void SceneManager::ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings)
     {
         m_transition.Configure(settings);
+        m_transitionVideoEnabled = settings.enable;
     }
 
     void SceneManager::AdvanceTransition()
@@ -285,9 +294,31 @@ namespace SceneSpace
         case SceneTransitionController::State::Idle:
             if (m_pendingScene)
             {
-                if (!m_transition.IsEnabled())
+                if (m_transitionVideoEnabled && m_activeScene)
                 {
-                    // インスタントスイッチ：遷移を無効化し、フェードを完全にスキップする
+                    if (!m_transitionVideo)
+                    {
+                        VideoBackgroundRenderer::ShaderPaths shaderPaths{
+                            "Assets/shaders/video_vs.cso",
+                            "Assets/shaders/video_ps.cso"
+                        };
+
+                        m_transitionVideo = std::make_unique<VideoBackgroundRenderer>();
+                        if (!m_transitionVideo->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Fade.mp4"))
+                        {
+                            m_transitionVideo.reset();
+                            m_transitionVideoEnabled = false;
+                            m_transition.BeginFadeOut();
+                            break;
+                        }
+                        m_transitionVideo->SetAutoLoop(false);
+                    }
+
+                    m_transition.Reset();
+                    m_transition.Update(0.0f);
+                }
+                else if (!m_transition.IsEnabled())
+                {
                     ActivatePendingScene();
                 }
                 else if (m_activeScene)
@@ -296,7 +327,6 @@ namespace SceneSpace
                 }
                 else
                 {
-                    // フェードをスキップ：アクティブなシーンはまだないため、すぐに読み込む
                     ActivatePendingScene();
                 }
             }
@@ -315,11 +345,29 @@ namespace SceneSpace
         case SceneTransitionController::State::FadingOut:
         case SceneTransitionController::State::Holding:
         case SceneTransitionController::State::FadingIn:
+        case SceneTransitionController::State::PlayingTransitionVideo:
         default:
             break;
         }
 
-        const SceneTransitionController::State stateAfter = m_transition.GetState();
+        SceneTransitionController::State stateAfter = m_transition.GetState();
+        if (m_transitionVideo && m_pendingScene)
+        {
+            m_transitionVideo->Update(m_timer.DeltaTime());
+            if (m_transitionVideo->IsFinished())
+            {
+                m_transitionVideo->Shutdown();
+                m_transitionVideo.reset();
+                ActivatePendingScene();
+                stateAfter = SceneTransitionController::State::Idle;
+                m_transition.Reset();
+            }
+            else
+            {
+                stateAfter = SceneTransitionController::State::PlayingTransitionVideo;
+            }
+        }
+
         if (m_lastTransitionState == SceneTransitionController::State::Idle
             && stateAfter != SceneTransitionController::State::Idle)
         {
@@ -338,12 +386,13 @@ namespace SceneSpace
         }
 
         m_lastTransitionState = stateAfter;
-        m_input.Enable(!m_transition.IsTransitioning());
+        m_input.Enable(stateAfter == SceneTransitionController::State::Idle);
     }
+
 
     void SceneManager::UpdateActiveSceneIfAllowed()
     {
-        if (m_activeScene && !m_transition.IsTransitioning())
+        if (m_activeScene && !IsTransitioning())
         {
             assert(m_sceneLoaded && m_sceneEntered);
             m_activeScene->Update(m_timer, m_input);
@@ -352,12 +401,22 @@ namespace SceneSpace
 
     SceneTransitionController::State SceneManager::GetTransitionState() const
     {
+        if (m_transitionVideo && m_pendingScene)
+        {
+            return SceneTransitionController::State::PlayingTransitionVideo;
+        }
+
         return m_transition.GetState();
     }
 
     bool SceneManager::IsTransitioning() const
     {
-        return m_transition.IsTransitioning();
+        return m_transition.IsTransitioning() || (m_transitionVideo && m_pendingScene);
+    }
+
+    bool SceneManager::IsUsingVideoTransition() const
+    {
+        return m_transitionVideoEnabled;
     }
 
     ::EffekseerRendererDX11::RendererRef SceneManager::GetEffectRenderer()

@@ -5,6 +5,7 @@
 #define __SCENE_MANAGER_H__
 
 #include "SceneGameConfigTypes.h"
+#include "VideoBackgroundRenderer.h"
 
 #include <Effekseer.h>
 #include <EffekseerRendererDX11.h>
@@ -28,6 +29,7 @@ namespace SceneSpace
             Holding,
             Switching,
             FadingIn,
+            PlayingTransitionVideo,
         };
 
         SceneTransitionController();
@@ -81,6 +83,7 @@ namespace SceneSpace
         float GetFadeAlpha() const;
         SceneTransitionController::State GetTransitionState() const;
         bool IsTransitioning() const;
+        bool IsUsingVideoTransition() const;
         ::EffekseerRendererDX11::RendererRef GetEffectRenderer();
         ::Effekseer::ManagerRef GetEffectManager();
 
@@ -102,6 +105,8 @@ namespace SceneSpace
         bool m_sceneEntered;
         bool m_isEnd;
         SceneTransitionController m_transition;
+        bool m_transitionVideoEnabled;
+        std::unique_ptr<VideoBackgroundRenderer> m_transitionVideo;
         SceneTransitionController::State m_lastTransitionState;
     };
 }

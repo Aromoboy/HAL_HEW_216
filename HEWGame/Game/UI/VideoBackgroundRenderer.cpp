@@ -420,6 +420,19 @@ void VideoBackgroundRenderer::Update(float dt)
     SAFE_RELEASE(sample);
 }
 
+bool VideoBackgroundRenderer::IsFinished() const
+{
+    return m_decoder ? m_decoder->mf.finished : true;
+}
+
+void VideoBackgroundRenderer::SetAutoLoop(bool enabled)
+{
+    if (m_decoder)
+    {
+        m_decoder->mf.autoLoop = enabled;
+    }
+}
+
 ID3D11ShaderResourceView* VideoBackgroundRenderer::GetTexture() const
 {
     return m_srv.Get();
