@@ -678,12 +678,6 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
     {
         return;
     }
-
-    if (m_videoBackground)
-    {
-        m_videoBackground->Update(timer.DeltaTime());
-    }
-
     RootUpdate(timer, input);
 
 
@@ -832,29 +826,10 @@ void SceneGame::OnEnter()
     m_whistlePlayed = false;
     m_bgmStarted = false;
     m_gameBGMHandle = -1;
-
-    if (!m_videoBackground)
-    {
-        VideoTexturePlayer::ShaderPaths shaderPaths;
-        shaderPaths.vertexShader = "Assets/shaders/video_vs.cso";
-        shaderPaths.pixelShader = "Assets/shaders/video_ps.cso";
-
-        m_videoBackground = std::make_unique<VideoTexturePlayer>();
-        if (!m_videoBackground->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Game.mp4"))
-        {
-            m_videoBackground.reset();
-        }
-    }
 }
 
 void SceneGame::OnExit()
 {
-    if (m_videoBackground)
-    {
-        m_videoBackground->Shutdown();
-        m_videoBackground.reset();
-    }
-
     //if (m_gameBGMHandle != -1 && SoundManagerEX::GetInstance())
     //{
     //    SoundManagerEX::GetInstance()->StopSound(m_gameBGMHandle);
@@ -2023,11 +1998,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 }
             }
         }
-        if (m_videoBackground)
-        {
-            m_videoBackground->Draw();
-        }
-        else if (m_backgroundRenderer)
+        if (m_backgroundRenderer)
         {
             m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, pixelsPerUnit);
         }
