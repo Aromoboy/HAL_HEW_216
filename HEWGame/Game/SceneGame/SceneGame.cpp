@@ -1412,6 +1412,16 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
             m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+
+   //         DebugTrace("guidelineDelta = " + std::to_string(guidelineDelta) + "\n");
+   //         DebugTrace("Remaining set to = " + std::to_string(m_OsaraToAddRemaining) + "\n");
+
+            if (guidelineDelta > 0.01f)
+            {
+                m_isOsaraCounting = true;
+                m_OsaraToAddRemaining = guidelineDelta;
+   //             DebugTrace("Remaining SET = " + std::to_string(m_OsaraToAddRemaining) + "\n");
+            }
             if (guidelineDelta != 0.0f)
             {
                 if (m_sweetsManager)
@@ -1426,8 +1436,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         continue;
                     }
 
-                    obj.baseY += guidelineDelta;
-                    obj.transform.position.y += guidelineDelta;
+
+                //    obj.baseY += guidelineDelta;
+                //    obj.transform.position.y += guidelineDelta;
 
                     if (obj.physicsEntity)
                     {
@@ -1456,7 +1467,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         //        m_scoreAddTimer = 0.0;
         //    }
         //}
-
+       
         break;
     }
     case StageState::TimeUp:
@@ -1477,6 +1488,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     case StageState::ShowingResult:
         break;
     }
+
+    UpdateOsaraGradualMove(ctx);
 
     for (auto& obj : m_stageObjects)
     {
@@ -2814,4 +2827,45 @@ int SceneGame::GetSweetsCount() const
 bool SceneGame::IsOsara(const StageObject& obj)
 {
     return obj.modelPath.find("osara") != std::string::npos;
+}
+
+void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
+{
+    if (!m_isOsaraCounting || m_OsaraToAddRemaining <= 0.0f)
+    {
+        return;
+    }
+    //徐々に上に移動したい
+
+
+        float deltaY = osaraMoveSpeed * ctx.dt;
+     //   DebugTrace("deltaY = " + std::to_string(deltaY) + "\n");
+     //   DebugTrace("Remaining BEFORE = " + std::to_string(m_OsaraToAddRemaining) + "\n");
+        if (deltaY > m_OsaraToAddRemaining)
+        {
+            deltaY = m_OsaraToAddRemaining;
+        }
+        //  float moveY = guidelineDelta - deltaY;
+
+        for (auto& obj : m_stageObjects)
+        {
+            if (!IsOsara(obj)) continue;
+
+            obj.baseY += deltaY;
+          //  obj.transform.position.y += deltaY;
+
+            //if (obj.physicsEntity)
+            //{
+            //    obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+            //}
+        }
+        m_OsaraToAddRemaining -= deltaY;
+
+        if (m_OsaraToAddRemaining <= 0.0f)
+        {
+      //      m_OsaraToAddRemaining = 0.0f;
+            m_isOsaraCounting = false;
+        }
+  
+  
 }
