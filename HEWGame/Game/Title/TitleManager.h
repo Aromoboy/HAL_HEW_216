@@ -104,8 +104,6 @@ public:
 private:
 	Core::UpdateScheduler* m_scheduler;
 
-	std::shared_ptr<Texture2D> m_backTexture;
-
 	TitleCursor::NodeFormat m_format;
 
 	std::array<TitleNode, TITLE_MAX_NODE> m_nodes;

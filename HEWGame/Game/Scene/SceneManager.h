@@ -5,10 +5,13 @@
 #define __SCENE_MANAGER_H__
 
 #include "SceneGameConfigTypes.h"
+#include "VideoBackgroundRenderer.h"
 
 #include <Effekseer.h>
 #include <EffekseerRendererDX11.h>
+#include <cstdint>
 #include <memory>
+#include <string>
 
 namespace Core
 {
@@ -28,6 +31,7 @@ namespace SceneSpace
             Holding,
             Switching,
             FadingIn,
+            PlayingTransitionVideo
         };
 
         SceneTransitionController();
@@ -71,9 +75,11 @@ namespace SceneSpace
         SceneManager(Core::StepTimer& timer, Core::Input& input, ::EffekseerRendererDX11::RendererRef m_renderer, ::Effekseer::ManagerRef m_manager);
         void SetInitialScene(std::unique_ptr<IScene> scene);
         void RequestSceneChange(std::unique_ptr<IScene> scene);
-        void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings);
+        void ConfigureRenderFade(const SceneGameConfig::RenderFadeSettings& settings,
+                                 const SceneGameConfig::RenderTransitionVideoSettings& transitionVideoSettings);
         void Update();
         void Draw();
+        void DrawTransitionOverlay();
         void GameEndRequest();
         bool IsGameEnd();
         IScene* GetActiveScene();
@@ -81,6 +87,8 @@ namespace SceneSpace
         float GetFadeAlpha() const;
         SceneTransitionController::State GetTransitionState() const;
         bool IsTransitioning() const;
+        bool IsVideoTransitionActive() const;
+        bool IsUsingVideoTransition() const;
         ::EffekseerRendererDX11::RendererRef GetEffectRenderer();
         ::Effekseer::ManagerRef GetEffectManager();
 
@@ -89,6 +97,7 @@ namespace SceneSpace
         void UpdateActiveSceneIfAllowed();
         void ActivatePendingScene();
         void LogSceneEvent(const char* eventLabel, const IScene* scene) const;
+        void CleanupTransitionVideo(const char* reason);
 
         Core::StepTimer& m_timer;
         Core::Input& m_input;
@@ -102,7 +111,14 @@ namespace SceneSpace
         bool m_sceneEntered;
         bool m_isEnd;
         SceneTransitionController m_transition;
+        bool m_transitionVideoEnabled;
+        std::string m_transitionVideoPath;
+        std::unique_ptr<VideoBackgroundRenderer> m_transitionVideo;
         SceneTransitionController::State m_lastTransitionState;
+        std::uint64_t m_lastTransitionVideoProgressLogFrame;
+        bool m_transitionVideoDrawLogged;
+        bool m_transitionVideoStartLogged;
+        bool m_videoTransitionInProgress;
     };
 }
 

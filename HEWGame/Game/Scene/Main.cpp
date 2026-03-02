@@ -38,6 +38,7 @@ namespace
         HRESULT g_comInitResult = E_FAIL;
         SceneGameConfig::RenderPostProcessSettings g_postProcessSettings{};
         SceneGameConfig::RenderFadeSettings g_renderFadeSettings{};
+        SceneGameConfig::RenderTransitionVideoSettings g_renderTransitionVideoSettings{};
         std::unique_ptr<Texture> g_fadeTexture;
         Effekseer::Backend::GraphicsDeviceRef g_effectDevice;
         EffekseerRendererDX11::RendererRef g_effectRenderer;
@@ -160,6 +161,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
                 shaderDir / "postprocess_ps.cso");
         g_postProcessSettings = SceneGameConfig::LoadRenderPostProcessSettings();
         g_renderFadeSettings = SceneGameConfig::LoadRenderFadeSettings();
+        g_renderTransitionVideoSettings = SceneGameConfig::LoadRenderTransitionVideoSettings();
 
         g_effectDevice = ::EffekseerRendererDX11::CreateGraphicsDevice(GetDevice(), GetContext());
         g_effectRenderer = ::EffekseerRendererDX11::Renderer::Create(g_effectDevice, 8000);
@@ -179,7 +181,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
 
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input, g_effectRenderer, g_effectManager);
-        g_sceneManager->ConfigureRenderFade(g_renderFadeSettings);
+        g_sceneManager->ConfigureRenderFade(g_renderFadeSettings, g_renderTransitionVideoSettings);
         g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
 
         LogBootScenario();
@@ -236,7 +238,8 @@ void Update()
                 FullscreenManager::Toggle();
         }
 
-        if (g_input.IsTrigger(VK_ESCAPE) || g_input.IsTrigger(Core::ActionId::Cancel))
+        if ((!g_sceneManager || !g_sceneManager->IsTransitioning())
+                && (g_input.IsTrigger(VK_ESCAPE) || g_input.IsTrigger(Core::ActionId::Cancel)))
         {
                 std::ostringstream oss;
                 oss << "[Input] Exit hotkey triggered at frame " << g_stepTimer.FrameIndex();
@@ -385,6 +388,11 @@ void Draw()
         }
 
         if (g_sceneManager)
+        {
+                g_sceneManager->DrawTransitionOverlay();
+        }
+
+        if (g_sceneManager && !g_sceneManager->IsVideoTransitionActive())
         {
                 DrawSceneFadeOverlay(g_sceneManager->GetFadeAlpha());
         }
