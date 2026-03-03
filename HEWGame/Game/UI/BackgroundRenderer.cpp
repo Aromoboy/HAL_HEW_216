@@ -141,6 +141,15 @@ bool BackgroundRenderer::Initialize(const BackgroundRendererConfig& config)
     return true;
 }
 
+
+void BackgroundRenderer::Update(float /*dt*/)
+{
+}
+
+void BackgroundRenderer::Draw(const BackgroundLayerDrawContext& context)
+{
+    Draw(context.worldScrollOffset, context.pixelsPerUnit);
+}
 void BackgroundRenderer::Shutdown()
 {
     m_layers.clear();

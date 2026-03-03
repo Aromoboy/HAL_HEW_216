@@ -144,6 +144,38 @@ namespace
         outIndex = hasIndex ? parsedIndex : 0;
         return true;
     }
+
+    bool TryParseBool(const std::string& rawValue, bool& outValue)
+    {
+        const std::string lowered = ToLowerCopy(rawValue);
+        if (lowered == "1" || lowered == "true" || lowered == "yes" || lowered == "on")
+        {
+            outValue = true;
+            return true;
+        }
+        if (lowered == "0" || lowered == "false" || lowered == "no" || lowered == "off")
+        {
+            outValue = false;
+            return true;
+        }
+        return false;
+    }
+
+    bool TryParseBackgroundScrollMode(const std::string& rawValue, Stage::BackgroundScrollMode& outMode)
+    {
+        const std::string lowered = ToLowerCopy(rawValue);
+        if (lowered == "clamp")
+        {
+            outMode = Stage::BackgroundScrollMode::Clamp;
+            return true;
+        }
+        if (lowered == "wrap")
+        {
+            outMode = Stage::BackgroundScrollMode::Wrap;
+            return true;
+        }
+        return false;
+    }
 }
 
 namespace Stage
@@ -214,6 +246,9 @@ namespace Stage
         result.guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
         result.guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        result.backgroundVideoPath.clear();
+        result.backgroundVideoAutoLoop = true;
+        result.backgroundScrollMode = BackgroundScrollMode::Clamp;
 
         for (const auto& entry : lines)
         {
@@ -900,6 +935,43 @@ namespace Stage
                 {
                     result.backgroundTexturePath = rawValue;
                     result.backgroundTextureSet = true;
+                }
+            }
+            else if (key == "backgroundVideoPath")
+            {
+                result.backgroundVideoPath = rawValue;
+                result.backgroundVideoPathSet = true;
+            }
+            else if (key == "backgroundVideoAutoLoop")
+            {
+                bool parsedValue = true;
+                if (!TryParseBool(rawValue, parsedValue))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoAutoLoop on line " << lineNumber
+                        << ": expected true/false but got '" << rawValue << "'.\n";
+                    result.parseError = true;
+                }
+                else
+                {
+                    result.backgroundVideoAutoLoop = parsedValue;
+                    result.backgroundVideoAutoLoopSet = true;
+                }
+            }
+            else if (key == "backgroundScrollMode")
+            {
+                BackgroundScrollMode parsedMode = BackgroundScrollMode::Clamp;
+                if (!TryParseBackgroundScrollMode(rawValue, parsedMode))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundScrollMode on line " << lineNumber
+                        << ": expected clamp/wrap but got '" << rawValue << "'.\n";
+                    result.parseError = true;
+                }
+                else
+                {
+                    result.backgroundScrollMode = parsedMode;
+                    result.backgroundScrollModeSet = true;
                 }
             }
             else

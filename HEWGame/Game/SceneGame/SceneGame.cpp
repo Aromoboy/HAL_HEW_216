@@ -1228,6 +1228,10 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     }*/
     
     m_guidelineSystem.TickCooldowns(ctx.dt);
+    if (m_backgroundRenderer)
+    {
+        m_backgroundRenderer->Update(ctx.dt);
+    }
 
 #if defined(_DEBUG)
     if (m_sweetsManager)
@@ -1986,6 +1990,9 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     // scrollOffsetUsedForBackground is in world units (meters). pixelsPerUnit is derived from the active camera.
     float scrollOffsetUsedForBackground = 0.0f;
     float pixelsPerUnit = 1.0f;
+    float viewportWidth = 0.0f;
+    float viewportHeight = 0.0f;
+    float normalizedScroll01 = 0.0f;
 
     auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
     assert(baseCamera && "SceneGame background requires a BaseCamera.");
@@ -2001,7 +2008,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             RenderTarget* defaultRTV = GetDefaultRTV();
             if (defaultRTV)
             {
-                const float viewportHeight = static_cast<float>(defaultRTV->GetHeight());
+                viewportWidth = static_cast<float>(defaultRTV->GetWidth());
+                viewportHeight = static_cast<float>(defaultRTV->GetHeight());
                 if (viewportHeight > 0.0f)
                 {
                     float3 planeSample{ 0.0f, 0.0f, 0.0f };
@@ -2026,9 +2034,22 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 }
             }
         }
+
+        const float levelHeight = std::max({ 1.0f,
+            m_guidelineSystem.GetHeightMeters(),
+            m_gameplayRules.GetCurrentTowerHeight(),
+            m_gameplayRules.GetPeakTowerHeight() });
+        normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / levelHeight, 0.0f, 1.0f);
+
         if (m_backgroundRenderer)
         {
-            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, pixelsPerUnit);
+            BackgroundLayerDrawContext backgroundContext{};
+            backgroundContext.worldScrollOffset = scrollOffsetUsedForBackground;
+            backgroundContext.pixelsPerUnit = pixelsPerUnit;
+            backgroundContext.viewportWidth = viewportWidth;
+            backgroundContext.viewportHeight = viewportHeight;
+            backgroundContext.normalizedScroll01 = normalizedScroll01;
+            m_backgroundRenderer->Draw(backgroundContext);
         }
     }
 

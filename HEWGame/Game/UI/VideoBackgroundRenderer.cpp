@@ -446,6 +446,11 @@ void VideoBackgroundRenderer::SetScroll01(float scroll01)
     m_scroll01 = scroll01;
 }
 
+void VideoBackgroundRenderer::SetScrollMode(ScrollMode mode)
+{
+    m_scrollMode = mode;
+}
+
 void VideoBackgroundRenderer::SetInvertY(bool invert)
 {
     m_invertY = invert;
@@ -488,7 +493,17 @@ void VideoBackgroundRenderer::Draw()
             const float maxY = std::max(0.0f, 1.0f - uvH);
             const float maxX = std::max(0.0f, 1.0f - uvW);
 
-            float uvY = std::clamp(m_scroll01 * maxY, 0.0f, maxY);
+            float uvY = 0.0f;
+            if (m_scrollMode == ScrollMode::Wrap && maxY > 0.0f)
+            {
+                const float wrapped = std::fmod(m_scroll01, 1.0f);
+                const float wrapped01 = wrapped < 0.0f ? wrapped + 1.0f : wrapped;
+                uvY = wrapped01 * maxY;
+            }
+            else
+            {
+                uvY = std::clamp(m_scroll01 * maxY, 0.0f, maxY);
+            }
             if (m_invertY)
             {
                 uvY = maxY - uvY;
@@ -507,6 +522,13 @@ void VideoBackgroundRenderer::Draw()
 
     SetSamplerState(SAMPLER_LINEAR);
     m_quad->Draw();
+}
+
+void VideoBackgroundRenderer::Draw(const BackgroundLayerDrawContext& context)
+{
+    SetViewportSize(context.viewportWidth, context.viewportHeight);
+    SetScroll01(context.normalizedScroll01);
+    Draw();
 }
 
 void VideoBackgroundRenderer::Shutdown()

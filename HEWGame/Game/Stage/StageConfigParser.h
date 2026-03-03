@@ -89,6 +89,12 @@ namespace Stage
         bool guidelineMilestoneIntervalSet = false;
         std::string backgroundTexturePath;
         bool backgroundTextureSet = false;
+        std::string backgroundVideoPath;
+        bool backgroundVideoPathSet = false;
+        bool backgroundVideoAutoLoop = true;
+        bool backgroundVideoAutoLoopSet = false;
+        BackgroundScrollMode backgroundScrollMode = BackgroundScrollMode::Clamp;
+        bool backgroundScrollModeSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);

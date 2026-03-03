@@ -245,6 +245,9 @@ namespace Stage
         float guidelineMilestoneBonusSeconds = parsed.guidelineMilestoneBonusSeconds;
         int guidelineMilestoneInterval = parsed.guidelineMilestoneInterval;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
+        std::string backgroundVideoPath = parsed.backgroundVideoPath;
+        bool backgroundVideoAutoLoop = parsed.backgroundVideoAutoLoop;
+        BackgroundScrollMode backgroundScrollMode = parsed.backgroundScrollMode;
 
         if (!planeZSet)
         {
@@ -379,6 +382,21 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "backgroundTexture not specified; defaulting to '"
                 << backgroundTexturePath << "'.\n";
+        }
+
+        if (!parsed.backgroundVideoPathSet)
+        {
+            backgroundVideoPath.clear();
+        }
+
+        if (!parsed.backgroundVideoAutoLoopSet)
+        {
+            backgroundVideoAutoLoop = true;
+        }
+
+        if (!parsed.backgroundScrollModeSet)
+        {
+            backgroundScrollMode = BackgroundScrollMode::Clamp;
         }
 
         if (!platformWidthFractionSet)
@@ -987,6 +1005,9 @@ namespace Stage
         normalized.guidelineMilestoneBonusSeconds = guidelineMilestoneBonusSeconds;
         normalized.guidelineMilestoneInterval = guidelineMilestoneInterval;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
+        normalized.backgroundVideoPath = std::move(backgroundVideoPath);
+        normalized.backgroundVideoAutoLoop = backgroundVideoAutoLoop;
+        normalized.backgroundScrollMode = backgroundScrollMode;
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
         return normalized;
@@ -1037,6 +1058,9 @@ namespace Stage
         normalized.guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
         normalized.guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        normalized.backgroundVideoPath.clear();
+        normalized.backgroundVideoAutoLoop = true;
+        normalized.backgroundScrollMode = BackgroundScrollMode::Clamp;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
         normalized.secondaryUsedDefaults = false;

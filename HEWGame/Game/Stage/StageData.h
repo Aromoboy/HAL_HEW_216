@@ -24,6 +24,12 @@ namespace Stage
 
     struct StageConfigNormalized;
 
+    enum class BackgroundScrollMode
+    {
+        Clamp,
+        Wrap
+    };
+
     class StageData
     {
     public:
@@ -65,6 +71,9 @@ namespace Stage
         float GetGuidelineMilestoneBonusSeconds() const noexcept;
         int GetGuidelineMilestoneInterval() const noexcept;
         const std::string& GetBackgroundTexturePath() const noexcept;
+        const std::string& GetBackgroundVideoPath() const noexcept;
+        bool IsBackgroundVideoAutoLoop() const noexcept;
+        BackgroundScrollMode GetBackgroundScrollMode() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -108,5 +117,8 @@ namespace Stage
         float m_guidelineMilestoneBonusSeconds;
         int m_guidelineMilestoneInterval;
         std::string m_backgroundTexturePath;
+        std::string m_backgroundVideoPath;
+        bool m_backgroundVideoAutoLoop = true;
+        BackgroundScrollMode m_backgroundScrollMode = BackgroundScrollMode::Clamp;
     };
 }

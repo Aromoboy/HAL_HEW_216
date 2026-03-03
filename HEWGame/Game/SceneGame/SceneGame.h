@@ -23,7 +23,7 @@
 #include "Transform.h"
 #include "Stage/StageData.h"
 #include "GameFlow/PhaseManager.h"
-#include "BackgroundRenderer.h"
+#include "IBackgroundLayerRenderer.h"
 #include "StageLayoutLoader.h"
 #include "SceneGameConfigTypes.h"
 #include "BlobShadowRenderer.h"
@@ -161,7 +161,7 @@ protected:
     bool m_resultSaved = false;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
-    std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
+    std::unique_ptr<IBackgroundLayerRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
     RenderPostProcessSettings m_renderPostProcessSettings{};
