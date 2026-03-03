@@ -29,6 +29,9 @@ namespace
     constexpr LONGLONG kMfTimeBase = 10000000;
     constexpr const char* kLogPrefix = "[VideoBackgroundRenderer] ";
     constexpr uint32_t kScrollDebugLogIntervalFrames = 60;
+    constexpr uint32_t kDeadRangeWarnThresholdFrames = 30;
+    constexpr float kDeadRangeInputEpsilon = 1.0e-4f;
+    constexpr float kDeadRangeOutputEpsilon = 1.0e-5f;
 
     void LogVideoError(const char* step, HRESULT hr)
     {
@@ -519,17 +522,64 @@ void VideoBackgroundRenderer::Draw()
             const float maxY = std::max(0.0f, 1.0f - uvH);
             const float maxX = std::max(0.0f, 1.0f - uvW);
             const float baseOffset01 = m_invertY ? (1.0f - m_baseOffset01) : m_baseOffset01;
-            const float scaledScroll01 = baseOffset01 + (m_scroll01 * m_scrollSpeed * m_scrollDirection);
+
+            // 1) Normalize input scroll first.
+            const float normalizedInputScroll01 = std::clamp(m_scroll01, 0.0f, 1.0f);
+            // 2) Apply speed + direction to the delta from start (0.0).
+            const float speedAdjustedScroll01 = normalizedInputScroll01 * m_scrollSpeed * m_scrollDirection;
 
             float normalizedY = 0.0f;
             if (m_scrollMode == ScrollMode::Wrap)
             {
-                const float wrapped = std::fmod(scaledScroll01, 1.0f);
+                // 3) Apply base offset, then wrap.
+                const float offsetAppliedScroll01 = baseOffset01 + speedAdjustedScroll01;
+                const float wrapped = std::fmod(offsetAppliedScroll01, 1.0f);
                 normalizedY = wrapped < 0.0f ? wrapped + 1.0f : wrapped;
             }
             else
             {
-                normalizedY = std::clamp(scaledScroll01, 0.0f, 1.0f);
+                // Clamp mode: constrain speed contribution before base offset,
+                // so high speed does not instantly force the final value to an edge.
+                const float clampedSpeedAdjustedScroll01 = std::clamp(speedAdjustedScroll01, -1.0f, 1.0f);
+                const float offsetAppliedScroll01 = baseOffset01 + clampedSpeedAdjustedScroll01;
+                normalizedY = std::clamp(offsetAppliedScroll01, 0.0f, 1.0f);
+            }
+
+            if (!m_deadRangeStateInitialized)
+            {
+                m_lastDeadRangeInputScroll01 = m_scroll01;
+                m_lastDeadRangeNormalizedY = normalizedY;
+                m_deadRangeFrameStreak = 0;
+                m_deadRangeStateInitialized = true;
+            }
+            else
+            {
+                const bool inputChanged = std::fabs(m_scroll01 - m_lastDeadRangeInputScroll01) > kDeadRangeInputEpsilon;
+                const bool outputChanged = std::fabs(normalizedY - m_lastDeadRangeNormalizedY) > kDeadRangeOutputEpsilon;
+                if (inputChanged && !outputChanged)
+                {
+                    ++m_deadRangeFrameStreak;
+                    if (m_deadRangeFrameStreak >= kDeadRangeWarnThresholdFrames)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix
+                            << "warn dead-range: normalizedY is not changing while input scroll changes"
+                            << " inputScroll01=" << m_scroll01
+                            << " normalizedY=" << normalizedY
+                            << " speed=" << m_scrollSpeed
+                            << " baseOffset01=" << baseOffset01
+                            << " mode=" << (m_scrollMode == ScrollMode::Wrap ? "wrap" : "clamp");
+                        Diagnostics::LogInfo(warn.str());
+                        m_deadRangeFrameStreak = 0;
+                    }
+                }
+                else
+                {
+                    m_deadRangeFrameStreak = 0;
+                }
+
+                m_lastDeadRangeInputScroll01 = m_scroll01;
+                m_lastDeadRangeNormalizedY = normalizedY;
             }
 
             float uvY = normalizedY * maxY;
@@ -606,6 +656,10 @@ void VideoBackgroundRenderer::Shutdown()
     m_zoom = 1.0f;
     m_cameraY = 0.0f;
     m_debugScrollLogFrameCounter = 0;
+    m_lastDeadRangeInputScroll01 = 0.0f;
+    m_lastDeadRangeNormalizedY = 0.0f;
+    m_deadRangeFrameStreak = 0;
+    m_deadRangeStateInitialized = false;
     m_invertY = false;
 }
 

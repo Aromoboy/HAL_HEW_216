@@ -82,5 +82,9 @@ private:
     ScrollMode m_scrollMode = ScrollMode::Clamp;
     bool m_ready = false;
     uint32_t m_debugScrollLogFrameCounter = 0;
+    float m_lastDeadRangeInputScroll01 = 0.0f;
+    float m_lastDeadRangeNormalizedY = 0.0f;
+    uint32_t m_deadRangeFrameStreak = 0;
+    bool m_deadRangeStateInitialized = false;
     bool m_mfStarted = false;
 };
