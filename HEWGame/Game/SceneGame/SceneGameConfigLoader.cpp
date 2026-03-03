@@ -3107,6 +3107,28 @@ namespace SceneGameConfig
                         << "' on line=" << lineNumber << "; keeping default.\n";
                     ::DebugTrace(oss.str());
                 }
+                continue;
+            }
+
+            if (key == "spawnlivecapgrowthmode" || key == "livecapgrowthmode")
+            {
+                settings.liveCapGrowthMode = value;
+                continue;
+            }
+
+            if (key == "spawnlivecapmax" || key == "livecapmax")
+            {
+                if (auto parsed = TryParseIntToken(value))
+                {
+                    settings.spawnLiveCapMax = std::max(0, *parsed);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid spawnLiveCapMax value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
             }
         }
 
