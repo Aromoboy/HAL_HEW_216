@@ -1255,6 +1255,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         m_backgroundRenderer->Update(ctx.dt);
     }
 
+    if (m_pendingBackgroundScrollOriginReanchor && m_gameCamera)
+    {
+        ReanchorBackgroundScrollOrigin("UpdateDeferred");
+    }
+
 #if defined(_DEBUG)
     if (m_sweetsManager)
     {
@@ -2498,8 +2503,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
 
     m_gameCamera->SetPosition(cameraPosition);
-    m_backgroundScrollOriginY = m_gameCamera->GetPosition().y;
     m_gameCamera->SetRotation(cameraRotation);
+    ReanchorBackgroundScrollOrigin("ConfigureCamera");
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
     (void)m_gameCamera->GetView();
@@ -2528,6 +2533,38 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
     ::DebugTrace(oss.str());
 
+}
+
+
+void SceneGame::QueueBackgroundScrollOriginReanchor(const char* sourceTag)
+{
+    m_pendingBackgroundScrollOriginReanchor = true;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[BackgroundReanchor] queued source="
+        << (sourceTag ? sourceTag : "unknown")
+        << " oldOriginY=" << std::fixed << std::setprecision(3) << m_backgroundScrollOriginY << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::ReanchorBackgroundScrollOrigin(const char* sourceTag)
+{
+    if (!m_gameCamera)
+    {
+        QueueBackgroundScrollOriginReanchor(sourceTag ? sourceTag : "camera-missing");
+        return;
+    }
+
+    const float oldOriginY = m_backgroundScrollOriginY;
+    const float newOriginY = m_gameCamera->GetPosition().y;
+    m_backgroundScrollOriginY = newOriginY;
+    m_pendingBackgroundScrollOriginReanchor = false;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[BackgroundReanchor] source=" << (sourceTag ? sourceTag : "unknown")
+        << " oldOriginY=" << std::fixed << std::setprecision(3) << oldOriginY
+        << " newOriginY=" << newOriginY << "\n";
+    ::DebugTrace(oss.str());
 }
 
 void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
@@ -2888,6 +2925,15 @@ void SceneGame::ResetPlaySession()
     else if (!m_cameraRig)
     {
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession skipped camera rig realignment: camera rig missing.\n");
+    }
+
+    if (m_gameCamera)
+    {
+        ReanchorBackgroundScrollOrigin("ResetPlaySession");
+    }
+    else
+    {
+        QueueBackgroundScrollOriginReanchor("ResetPlaySession");
     }
 
     m_gameplayRules.ResetSession();

@@ -103,6 +103,8 @@ public:
 
 private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
+    void ReanchorBackgroundScrollOrigin(const char* sourceTag);
+    void QueueBackgroundScrollOriginReanchor(const char* sourceTag);
     void UpdateCameraBoundsForPhase(float heightMeters);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
@@ -164,6 +166,7 @@ protected:
     std::unique_ptr<IBackgroundLayerRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
+    bool m_pendingBackgroundScrollOriginReanchor = false;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
