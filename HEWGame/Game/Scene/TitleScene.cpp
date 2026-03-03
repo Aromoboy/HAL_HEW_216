@@ -4,7 +4,7 @@
 #include "Core/StepTimer.h"
 
 #include "PerspectiveCamera.h"
-#include "SceneGame.h"
+#include "SceneSlopeTest.h"
 #include "ScenePowerUp.h"
 #include "SettingScene.h"
 #include "EffectTestScene.h"
@@ -208,7 +208,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
     case GAME_REQUEST:
         m_shouldStopBGM = true;
         m_manager->RequestSceneChange(
-            std::make_unique<SceneGame>(*m_manager));
+            std::make_unique<SceneSlopeTest>(*m_manager));
         break;
 
     case POWERUP_REQUEST:
