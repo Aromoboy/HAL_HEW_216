@@ -32,6 +32,7 @@ namespace
     constexpr uint32_t kDeadRangeWarnThresholdFrames = 30;
     constexpr float kDeadRangeInputEpsilon = 1.0e-4f;
     constexpr float kDeadRangeOutputEpsilon = 1.0e-5f;
+    constexpr float kClampEdgeReleaseEpsilon = 1.0e-4f;
 
     void LogVideoError(const char* step, HRESULT hr)
     {
@@ -545,7 +546,38 @@ void VideoBackgroundRenderer::Draw()
                 normalizedY = std::clamp(offsetAppliedScroll01, 0.0f, 1.0f);
             }
 
-            if (!m_deadRangeStateInitialized)
+            const bool hasDeadRangeHistory = m_deadRangeStateInitialized;
+            const bool inputChanged = hasDeadRangeHistory
+                && std::fabs(m_scroll01 - m_lastDeadRangeInputScroll01) > kDeadRangeInputEpsilon;
+            const bool outputChanged = hasDeadRangeHistory
+                && std::fabs(normalizedY - m_lastDeadRangeNormalizedY) > kDeadRangeOutputEpsilon;
+            const bool clampOutputStuck = (m_scrollMode == ScrollMode::Clamp) && inputChanged && !outputChanged;
+
+            if (clampOutputStuck)
+            {
+                // Guard against immediate edge sticking in clamp mode:
+                // keep the UV in a tiny safe band away from exact 0/1 when input is still changing.
+                if (normalizedY <= 0.0f)
+                {
+                    normalizedY = kClampEdgeReleaseEpsilon;
+                }
+                else if (normalizedY >= 1.0f)
+                {
+                    normalizedY = 1.0f - kClampEdgeReleaseEpsilon;
+                }
+
+                std::ostringstream clampWarn;
+                clampWarn << kLogPrefix
+                    << "clamp dead-range detected"
+                    << " inputScroll01=" << m_scroll01
+                    << " normalizedY=" << normalizedY
+                    << " speed=" << m_scrollSpeed
+                    << " direction=" << m_scrollDirection
+                    << " baseOffset01=" << baseOffset01;
+                Diagnostics::LogInfo(clampWarn.str());
+            }
+
+            if (!hasDeadRangeHistory)
             {
                 m_lastDeadRangeInputScroll01 = m_scroll01;
                 m_lastDeadRangeNormalizedY = normalizedY;
@@ -554,8 +586,6 @@ void VideoBackgroundRenderer::Draw()
             }
             else
             {
-                const bool inputChanged = std::fabs(m_scroll01 - m_lastDeadRangeInputScroll01) > kDeadRangeInputEpsilon;
-                const bool outputChanged = std::fabs(normalizedY - m_lastDeadRangeNormalizedY) > kDeadRangeOutputEpsilon;
                 if (inputChanged && !outputChanged)
                 {
                     ++m_deadRangeFrameStreak;
