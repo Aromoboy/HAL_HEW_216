@@ -30,6 +30,7 @@
 #include "ISceneServices.h"
 #include "Save/PlayerData.h"
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -192,6 +193,10 @@ protected:
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
+    uint32_t m_baseLiveCap = 0;
+    uint32_t m_maxLiveCap = 0;
+    uint32_t m_currentLiveCap = 0;
+    bool m_liveCapDoublePerPhase = false;
     // 仮で作った何回フェーズを超えたらクリアになるかの判定
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;

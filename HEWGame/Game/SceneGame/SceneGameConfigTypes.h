@@ -155,6 +155,8 @@ namespace SceneGameConfig
         int spawnPerPointCap = 6;
         int spawnPerPointInitial = 0;
         int spawnTotalCap = 12;
+        std::string liveCapGrowthMode = "fixed";
+        int spawnLiveCapMax = 256;
         bool hasSpawnLimits = false;
     };
 
