@@ -1,4 +1,4 @@
-#include "Sweets/SweetsLifecycle.h"
+﻿#include "Sweets/SweetsLifecycle.h"
 
 #include <algorithm>
 #include <array>
@@ -295,6 +295,31 @@ namespace SweetsSpace
             return;
         }
 
+        if (!m_pendingStateReevaluation.empty())
+        {
+            for (const auto& sweets : m_pendingStateReevaluation)
+            {
+                if (!sweets || sweets->IsPendingDestroy())
+                {
+                    continue;
+                }
+
+                auto lookup = m_registry->Lookup().find(sweets);
+                if (lookup == m_registry->Lookup().end())
+                {
+                    continue;
+                }
+
+                const SweetsState current = lookup->second;
+                const SweetsState desired = EvaluateState(*sweets, current, *m_contacts);
+                if (desired != current)
+                {
+                    stateChanges.push_back({ sweets, desired });
+                }
+            }
+            m_pendingStateReevaluation.clear();
+        }
+
         for (auto& entry : m_registry->MutableStateMap())
         {
             SweetsState bucketState = entry.first;
@@ -457,6 +482,16 @@ namespace SweetsSpace
         {
             RemoveSweetsEntry(entry.sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch, entry.notifySpawner);
         }
+    }
+
+    void SweetsLifecycle::MarkForStateReevaluation(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        if (!sweets || sweets->IsPendingDestroy())
+        {
+            return;
+        }
+
+        m_pendingStateReevaluation.insert(sweets);
     }
 
     void SweetsLifecycle::OnLateUpdate(const Core::UpdateContext& ctx)
@@ -694,7 +729,7 @@ namespace SweetsSpace
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ClearAllSweets で " << staged
+        oss << kLogPrefix << "[DespawnResult] context=ClearAllSweets staged=" << staged
             << " 個を破棄予約したよ（すでに予約済み " << alreadyPending << " 個）/ "
             << m_registry->StateMap().size() << " 状態分 \n";
         DebugTrace(oss.str());
@@ -955,13 +990,45 @@ namespace SweetsSpace
         }
 
 #if defined(_DEBUG)
+        int activeCount = 0;
+        int stackedCount = 0;
+        int groundCount = 0;
+        int carriedCount = 0;
+        if (m_registry)
+        {
+            for (const auto& entry : m_registry->StateMap())
+            {
+                const int count = static_cast<int>(entry.second.size());
+                switch (entry.first)
+                {
+                case SweetsState::Active:
+                    activeCount = count;
+                    break;
+                case SweetsState::Stacked:
+                    stackedCount = count;
+                    break;
+                case SweetsState::Ground:
+                    groundCount = count;
+                    break;
+                case SweetsState::Carried:
+                    carriedCount = count;
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+
         const auto& pos = sweets->GetTransform().position;
         std::ostringstream oss;
-        oss << kLogPrefix << context << " でスイーツ tag='" << sweets->GetTag()
-            << "' を削除 state=" << StateToString(previousState)
+        oss << kLogPrefix << "[DespawnResult] context=" << context
+            << " tag='" << sweets->GetTag()
+            << "' state=" << StateToString(previousState)
             << " deleteReason=" << DeleteReasonToString(reason)
             << " outcome=" << UseOutcomeToString(outcome)
             << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
+            << " counts(active=" << activeCount << ",stacked=" << stackedCount
+            << ",ground=" << groundCount << ",carried=" << carriedCount << ")"
             << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
         DebugTrace(oss.str());
 #endif

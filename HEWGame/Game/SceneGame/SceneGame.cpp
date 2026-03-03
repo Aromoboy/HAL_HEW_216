@@ -470,6 +470,20 @@ bool SceneGame::Load(Core::Input& input)
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
+    m_baseLiveCap = static_cast<uint32_t>(std::max(0, composition->sweetsSpawnLimitSettings.spawnTotalCap));
+    m_maxLiveCap = static_cast<uint32_t>(std::max(
+        static_cast<int>(m_baseLiveCap),
+        composition->sweetsSpawnLimitSettings.spawnLiveCapMax));
+    m_currentLiveCap = std::min(m_baseLiveCap, m_maxLiveCap);
+    {
+        std::string growthMode = composition->sweetsSpawnLimitSettings.liveCapGrowthMode;
+        std::transform(growthMode.begin(), growthMode.end(), growthMode.begin(), [](unsigned char ch)
+            {
+                return static_cast<char>(std::tolower(ch));
+            });
+        m_liveCapDoublePerPhase = (growthMode == "doubleperphase");
+    }
+
     if (m_sweetsManager)
     {
         m_sweetsManager->SetOutOfBoundsSettings(
@@ -478,6 +492,7 @@ bool SceneGame::Load(Core::Input& input)
             m_sweetsOutOfBoundsSettings.outOfBoundsRespawnDelaySeconds);
         m_sweetsManager->SetGrabRespawnDelaySeconds(
             m_sweetsOutOfBoundsSettings.grabRespawnDelaySeconds);
+        m_sweetsManager->SetLiveSweetsCap(static_cast<int>(m_currentLiveCap));
     }
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
@@ -2634,10 +2649,53 @@ bool SceneGame::EnsureResultSaved()
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
 {
+    const uint32_t guidelineReachedCount = static_cast<uint32_t>(std::max(0, m_gameplayRules.GetPhaseUpCount()));
+    const uint32_t oldCap = m_currentLiveCap;
+
+    uint32_t newLiveCap = m_baseLiveCap;
+    if (m_liveCapDoublePerPhase)
+    {
+        newLiveCap = m_baseLiveCap;
+        for (uint32_t i = 0; i < guidelineReachedCount; ++i)
+        {
+            if (newLiveCap >= m_maxLiveCap)
+            {
+                newLiveCap = m_maxLiveCap;
+                break;
+            }
+
+            if (newLiveCap > (std::numeric_limits<uint32_t>::max)() / 2u)
+            {
+                newLiveCap = (std::numeric_limits<uint32_t>::max)();
+            }
+            else
+            {
+                newLiveCap *= 2u;
+            }
+        }
+    }
+
+    if (newLiveCap > m_maxLiveCap)
+    {
+        newLiveCap = m_maxLiveCap;
+    }
+
+    m_currentLiveCap = newLiveCap;
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->SetLiveSweetsCap(static_cast<int>(newLiveCap));
+    }
+
     std::ostringstream oss;
     const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
     oss << kLogPrefix << "Broadcasting phase " << newPhase
-        << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
+        << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")"
+        << " [LiveCapUpdate phase=" << newPhase
+        << " guidelineReachedCount=" << guidelineReachedCount
+        << " oldCap=" << oldCap
+        << " newCap=" << newLiveCap
+        << " currentLive=" << (m_sweetsManager ? m_sweetsManager->GetSweetsCount() : 0)
+        << "]\n";
     ::DebugTrace(oss.str());
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
 }
@@ -2835,37 +2893,58 @@ void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
     {
         return;
     }
-    //徐々に上に移動したい
 
+    float deltaY = osaraMoveSpeed * ctx.dt;
+    if (deltaY > m_OsaraToAddRemaining)
+    {
+        deltaY = m_OsaraToAddRemaining;
+    }
 
-        float deltaY = osaraMoveSpeed * ctx.dt;
-     //   DebugTrace("deltaY = " + std::to_string(deltaY) + "\n");
-     //   DebugTrace("Remaining BEFORE = " + std::to_string(m_OsaraToAddRemaining) + "\n");
-        if (deltaY > m_OsaraToAddRemaining)
+    bool movedAnyOsara = false;
+    float movedMinX = std::numeric_limits<float>::max();
+    float movedMaxX = std::numeric_limits<float>::lowest();
+    float movedMinY = std::numeric_limits<float>::max();
+    float movedMaxY = std::numeric_limits<float>::lowest();
+
+    for (auto& obj : m_stageObjects)
+    {
+        if (!IsOsara(obj))
         {
-            deltaY = m_OsaraToAddRemaining;
+            continue;
         }
-        //  float moveY = guidelineDelta - deltaY;
 
-        for (auto& obj : m_stageObjects)
+        obj.baseY += deltaY;
+
+        if (obj.physicsEntity)
         {
-            if (!IsOsara(obj)) continue;
-
-            obj.baseY += deltaY;
-          //  obj.transform.position.y += deltaY;
-
-            //if (obj.physicsEntity)
-            //{
-            //    obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
-            //}
+            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+            obj.physicsEntity->SyncColliderBounds();
+            const AABB bounds = obj.physicsEntity->GetAABB();
+            movedMinX = std::min(movedMinX, bounds.min.x);
+            movedMaxX = std::max(movedMaxX, bounds.max.x);
+            movedMinY = std::min(movedMinY, bounds.min.y);
+            movedMaxY = std::max(movedMaxY, bounds.max.y);
         }
-        m_OsaraToAddRemaining -= deltaY;
-
-        if (m_OsaraToAddRemaining <= 0.0f)
+        else
         {
-      //      m_OsaraToAddRemaining = 0.0f;
-            m_isOsaraCounting = false;
+            movedMinX = std::min(movedMinX, obj.transform.position.x - 0.5f);
+            movedMaxX = std::max(movedMaxX, obj.transform.position.x + 0.5f);
+            movedMinY = std::min(movedMinY, obj.transform.position.y - 0.5f);
+            movedMaxY = std::max(movedMaxY, obj.transform.position.y + 0.5f);
         }
-  
-  
+
+        movedAnyOsara = true;
+    }
+
+    if (movedAnyOsara && m_sweetsManager)
+    {
+        m_sweetsManager->NotifyStageMoved(movedMinX, movedMaxX, movedMinY, movedMaxY, deltaY);
+    }
+
+    m_OsaraToAddRemaining -= deltaY;
+
+    if (m_OsaraToAddRemaining <= 0.0f)
+    {
+        m_isOsaraCounting = false;
+    }
 }

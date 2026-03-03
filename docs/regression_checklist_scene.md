@@ -14,5 +14,7 @@ This checklist uses the `stage.checklist` section in `Assets/Config/gameplay.cfg
 | ✅ | Walk-through path | Player can traverse the plate from the spawn anchors without hitting the previous invisible line because spawns and ground share the same Y/Z plane. |
 | ✅ | Debug overlay toggle | Turning the debug/telemetry overlay off/on does not change Box2D contacts or movement speed; physics values remain stable in logs before and after toggling. |
 | ✅ | Pivot vs. collider | Visual pivot adjustments on the platform do not move its collider; collider dimensions follow the descriptor scale while the pivot only shifts rendering. |
+| ✅ | Osara lift + unattended fruit | During osara/platform upward movement, a fruit resting on osara that is not picked up must not remain suspended in air. Expected: it gets physically woken, resumes simulation, and either settles with valid support or is removed/respawned by lifecycle/spawner cleanup without blocking next spawn origin. |
+| ✅ | Guideline live-cap growth | After each guideline crossing (phase advance), sweets live cap doubles from `spawnTotalCap` and is clamped by `spawnLiveCapMax`; verify spawner starts maintaining the higher ceiling immediately without restarting the scene. |
 
 Use this table as regression evidence after running the scene; update the notes column when a run reveals differences or confirms parity.
