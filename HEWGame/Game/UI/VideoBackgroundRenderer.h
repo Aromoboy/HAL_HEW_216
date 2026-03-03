@@ -34,8 +34,7 @@ public:
     bool Initialize(ID3D11Device* device,
         ID3D11DeviceContext* context,
         const ShaderPaths& shader,
-        const std::string& mp4Path,
-        uint32_t maxDecodeHeight = 0);
+        const std::string& mp4Path);
     void Update(float dt) override;
     bool IsFinished() const;
     void SetAutoLoop(bool enabled);
