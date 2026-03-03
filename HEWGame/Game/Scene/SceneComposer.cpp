@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <iomanip>
 #include <limits>
@@ -537,7 +538,8 @@ void SceneComposer::ComposeUI(Composition& result)
         };
 
         auto videoBg = std::make_unique<VideoBackgroundRenderer>();
-        if (!videoBg->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundVideo))
+        constexpr uint32_t kVideoDecodeMaxHeight = 2048;
+        if (!videoBg->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundVideo, kVideoDecodeMaxHeight))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Video background renderer failed for video '" << backgroundVideo << "'.\n";

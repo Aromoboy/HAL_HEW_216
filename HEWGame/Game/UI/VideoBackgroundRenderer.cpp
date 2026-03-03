@@ -123,7 +123,7 @@ namespace
             return true;
         }
 
-        bool Open(const std::string& filename)
+        bool Open(const std::string& filename, uint32_t maxDecodeHeight)
         {
             finished = false;
             pendingTypeChange = false;
@@ -213,6 +213,60 @@ namespace
                 return false;
             }
 
+            uint32_t sourceWidth = 0;
+            uint32_t sourceHeight = 0;
+            IMFMediaType* nativeType = nullptr;
+            hr = sourceReader->GetNativeMediaType(
+                MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+                MF_SOURCE_READER_CURRENT_TYPE_INDEX,
+                &nativeType);
+            if (SUCCEEDED(hr))
+            {
+                hr = MFGetAttributeSize(nativeType, MF_MT_FRAME_SIZE, &sourceWidth, &sourceHeight);
+                if (FAILED(hr))
+                {
+                    LogVideoError("MFGetAttributeSize native", hr);
+                }
+            }
+            else
+            {
+                LogVideoError("GetNativeMediaType initial", hr);
+            }
+            SAFE_RELEASE(nativeType);
+
+            uint32_t targetWidth = sourceWidth;
+            uint32_t targetHeight = sourceHeight;
+            if (maxDecodeHeight > 0 && sourceHeight > maxDecodeHeight && sourceWidth > 0)
+            {
+                const double scale = static_cast<double>(maxDecodeHeight) / static_cast<double>(sourceHeight);
+                targetHeight = maxDecodeHeight;
+                targetWidth = static_cast<uint32_t>(std::lround(static_cast<double>(sourceWidth) * scale));
+                if ((targetWidth & 1u) != 0u)
+                {
+                    --targetWidth;
+                }
+                if (targetWidth == 0u)
+                {
+                    targetWidth = 2u;
+                }
+
+                hr = MFSetAttributeSize(readerOutputType, MF_MT_FRAME_SIZE, targetWidth, targetHeight);
+                if (FAILED(hr))
+                {
+                    LogVideoError("MFSetAttributeSize MF_MT_FRAME_SIZE", hr);
+                    return false;
+                }
+            }
+
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "Decode size request: source=" << sourceWidth << "x" << sourceHeight
+                    << ", target=" << targetWidth << "x" << targetHeight
+                    << ", capHeight=" << maxDecodeHeight << ".";
+                Diagnostics::LogInfo(oss.str());
+            }
+
             hr = sourceReader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, nullptr, readerOutputType);
             if (FAILED(hr))
             {
@@ -267,7 +321,8 @@ VideoBackgroundRenderer::~VideoBackgroundRenderer()
 bool VideoBackgroundRenderer::Initialize(ID3D11Device* device,
     ID3D11DeviceContext* context,
     const ShaderPaths& shader,
-    const std::string& mp4Path)
+    const std::string& mp4Path,
+    uint32_t maxDecodeHeight)
 {
     Shutdown();
 
@@ -288,7 +343,7 @@ bool VideoBackgroundRenderer::Initialize(ID3D11Device* device,
     m_mfStarted = true;
 
     m_decoder = std::make_unique<DecoderState>();
-    if (!m_decoder->mf.Open(mp4Path))
+    if (!m_decoder->mf.Open(mp4Path, maxDecodeHeight))
     {
         LogVideoMessage("Decoder open failed.");
         Shutdown();
