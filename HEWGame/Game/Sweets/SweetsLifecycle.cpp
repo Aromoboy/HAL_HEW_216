@@ -1,4 +1,4 @@
-#include "Sweets/SweetsLifecycle.h"
+﻿#include "Sweets/SweetsLifecycle.h"
 
 #include <algorithm>
 #include <array>
@@ -729,7 +729,7 @@ namespace SweetsSpace
         }
 
         std::ostringstream oss;
-        oss << kLogPrefix << "ClearAllSweets で " << staged
+        oss << kLogPrefix << "[DespawnResult] context=ClearAllSweets staged=" << staged
             << " 個を破棄予約したよ（すでに予約済み " << alreadyPending << " 個）/ "
             << m_registry->StateMap().size() << " 状態分 \n";
         DebugTrace(oss.str());
@@ -990,13 +990,45 @@ namespace SweetsSpace
         }
 
 #if defined(_DEBUG)
+        int activeCount = 0;
+        int stackedCount = 0;
+        int groundCount = 0;
+        int carriedCount = 0;
+        if (m_registry)
+        {
+            for (const auto& entry : m_registry->StateMap())
+            {
+                const int count = static_cast<int>(entry.second.size());
+                switch (entry.first)
+                {
+                case SweetsState::Active:
+                    activeCount = count;
+                    break;
+                case SweetsState::Stacked:
+                    stackedCount = count;
+                    break;
+                case SweetsState::Ground:
+                    groundCount = count;
+                    break;
+                case SweetsState::Carried:
+                    carriedCount = count;
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+
         const auto& pos = sweets->GetTransform().position;
         std::ostringstream oss;
-        oss << kLogPrefix << context << " でスイーツ tag='" << sweets->GetTag()
-            << "' を削除 state=" << StateToString(previousState)
+        oss << kLogPrefix << "[DespawnResult] context=" << context
+            << " tag='" << sweets->GetTag()
+            << "' state=" << StateToString(previousState)
             << " deleteReason=" << DeleteReasonToString(reason)
             << " outcome=" << UseOutcomeToString(outcome)
             << " batchUsesRemaining=" << (batchContext ? batchContext->usesRemaining : -1)
+            << " counts(active=" << activeCount << ",stacked=" << stackedCount
+            << ",ground=" << groundCount << ",carried=" << carriedCount << ")"
             << " pos=(" << pos.x << ',' << pos.y << ',' << pos.z << ")\n";
         DebugTrace(oss.str());
 #endif

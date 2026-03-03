@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <string>
@@ -55,6 +55,7 @@ public:
         SceneGameConfig::MaterialTuningSettings materialTuningSettings{};
         SceneGameConfig::SweetsOutOfBoundsSettings sweetsOutOfBoundsSettings{};
         SceneGameConfig::SweetsSpawnLimitSettings sweetsSpawnLimitSettings{};
+        SceneGameConfig::SweetsSpawnDebugSettings sweetsSpawnDebugSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<GuidelineActor> guidelineActor;

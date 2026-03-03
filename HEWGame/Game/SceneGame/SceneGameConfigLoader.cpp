@@ -1,4 +1,4 @@
-#include "SceneGameConfigLoader.h"
+﻿#include "SceneGameConfigLoader.h"
 
 #include "ConfigSectionReader.h"
 #include "GameplayConfig.h"
@@ -3106,6 +3106,52 @@ namespace SceneGameConfig
                     oss << kLogPrefix << "Invalid spawnTotalCap value '" << value
                         << "' on line=" << lineNumber << "; keeping default.\n";
                     ::DebugTrace(oss.str());
+                }
+            }
+        }
+
+        return settings;
+    }
+}
+
+namespace SceneGameConfig
+{
+    SweetsSpawnDebugSettings LoadSweetsSpawnDebugSettings()
+    {
+        SweetsSpawnDebugSettings settings{};
+
+        std::vector<Config::SectionLine> lines;
+        if (!Config::ReadSectionLines(kGameplayConfigPath, GameplayConfig::kSectionSweetsSpawnDebug, lines))
+        {
+            return settings;
+        }
+
+        for (const auto& entry : lines)
+        {
+            std::string key = ToLowerCopy(TrimWhitespace(entry.key));
+            const std::string value = TrimWhitespace(entry.value);
+            const std::size_t lineNumber = entry.lineNumber;
+
+            if (key == "enabled" || key == "spawn.debug.enabled")
+            {
+                if (!ParseBool(value, settings.enabled))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Invalid sweets spawn debug enabled value '" << value
+                        << "' on line=" << lineNumber << "; keeping default.\n";
+                    ::DebugTrace(oss.str());
+                }
+                continue;
+            }
+
+            if (key == "ratelimitseconds" || key == "spawn.debug.ratelimitseconds")
+            {
+                if (auto parsed = TryParseFloatToken(value))
+                {
+                    if (std::isfinite(*parsed))
+                    {
+                        settings.rateLimitSeconds = std::max(0.0f, *parsed);
+                    }
                 }
             }
         }
