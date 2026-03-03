@@ -2030,6 +2030,30 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
+        if (m_pendingBackgroundScrollOriginReanchor)
+        {
+            if (m_gameCamera)
+            {
+                ReanchorBackgroundScrollOrigin("DrawWorldDeferred");
+            }
+            else
+            {
+                const float oldOriginY = m_backgroundScrollOriginY;
+                const float cameraAnchorY = baseCamera->GetPosition().y;
+                m_backgroundScrollOriginY = cameraAnchorY;
+                m_pendingBackgroundScrollOriginReanchor = false;
+
+                std::ostringstream reanchorLog;
+                reanchorLog << kLogPrefix
+                    << "[BackgroundReanchor] source=DrawWorldDeferredActiveCamera"
+                    << " cameraY=" << std::fixed << std::setprecision(3) << cameraAnchorY
+                    << " oldOriginY=" << oldOriginY
+                    << " newOriginY=" << m_backgroundScrollOriginY
+                    << "\n";
+                ::DebugTrace(reanchorLog.str());
+            }
+        }
+
         cameraY = baseCamera->GetPosition().y;
         scrollOffsetUsedForBackground = cameraY - m_backgroundScrollOriginY;
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
@@ -2562,6 +2586,7 @@ void SceneGame::ReanchorBackgroundScrollOrigin(const char* sourceTag)
 
     std::ostringstream oss;
     oss << kLogPrefix << "[BackgroundReanchor] source=" << (sourceTag ? sourceTag : "unknown")
+        << " cameraY=" << std::fixed << std::setprecision(3) << newOriginY
         << " oldOriginY=" << std::fixed << std::setprecision(3) << oldOriginY
         << " newOriginY=" << newOriginY << "\n";
     ::DebugTrace(oss.str());
@@ -2929,6 +2954,7 @@ void SceneGame::ResetPlaySession()
 
     if (m_gameCamera)
     {
+        // Retry reset aligns the camera rig first, then snaps background origin to the aligned camera position.
         ReanchorBackgroundScrollOrigin("ResetPlaySession");
     }
     else
