@@ -1,8 +1,7 @@
 #include "common.hlsl"
 
 //--------------------------------------------------------------------------------------
-Texture2D    txLuma       : register(t0);
-Texture2D    txChroma     : register(t1);
+Texture2D    txYUV        : register(t0);
 SamplerState samLinear    : register(s0);
 
 //--------------------------------------------------------------------------------------
@@ -42,21 +41,8 @@ float3 YUVToRGB(float3 yuv) {
 }
 
 float4 PS(v2f input) : SV_Target {
-  float2 uv = saturate(input.Tex);
-
-  // NV12 path: Y in t0.r, UV in t1.rg.
-  float y = txLuma.Sample(samLinear, uv).r;
-  float2 uvSample = txChroma.Sample(samLinear, uv).rg;
-  float u = uvSample.x;
-  float v = uvSample.y;
-
-  // Legacy fallback: IYUV packed into single R8 texture in t0.
-  if (u == 0.0f && v == 0.0f)
-  {
-    y = txLuma.Sample(samLinear, float2(uv.x, uv.y * 0.5)).r;
-    u = txLuma.Sample(samLinear, float2(uv.x * 0.5, 0.50 + uv.y * 0.25)).r;
-    v = txLuma.Sample(samLinear, float2(uv.x * 0.5, 0.75 + uv.y * 0.25)).r;
-  }
-
-  return float4(YUVToRGB(float3(y, u, v)), 1.f);
+  float y = txYUV.Sample(samLinear, float2(input.Tex.x, input.Tex.y * 0.5)).r;
+  float u = txYUV.Sample(samLinear, float2(input.Tex.x * 0.5, 0.50 + input.Tex.y * 0.25)).r;
+  float v = txYUV.Sample(samLinear, float2(input.Tex.x * 0.5, 0.75 + input.Tex.y * 0.25)).r;
+  return float4(YUVToRGB(float3(y,u,v)), 1.f);
 }
