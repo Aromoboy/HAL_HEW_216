@@ -42,6 +42,7 @@ public:
     void SetScroll01(float scroll01);
     void SetBaseOffset01(float baseOffset01);
     void SetScrollSpeed(float scrollSpeed);
+    void SetScrollDirection(float dir);
     void SetZoom(float zoom);
     void SetScrollMode(ScrollMode mode);
     void SetInvertY(bool invert);
@@ -74,6 +75,7 @@ private:
     float m_scroll01 = 0.0f;
     float m_baseOffset01 = 0.0f;
     float m_scrollSpeed = 1.0f;
+    float m_scrollDirection = 1.0f;
     float m_zoom = 1.0f;
     float m_cameraY = 0.0f;
     bool m_invertY = false;

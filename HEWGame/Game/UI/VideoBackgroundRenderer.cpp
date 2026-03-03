@@ -455,6 +455,11 @@ void VideoBackgroundRenderer::SetScrollSpeed(float scrollSpeed)
     m_scrollSpeed = std::max(0.0f, scrollSpeed);
 }
 
+void VideoBackgroundRenderer::SetScrollDirection(float dir)
+{
+    m_scrollDirection = (dir < 0.0f) ? -1.0f : 1.0f;
+}
+
 void VideoBackgroundRenderer::SetZoom(float zoom)
 {
     m_zoom = std::max(1.0f, zoom);
@@ -514,7 +519,7 @@ void VideoBackgroundRenderer::Draw()
             const float maxY = std::max(0.0f, 1.0f - uvH);
             const float maxX = std::max(0.0f, 1.0f - uvW);
             const float baseOffset01 = m_invertY ? (1.0f - m_baseOffset01) : m_baseOffset01;
-            const float scaledScroll01 = baseOffset01 + (m_scroll01 * m_scrollSpeed);
+            const float scaledScroll01 = baseOffset01 + (m_scroll01 * m_scrollSpeed * m_scrollDirection);
 
             float normalizedY = 0.0f;
             if (m_scrollMode == ScrollMode::Wrap)
@@ -597,6 +602,7 @@ void VideoBackgroundRenderer::Shutdown()
     m_scroll01 = 0.0f;
     m_baseOffset01 = 0.0f;
     m_scrollSpeed = 1.0f;
+    m_scrollDirection = 1.0f;
     m_zoom = 1.0f;
     m_cameraY = 0.0f;
     m_debugScrollLogFrameCounter = 0;
