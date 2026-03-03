@@ -3,6 +3,7 @@
 #include "Core/ActionId.h"
 #include "Core/Input.h"
 #include "Core/StepTimer.h"
+#include "DrawMatrix.h"
 #include "Geometory.h"
 #include "PerspectiveCamera.h"
 #include "TitleScene.h"
@@ -43,13 +44,6 @@ namespace
     static XMFLOAT3 Mul(const XMFLOAT3& a, float s)
     {
         return { a.x * s, a.y * s, a.z * s };
-    }
-
-    static XMFLOAT4X4 ToFloat4x4(const XMMATRIX& matrix)
-    {
-        XMFLOAT4X4 out{};
-        XMStoreFloat4x4(&out, matrix);
-        return out;
     }
 
     static bool QueryBlockSurfaceHit(
@@ -327,6 +321,6 @@ void SceneSlopeTest::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& ac
 
     XMMATRIX ballMat = XMMatrixScaling(m_ball.radius * 2.0f, m_ball.radius * 2.0f, m_ball.radius * 2.0f)
         * XMMatrixTranslation(m_ball.pos.x, m_ball.pos.y, m_ball.pos.z);
-    Geometory::SetWorld(ToFloat4x4(ballMat));
+    Geometory::SetWorld(DrawMatrix::ToGpuMatrix(ballMat));
     Geometory::DrawSphere();
 }

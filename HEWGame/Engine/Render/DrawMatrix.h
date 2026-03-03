@@ -8,6 +8,7 @@
 class DrawMatrix
 {
 public:
+	static DirectX::XMFLOAT4X4 ToGpuMatrix(const DirectX::XMMATRIX& matrix, bool transpose = true);
 
 	static void CreateWorldMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_fPos, const float3& a_fScale, const float3& a_fAngle, bool a_bTranspose = true);
 	static void CreateWorldMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_fPos, const float3& a_fScale, const float3& a_fAngle, DirectX::XMMATRIX a_fBone, bool a_bTranspose = true);
