@@ -77,6 +77,7 @@ namespace Stage
         float GetBackgroundBaseOffset01() const noexcept;
         float GetBackgroundBaseOffsetPixels() const noexcept;
         float GetBackgroundVideoScrollSpeed() const noexcept;
+        float GetBackgroundVideoParallaxFactor() const noexcept;
         float GetBackgroundVideoZoom() const noexcept;
     private:
         void ApplyDefaults();
@@ -127,6 +128,7 @@ namespace Stage
         float m_backgroundBaseOffset01 = 0.0f;
         float m_backgroundBaseOffsetPixels = 0.0f;
         float m_backgroundVideoScrollSpeed = 1.0f;
+        float m_backgroundVideoParallaxFactor = 1.0f;
         float m_backgroundVideoZoom = 1.0f;
     };
 }

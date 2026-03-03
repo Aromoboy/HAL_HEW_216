@@ -270,6 +270,11 @@ namespace Stage
         return m_backgroundVideoScrollSpeed;
     }
 
+    float StageData::GetBackgroundVideoParallaxFactor() const noexcept
+    {
+        return m_backgroundVideoParallaxFactor;
+    }
+
     float StageData::GetBackgroundVideoZoom() const noexcept
     {
         return m_backgroundVideoZoom;
@@ -323,6 +328,7 @@ namespace Stage
         m_backgroundBaseOffset01 = normalized.backgroundBaseOffset01;
         m_backgroundBaseOffsetPixels = normalized.backgroundBaseOffsetPixels;
         m_backgroundVideoScrollSpeed = normalized.backgroundVideoScrollSpeed;
+        m_backgroundVideoParallaxFactor = normalized.backgroundVideoParallaxFactor;
         m_backgroundVideoZoom = normalized.backgroundVideoZoom;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
@@ -365,6 +371,7 @@ namespace Stage
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
             << " backgroundVideo='" << m_backgroundVideoPath << "'"
             << " backgroundVideoScrollSpeed=" << m_backgroundVideoScrollSpeed
+            << " backgroundVideoParallaxFactor=" << m_backgroundVideoParallaxFactor
             << " backgroundVideoZoom=" << m_backgroundVideoZoom
             << " detail=" << detail << "\n";
 

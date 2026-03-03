@@ -41,7 +41,9 @@ public:
     void SetViewportSize(float width, float height);
     void SetScroll01(float scroll01);
     void SetBaseOffset01(float baseOffset01);
+    void SetBaseOffsetPixels(float baseOffsetPixels);
     void SetScrollSpeed(float scrollSpeed);
+    void SetParallaxFactor(float parallaxFactor);
     void SetScrollDirection(float dir);
     void SetZoom(float zoom);
     void SetScrollMode(ScrollMode mode);
@@ -74,10 +76,14 @@ private:
     float m_viewportHeight = 0.0f;
     float m_scroll01 = 0.0f;
     float m_baseOffset01 = 0.0f;
+    float m_baseOffsetPixels = 0.0f;
     float m_scrollSpeed = 1.0f;
+    float m_parallaxFactor = 1.0f;
     float m_scrollDirection = 1.0f;
     float m_zoom = 1.0f;
     float m_cameraY = 0.0f;
+    float m_worldScrollOffset = 0.0f;
+    float m_pixelsPerUnit = 1.0f;
     bool m_invertY = false;
     ScrollMode m_scrollMode = ScrollMode::Clamp;
     bool m_ready = false;

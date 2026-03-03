@@ -454,9 +454,32 @@ void VideoBackgroundRenderer::SetBaseOffset01(float baseOffset01)
     m_baseOffset01 = std::clamp(baseOffset01, 0.0f, 1.0f);
 }
 
+void VideoBackgroundRenderer::SetBaseOffsetPixels(float baseOffsetPixels)
+{
+    if (std::isfinite(baseOffsetPixels))
+    {
+        m_baseOffsetPixels = baseOffsetPixels;
+    }
+    else
+    {
+        m_baseOffsetPixels = 0.0f;
+    }
+}
+
 void VideoBackgroundRenderer::SetScrollSpeed(float scrollSpeed)
 {
     m_scrollSpeed = std::max(0.0f, scrollSpeed);
+}
+
+void VideoBackgroundRenderer::SetParallaxFactor(float parallaxFactor)
+{
+    if (!std::isfinite(parallaxFactor))
+    {
+        m_parallaxFactor = 1.0f;
+        return;
+    }
+
+    m_parallaxFactor = std::max(0.0f, parallaxFactor);
 }
 
 void VideoBackgroundRenderer::SetScrollDirection(float dir)
@@ -522,33 +545,35 @@ void VideoBackgroundRenderer::Draw()
 
             const float maxY = std::max(0.0f, 1.0f - uvH);
             const float maxX = std::max(0.0f, 1.0f - uvW);
-            const float baseOffset01 = m_invertY ? (1.0f - m_baseOffset01) : m_baseOffset01;
 
-            // 1) Normalize input scroll first.
-            const float normalizedInputScroll01 = std::clamp(m_scroll01, 0.0f, 1.0f);
-            // 2) Apply speed + direction to the delta from start (0.0).
-            const float speedAdjustedScroll01 = normalizedInputScroll01 * m_scrollSpeed * m_scrollDirection;
+            const float scrollPx = m_worldScrollOffset * m_pixelsPerUnit * m_parallaxFactor;
+            const float scrollDirection = m_scrollDirection;
+            const float speedAdjustedScrollPx = scrollPx * m_scrollSpeed * scrollDirection;
+
+            const float baseOffset01 = std::clamp(m_baseOffset01, 0.0f, 1.0f);
+            const float maxOffsetPx = maxY * sourceHeight;
+            const float normalizedBaseOffsetPx = baseOffset01 * maxOffsetPx;
+            const float offsetAppliedScrollPx = normalizedBaseOffsetPx + m_baseOffsetPixels + speedAdjustedScrollPx;
 
             float normalizedY = 0.0f;
-            if (m_scrollMode == ScrollMode::Wrap)
+            if (maxOffsetPx > 0.0f)
             {
-                // 3) Apply base offset, then wrap.
-                const float offsetAppliedScroll01 = baseOffset01 + speedAdjustedScroll01;
-                const float wrapped = std::fmod(offsetAppliedScroll01, 1.0f);
-                normalizedY = wrapped < 0.0f ? wrapped + 1.0f : wrapped;
-            }
-            else
-            {
-                // Clamp mode: constrain speed contribution before base offset,
-                // so high speed does not instantly force the final value to an edge.
-                const float clampedSpeedAdjustedScroll01 = std::clamp(speedAdjustedScroll01, -1.0f, 1.0f);
-                const float offsetAppliedScroll01 = baseOffset01 + clampedSpeedAdjustedScroll01;
-                normalizedY = std::clamp(offsetAppliedScroll01, 0.0f, 1.0f);
+                if (m_scrollMode == ScrollMode::Wrap)
+                {
+                    const float wrappedOffsetPx = std::fmod(offsetAppliedScrollPx, maxOffsetPx);
+                    const float normalizedOffsetPx = wrappedOffsetPx < 0.0f ? wrappedOffsetPx + maxOffsetPx : wrappedOffsetPx;
+                    normalizedY = normalizedOffsetPx / maxOffsetPx;
+                }
+                else
+                {
+                    const float clampedOffsetPx = std::clamp(offsetAppliedScrollPx, 0.0f, maxOffsetPx);
+                    normalizedY = clampedOffsetPx / maxOffsetPx;
+                }
             }
 
             const bool hasDeadRangeHistory = m_deadRangeStateInitialized;
             const bool inputChanged = hasDeadRangeHistory
-                && std::fabs(m_scroll01 - m_lastDeadRangeInputScroll01) > kDeadRangeInputEpsilon;
+                && std::fabs(offsetAppliedScrollPx - m_lastDeadRangeInputScroll01) > kDeadRangeInputEpsilon;
             const bool outputChanged = hasDeadRangeHistory
                 && std::fabs(normalizedY - m_lastDeadRangeNormalizedY) > kDeadRangeOutputEpsilon;
             const bool clampOutputStuck = (m_scrollMode == ScrollMode::Clamp) && inputChanged && !outputChanged;
@@ -569,7 +594,7 @@ void VideoBackgroundRenderer::Draw()
                 std::ostringstream clampWarn;
                 clampWarn << kLogPrefix
                     << "clamp dead-range detected"
-                    << " inputScroll01=" << m_scroll01
+                    << " inputOffsetPx=" << offsetAppliedScrollPx
                     << " normalizedY=" << normalizedY
                     << " speed=" << m_scrollSpeed
                     << " direction=" << m_scrollDirection
@@ -579,7 +604,7 @@ void VideoBackgroundRenderer::Draw()
 
             if (!hasDeadRangeHistory)
             {
-                m_lastDeadRangeInputScroll01 = m_scroll01;
+                m_lastDeadRangeInputScroll01 = offsetAppliedScrollPx;
                 m_lastDeadRangeNormalizedY = normalizedY;
                 m_deadRangeFrameStreak = 0;
                 m_deadRangeStateInitialized = true;
@@ -594,7 +619,7 @@ void VideoBackgroundRenderer::Draw()
                         std::ostringstream warn;
                         warn << kLogPrefix
                             << "warn dead-range: normalizedY is not changing while input scroll changes"
-                            << " inputScroll01=" << m_scroll01
+                            << " inputOffsetPx=" << offsetAppliedScrollPx
                             << " normalizedY=" << normalizedY
                             << " speed=" << m_scrollSpeed
                             << " baseOffset01=" << baseOffset01
@@ -608,7 +633,7 @@ void VideoBackgroundRenderer::Draw()
                     m_deadRangeFrameStreak = 0;
                 }
 
-                m_lastDeadRangeInputScroll01 = m_scroll01;
+                m_lastDeadRangeInputScroll01 = offsetAppliedScrollPx;
                 m_lastDeadRangeNormalizedY = normalizedY;
             }
 
@@ -627,7 +652,8 @@ void VideoBackgroundRenderer::Draw()
                 std::ostringstream oss;
                 oss << kLogPrefix
                     << "scroll cameraY=" << m_cameraY
-                    << " scroll01=" << m_scroll01
+                    << " worldScrollOffset=" << m_worldScrollOffset
+                    << " scrollPx=" << scrollPx
                     << " uvY=" << uvY
                     << " uvH=" << uvH;
                 Diagnostics::LogInfo(oss.str());
@@ -652,8 +678,9 @@ void VideoBackgroundRenderer::Draw()
 void VideoBackgroundRenderer::Draw(const BackgroundLayerDrawContext& context)
 {
     m_cameraY = context.cameraY;
+    m_worldScrollOffset = context.worldScrollOffset;
+    m_pixelsPerUnit = std::max(0.0f, context.pixelsPerUnit);
     SetViewportSize(context.viewportWidth, context.viewportHeight);
-    SetScroll01(context.normalizedScroll01);
     Draw();
 }
 
@@ -681,10 +708,14 @@ void VideoBackgroundRenderer::Shutdown()
     m_viewportHeight = 0.0f;
     m_scroll01 = 0.0f;
     m_baseOffset01 = 0.0f;
+    m_baseOffsetPixels = 0.0f;
     m_scrollSpeed = 1.0f;
+    m_parallaxFactor = 1.0f;
     m_scrollDirection = 1.0f;
     m_zoom = 1.0f;
     m_cameraY = 0.0f;
+    m_worldScrollOffset = 0.0f;
+    m_pixelsPerUnit = 1.0f;
     m_debugScrollLogFrameCounter = 0;
     m_lastDeadRangeInputScroll01 = 0.0f;
     m_lastDeadRangeNormalizedY = 0.0f;
