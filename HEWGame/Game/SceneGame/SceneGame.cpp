@@ -49,6 +49,7 @@
 #include <string>
 #include <utility>
 #include <iterator>
+#include <chrono>
 #include <box2d/box2d.h>
 #include <DirectXMath.h>
 #include "Physical.h"
@@ -88,6 +89,8 @@ namespace
         constexpr float kScoreToPointsMultiplier = 1.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr float kBackgroundCameraRangeFallbackThresholdDefault = 150.0f;
+        constexpr std::chrono::milliseconds kBackgroundNormalizationLogInterval(2000);
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
             settings.fixedPosition = false;
@@ -113,6 +116,25 @@ namespace
         {
             return std::isfinite(value) != 0;
         }
+
+        float ReadBackgroundCameraRangeFallbackThreshold()
+        {
+            const char* value = std::getenv("r.BackgroundCameraRangeFallbackThreshold");
+            if (!value)
+            {
+                return kBackgroundCameraRangeFallbackThresholdDefault;
+            }
+
+            const float parsed = std::strtof(value, nullptr);
+            if (!IsFiniteFloat(parsed) || parsed <= 0.0f)
+            {
+                return kBackgroundCameraRangeFallbackThresholdDefault;
+            }
+
+            return parsed;
+        }
+
+        float g_backgroundCameraRangeFallbackThreshold = ReadBackgroundCameraRangeFallbackThreshold();
 
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
@@ -2037,26 +2059,62 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             }
         }
 
-        bool usedCameraRange = false;
-        if (m_cameraRig)
+        std::string normalizationSource = "height-based";
+        float levelHeight = std::max({ 1.0f,
+            m_guidelineSystem.GetHeightMeters(),
+            m_gameplayRules.GetCurrentTowerHeight(),
+            m_gameplayRules.GetPeakTowerHeight() });
+        const bool canUseLevelHeight = IsFiniteFloat(levelHeight) && levelHeight > 0.0f;
+        if (canUseLevelHeight)
+        {
+            normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / levelHeight, 0.0f, 1.0f);
+        }
+        else
+        {
+            normalizationSource = "origin-window";
+            const float localWindowHeight = std::max(1.0f, g_backgroundCameraRangeFallbackThreshold);
+            normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / localWindowHeight, 0.0f, 1.0f);
+        }
+
+        bool usedCameraRangeFallback = false;
+        float cameraRange = 0.0f;
+        if (!canUseLevelHeight && m_cameraRig)
         {
             const auto minY = m_cameraRig->GetClampMinY();
             const auto maxY = m_cameraRig->GetClampMaxY();
             if (minY && maxY && IsFiniteFloat(*minY) && IsFiniteFloat(*maxY) && *maxY > *minY)
             {
-                const float cameraRange = *maxY - *minY;
-                normalizedScroll01 = std::clamp((cameraY - *minY) / cameraRange, 0.0f, 1.0f);
-                usedCameraRange = true;
+                cameraRange = *maxY - *minY;
+                const bool cameraRangeIsAdequate = cameraRange <= g_backgroundCameraRangeFallbackThreshold;
+                if (cameraRangeIsAdequate)
+                {
+                    normalizedScroll01 = std::clamp((cameraY - *minY) / cameraRange, 0.0f, 1.0f);
+                    normalizationSource = "camera-range-fallback";
+                    usedCameraRangeFallback = true;
+                }
             }
         }
 
-        if (!usedCameraRange)
         {
-            const float levelHeight = std::max({ 1.0f,
-                m_guidelineSystem.GetHeightMeters(),
-                m_gameplayRules.GetCurrentTowerHeight(),
-                m_gameplayRules.GetPeakTowerHeight() });
-            normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / levelHeight, 0.0f, 1.0f);
+            static auto s_lastNormalizationLogTime = std::chrono::steady_clock::time_point{};
+            const auto now = std::chrono::steady_clock::now();
+            if (s_lastNormalizationLogTime.time_since_epoch().count() == 0 ||
+                now - s_lastNormalizationLogTime >= kBackgroundNormalizationLogInterval)
+            {
+                s_lastNormalizationLogTime = now;
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "background-normalization source=" << normalizationSource
+                    << " cameraY=" << cameraY
+                    << " normalizedScroll01=" << normalizedScroll01
+                    << " scrollOffset=" << scrollOffsetUsedForBackground
+                    << " levelHeight=" << levelHeight
+                    << " cameraRange=" << cameraRange
+                    << " fallbackThreshold=" << g_backgroundCameraRangeFallbackThreshold
+                    << " usedCameraRangeFallback=" << (usedCameraRangeFallback ? "true" : "false")
+                    << "\n";
+                DebugTrace(oss.str());
+            }
         }
 
         if (m_backgroundRenderer)
