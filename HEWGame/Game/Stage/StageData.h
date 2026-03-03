@@ -80,6 +80,7 @@ namespace Stage
         float GetBackgroundVideoParallaxFactor() const noexcept;
         float GetBackgroundVideoZoom() const noexcept;
         bool IsBackgroundVideoClampEdgeReleaseEnabled() const noexcept;
+        const std::string& GetSourcePath() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);

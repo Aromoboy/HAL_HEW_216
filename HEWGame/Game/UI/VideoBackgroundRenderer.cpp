@@ -33,6 +33,8 @@ namespace
     constexpr float kDeadRangeInputEpsilon = 1.0e-4f;
     constexpr float kDeadRangeOutputEpsilon = 1.0e-5f;
     constexpr float kClampEdgeReleaseEpsilon = 1.0e-4f;
+    constexpr float kMinEffectivePixelsPerUnit = 1.0f;
+    constexpr float kMaxEffectivePixelsPerUnit = 1000.0f;
 
     void LogVideoError(const char* step, HRESULT hr)
     {
@@ -552,7 +554,28 @@ void VideoBackgroundRenderer::Draw()
             const float maxY = std::max(0.0f, 1.0f - uvH);
             const float maxX = std::max(0.0f, 1.0f - uvW);
 
-            const float scrollPx = m_worldScrollOffset * m_pixelsPerUnit * m_parallaxFactor;
+            float effectivePixelsPerUnit = m_pixelsPerUnit;
+            if (m_scrollMode == ScrollMode::Wrap)
+            {
+                effectivePixelsPerUnit = std::clamp(m_pixelsPerUnit, kMinEffectivePixelsPerUnit, kMaxEffectivePixelsPerUnit);
+                const bool pixelsPerUnitClamped = std::isfinite(m_pixelsPerUnit)
+                    && std::fabs(effectivePixelsPerUnit - m_pixelsPerUnit) > 0.0f;
+                if (pixelsPerUnitClamped && !m_pixelsPerUnitClampWarned)
+                {
+                    std::ostringstream warn;
+                    warn << kLogPrefix
+                        << "pixelsPerUnit sanity clamp applied"
+                        << " rawPixelsPerUnit=" << m_pixelsPerUnit
+                        << " effectivePixelsPerUnit=" << effectivePixelsPerUnit
+                        << " worldScrollOffset=" << m_worldScrollOffset
+                        << " cameraY=" << m_cameraY
+                        << " uvH=" << uvH;
+                    Diagnostics::LogInfo(warn.str());
+                    m_pixelsPerUnitClampWarned = true;
+                }
+            }
+
+            const float scrollPx = m_worldScrollOffset * effectivePixelsPerUnit * m_parallaxFactor;
             const float scrollDirection = m_scrollDirection;
             const float speedAdjustedScrollPx = scrollPx * m_scrollSpeed * scrollDirection;
 
@@ -733,6 +756,7 @@ void VideoBackgroundRenderer::Shutdown()
     m_lastDeadRangeNormalizedY = 0.0f;
     m_deadRangeFrameStreak = 0;
     m_deadRangeStateInitialized = false;
+    m_pixelsPerUnitClampWarned = false;
     m_enableClampEdgeRelease = true;
     m_clampEdgeReleaseArmed = false;
     m_invertY = false;

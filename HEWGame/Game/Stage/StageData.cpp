@@ -285,6 +285,11 @@ namespace Stage
         return m_backgroundVideoClampEdgeRelease;
     }
 
+    const std::string& StageData::GetSourcePath() const noexcept
+    {
+        return m_sourcePath;
+    }
+
     void StageData::ApplyDefaults()
     {
         const StageConfigNormalized defaults = BuildDefaultStageConfig();

@@ -95,5 +95,6 @@ private:
     float m_lastDeadRangeNormalizedY = 0.0f;
     uint32_t m_deadRangeFrameStreak = 0;
     bool m_deadRangeStateInitialized = false;
+    bool m_pixelsPerUnitClampWarned = false;
     bool m_mfStarted = false;
 };
