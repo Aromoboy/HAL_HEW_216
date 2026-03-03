@@ -276,6 +276,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Scene\EffectTestScene.cpp" />
     <ClCompile Include="Game\Scene\ISceneServices.cpp" />
     <ClCompile Include="Game\Scene\Main.cpp" />
+    <ClCompile Include="Game\Scene\SceneBootstrap.cpp" />
     <ClCompile Include="Game\Scene\Scene.cpp" />
     <ClCompile Include="Game\Scene\SceneComposer.cpp" />
     <ClCompile Include="Game\Scene\SceneManager.cpp" />
@@ -436,6 +437,7 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Scene\SettingScene.h" />
     <ClInclude Include="Game\Scene\TitleScene.h" />
     <ClInclude Include="Game\Scene\SceneSlopeTest.h" />
+    <ClInclude Include="Game\Scene\SceneBootstrap.h" />
     <ClInclude Include="Game\Scene\Collision.h" />
     <ClInclude Include="Game\Scene\Block.h" />
     <ClInclude Include="Game\Scene\Ball.h" />
