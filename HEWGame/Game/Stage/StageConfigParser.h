@@ -95,6 +95,10 @@ namespace Stage
         bool backgroundVideoAutoLoopSet = false;
         BackgroundScrollMode backgroundScrollMode = BackgroundScrollMode::Clamp;
         bool backgroundScrollModeSet = false;
+        float backgroundBaseOffset01 = 0.0f;
+        bool backgroundBaseOffset01Set = false;
+        float backgroundBaseOffsetPixels = 0.0f;
+        bool backgroundBaseOffsetPixelsSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);

@@ -249,6 +249,8 @@ namespace Stage
         result.backgroundVideoPath.clear();
         result.backgroundVideoAutoLoop = true;
         result.backgroundScrollMode = BackgroundScrollMode::Clamp;
+        result.backgroundBaseOffset01 = 0.0f;
+        result.backgroundBaseOffsetPixels = 0.0f;
 
         for (const auto& entry : lines)
         {
@@ -972,6 +974,36 @@ namespace Stage
                 {
                     result.backgroundScrollMode = parsedMode;
                     result.backgroundScrollModeSet = true;
+                }
+            }
+            else if (key == "backgroundBaseOffset01")
+            {
+                try
+                {
+                    result.backgroundBaseOffset01 = std::stof(rawValue);
+                    result.backgroundBaseOffset01Set = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundBaseOffset01 on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundBaseOffsetPixels")
+            {
+                try
+                {
+                    result.backgroundBaseOffsetPixels = std::stof(rawValue);
+                    result.backgroundBaseOffsetPixelsSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundBaseOffsetPixels on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
                 }
             }
             else

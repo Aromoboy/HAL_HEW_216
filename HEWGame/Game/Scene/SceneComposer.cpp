@@ -561,9 +561,12 @@ void SceneComposer::ComposeUI(Composition& result)
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;
-        layer.scrollOffsetInPixels = false;
+        // backgroundBaseOffset01 is normalized in [0..1], and pixel-precise anchoring can be
+        // provided via gameplay.cfg using backgroundBaseOffsetPixels.
+        layer.scrollOffsetInPixels = true;
         layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
-        layer.baseOffset01 = 4.00f;
+        layer.baseOffset01 = result.stageData.GetBackgroundBaseOffset01();
+        layer.baseOffsetPixels = result.stageData.GetBackgroundBaseOffsetPixels();
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         backgroundConfig.layers.push_back(layer);
         result.backgroundRenderer = std::make_unique<BackgroundRenderer>();

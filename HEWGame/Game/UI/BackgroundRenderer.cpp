@@ -27,6 +27,7 @@ namespace
         float scrollOffset,
         float parallaxFactor,
         float baseOffset01,
+        float baseOffsetPixels,
         float pixelsPerUnit)
     {
         UVWindow out{};
@@ -52,7 +53,8 @@ namespace
             const float visibleWidthPx = textureWidth * scaleX;
             const float offsetRangePx = textureWidth - visibleWidthPx;
             const float maxOffsetPx = std::max(0.0f, offsetRangePx);
-            const float baseOffsetPx = clampedBaseOffset01 * (textureWidth - visibleWidthPx);
+            const float normalizedBaseOffsetPx = clampedBaseOffset01 * (textureWidth - visibleWidthPx);
+            const float baseOffsetPx = normalizedBaseOffsetPx + baseOffsetPixels;
             const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
 
             float u0 = offsetPx / textureWidth;
@@ -73,7 +75,8 @@ namespace
             const float visibleHeightPx = textureHeight * scaleY;
             const float offsetRangePx = textureHeight - visibleHeightPx;
             const float maxOffsetPx = std::max(0.0f, offsetRangePx);
-            const float baseOffsetPx = clampedBaseOffset01 * (textureHeight - visibleHeightPx);
+            const float normalizedBaseOffsetPx = clampedBaseOffset01 * (textureHeight - visibleHeightPx);
+            const float baseOffsetPx = normalizedBaseOffsetPx + baseOffsetPixels;
             const float offsetPx = std::clamp(scrollPx + baseOffsetPx, 0.0f, maxOffsetPx);
 
             float v0 = offsetPx / textureHeight;
@@ -82,6 +85,13 @@ namespace
             out.v0 = v0;
             out.scaleY = scaleY;
         }
+        std::ostringstream uvLog;
+        uvLog << "[BackgroundRenderer] UV window"
+            << " u0=" << out.u0
+            << " v0=" << out.v0
+            << " scaleX=" << out.scaleX
+            << " scaleY=" << out.scaleY;
+        Diagnostics::LogInfo(uvLog.str());
         return out;
     }
 
@@ -219,6 +229,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             adjustedScrollOffset,
             layer.config.parallaxFactor,
             layer.config.baseOffset01,
+            layer.config.baseOffsetPixels,
             layerPixelsPerUnit);
         Sprite::SetUVPos({ window.u0, window.v0 });
         if (!(window.scaleX == 1.0f && window.scaleY == 1.0f))

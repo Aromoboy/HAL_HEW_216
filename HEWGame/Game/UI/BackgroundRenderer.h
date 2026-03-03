@@ -25,6 +25,7 @@ struct BackgroundRendererConfig
         bool invertScroll = true;
         SamplingMode samplingMode = SamplingMode::Wrap;
         float baseOffset01 = 0.0f;
+        float baseOffsetPixels = 0.0f;
         bool scrollOffsetInPixels = false;
         DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     };

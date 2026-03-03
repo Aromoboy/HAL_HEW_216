@@ -110,6 +110,8 @@ Stage::StageData はこのセクションを読み込み、デフォルト適用
 - `backgroundVideoPath`: 動画背景パス（任意）。指定時は `VideoBackgroundRenderer` を優先して使用。
 - `backgroundVideoAutoLoop`: `true/false`（省略時 `true`）。動画背景のループ再生有無。
 - `backgroundScrollMode`: `clamp` / `wrap`（省略時 `clamp`）。動画背景の縦 pan におけるスクロールモード。
+- `backgroundBaseOffset01`: `0.0..1.0`（省略時 `0.0`）。静止画背景の開始オフセット（正規化）。
+- `backgroundBaseOffsetPixels`: 実数（省略時 `0.0`）。静止画背景の開始オフセット（ピクセル）。`scrollOffsetInPixels=true` 時に `backgroundBaseOffset01` と合算して適用。
 
 設定ローダー（概要）
 
