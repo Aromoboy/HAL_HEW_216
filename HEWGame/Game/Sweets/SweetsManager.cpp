@@ -1,4 +1,4 @@
-#include "SweetsManager.h"
+﻿#include "SweetsManager.h"
 
 #include <box2d/box2d.h>
 
@@ -245,14 +245,30 @@ namespace SweetsSpace
 
     std::shared_ptr<ActiveSweets> SweetsManager::Spawn(const std::string& kind, const Transform& transform)
     {
+        auto logSpawnResult = [&](bool success, const char* failReason)
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "[SpawnResult] kind=" << kind
+                << " transform=(" << transform.position.x << ',' << transform.position.y << ',' << transform.position.z << ")"
+                << " result=" << (success ? "success" : "fail");
+            if (!success)
+            {
+                oss << " failReason=" << (failReason ? failReason : "unknown");
+            }
+            oss << "\n";
+            DebugTrace(oss.str());
+        };
+
         if (!m_creamEnabled && IsCreamKind(kind))
         {
+            logSpawnResult(false, "creamDisabled");
             return nullptr;
         }
 
         auto sweets = m_factory.Create(kind, transform);
         if (!sweets)
         {
+            logSpawnResult(false, "factoryCreateFailed");
             return nullptr;
         }
 
@@ -260,6 +276,7 @@ namespace SweetsSpace
 
         if (!m_lifecycle.RegisterWithSystems(sweets))
         {
+            logSpawnResult(false, "registerWithSystemsFailed");
             return nullptr;
         }
 
@@ -278,6 +295,7 @@ namespace SweetsSpace
             }
         }
 
+        logSpawnResult(true, nullptr);
         return sweets;
     }
 
@@ -583,6 +601,11 @@ namespace SweetsSpace
     void SweetsManager::SetSpawnPerPointInitial(int count)
     {
         m_spawner.SetSpawnPerPointInitial(count);
+    }
+
+    void SweetsManager::SetSpawnDebugDiagnostics(bool enabled, float rateLimitSeconds)
+    {
+        m_spawner.SetSpawnDebugDiagnostics(enabled, rateLimitSeconds);
     }
 
     void SweetsManager::SetForceGeneratedColliders(bool force)

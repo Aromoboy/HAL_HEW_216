@@ -1,4 +1,4 @@
-#ifndef SCENE_GAME_CONFIG_TYPES_H_
+﻿#ifndef SCENE_GAME_CONFIG_TYPES_H_
 #define SCENE_GAME_CONFIG_TYPES_H_
 
 #include "Transform.h"
@@ -156,6 +156,12 @@ namespace SceneGameConfig
         int spawnPerPointInitial = 0;
         int spawnTotalCap = 12;
         bool hasSpawnLimits = false;
+    };
+
+    struct SweetsSpawnDebugSettings
+    {
+        bool enabled = false;
+        float rateLimitSeconds = 1.0f;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;

@@ -38,3 +38,27 @@ The following call sites already emit debug traces or guardrails around asset/sy
   - **Info** for the standard resolution path (using provided model, resolving descriptor).
   - **Warning** when falling back to placeholder assets because manifest data is missing/empty.
   - **Error** when no fairy model is available after all fallbacks, since rendering will be missing entirely.
+
+## Sweets spawn pipeline (`SweetsSpawner` / `SweetsManager` / `SweetsLifecycle`)
+- Location:
+  - `HEWGame/Game/Sweets/SweetsSpawner.cpp`
+  - `HEWGame/Game/Sweets/SweetsManager.cpp`
+  - `HEWGame/Game/Sweets/SweetsLifecycle.cpp`
+- Config gate:
+  - `HEWGame/Assets/Config/gameplay.cfg` section `[sweets.spawn.debug]` (`enabled`, `rateLimitSeconds`).
+- Behavior:
+  - Runtime snapshot (`SpawnDebugSnapshot`) is emitted only for state transitions and key events.
+  - Block reason transitions include: `BlockedByLiveCap`, `BlockedByPerPointCap`, `NoOrigins`, `NoWeights`, `CoolingDown`, `None`.
+  - Queue transition logs are emitted only on `0 -> >0` and `>0 -> 0` boundaries.
+  - `NextSpawnOrigin()` emits a first-failure aggregate occupancy log when no lane can be selected.
+  - Spawn result logs are unified in `SweetsManager::Spawn` with explicit fail reasons.
+  - Despawn/removal logs are symmetric in lifecycle with removal context and post-removal state counts.
+- Message keys for grep/analysis:
+  - `key=block.transition`
+  - `key=queue.transition`
+  - `key=origin.none`
+  - `key=origin.selection.fail`
+  - `key=spawn.result.success`
+  - `key=spawn.result.fail`
+  - `[SpawnResult]` (manager-level spawn attempt result)
+  - `[DespawnResult]` (lifecycle removal/clear summary)

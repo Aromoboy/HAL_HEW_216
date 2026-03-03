@@ -1,4 +1,4 @@
-#ifndef SCENE_GAME_CONFIG_LOADER_H_
+﻿#ifndef SCENE_GAME_CONFIG_LOADER_H_
 #define SCENE_GAME_CONFIG_LOADER_H_
 
 #include "SceneGameConfigTypes.h"
@@ -49,6 +49,7 @@ namespace SceneGameConfig
     GameCameraConfig LoadGameCameraConfig();
     SweetsOutOfBoundsSettings LoadSweetsOutOfBoundsSettings();
     SweetsSpawnLimitSettings LoadSweetsSpawnLimitSettings();
+    SweetsSpawnDebugSettings LoadSweetsSpawnDebugSettings();
 }
 
 #endif
