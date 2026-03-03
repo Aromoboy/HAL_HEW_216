@@ -545,7 +545,6 @@ void SceneComposer::ComposeUI(Composition& result)
         }
         else
         {
-            videoBg->SetDecodeMaxFps(30.0f);
             videoBg->SetAutoLoop(result.stageData.IsBackgroundVideoAutoLoop());
             videoBg->SetScrollMode(
                 result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap
