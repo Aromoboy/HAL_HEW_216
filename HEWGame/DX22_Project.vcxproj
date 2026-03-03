@@ -284,6 +284,9 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClCompile Include="Game\Scene\SettingScene.cpp" />
     <ClCompile Include="Game\Scene\Startup.cpp" />
     <ClCompile Include="Game\Scene\TitleScene.cpp" />
+    <ClCompile Include="Game\Scene\SceneSlopeTest.cpp" />
+    <ClCompile Include="Game\Scene\Collision.cpp" />
+    <ClCompile Include="Game\Scene\Block.cpp" />
     <ClCompile Include="Game\SceneGame\SceneGame.cpp" />
     <ClCompile Include="Game\SceneGame\BlobShadowRenderer.cpp" />
     <ClCompile Include="Game\SceneGame\SceneGameConfigLoader.cpp" />
@@ -432,6 +435,10 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
     <ClInclude Include="Game\Scene\SelectScene.h" />
     <ClInclude Include="Game\Scene\SettingScene.h" />
     <ClInclude Include="Game\Scene\TitleScene.h" />
+    <ClInclude Include="Game\Scene\SceneSlopeTest.h" />
+    <ClInclude Include="Game\Scene\Collision.h" />
+    <ClInclude Include="Game\Scene\Block.h" />
+    <ClInclude Include="Game\Scene\Ball.h" />
     <ClInclude Include="Game\SceneGame\GameplayConfig.h" />
     <ClInclude Include="Game\SceneGame\BlobShadowRenderer.h" />
     <ClInclude Include="Game\SceneGame\SceneGame.h" />
