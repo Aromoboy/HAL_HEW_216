@@ -554,25 +554,22 @@ void VideoBackgroundRenderer::Draw()
             const float maxY = std::max(0.0f, 1.0f - uvH);
             const float maxX = std::max(0.0f, 1.0f - uvW);
 
-            float effectivePixelsPerUnit = m_pixelsPerUnit;
-            if (m_scrollMode == ScrollMode::Wrap)
+            const float effectivePixelsPerUnit = std::clamp(m_pixelsPerUnit, kMinEffectivePixelsPerUnit, kMaxEffectivePixelsPerUnit);
+            const bool pixelsPerUnitClamped = std::isfinite(m_pixelsPerUnit)
+                && std::fabs(effectivePixelsPerUnit - m_pixelsPerUnit) > 0.0f;
+            if (pixelsPerUnitClamped && !m_pixelsPerUnitClampWarned)
             {
-                effectivePixelsPerUnit = std::clamp(m_pixelsPerUnit, kMinEffectivePixelsPerUnit, kMaxEffectivePixelsPerUnit);
-                const bool pixelsPerUnitClamped = std::isfinite(m_pixelsPerUnit)
-                    && std::fabs(effectivePixelsPerUnit - m_pixelsPerUnit) > 0.0f;
-                if (pixelsPerUnitClamped && !m_pixelsPerUnitClampWarned)
-                {
-                    std::ostringstream warn;
-                    warn << kLogPrefix
-                        << "pixelsPerUnit sanity clamp applied"
-                        << " rawPixelsPerUnit=" << m_pixelsPerUnit
-                        << " effectivePixelsPerUnit=" << effectivePixelsPerUnit
-                        << " worldScrollOffset=" << m_worldScrollOffset
-                        << " cameraY=" << m_cameraY
-                        << " uvH=" << uvH;
-                    Diagnostics::LogInfo(warn.str());
-                    m_pixelsPerUnitClampWarned = true;
-                }
+                std::ostringstream warn;
+                warn << kLogPrefix
+                    << "pixelsPerUnit sanity clamp applied"
+                    << " raw m_pixelsPerUnit=" << m_pixelsPerUnit
+                    << " effectivePixelsPerUnit=" << effectivePixelsPerUnit
+                    << " worldScrollOffset=" << m_worldScrollOffset
+                    << " cameraY=" << m_cameraY
+                    << " uvH=" << uvH
+                    << " scrollMode=" << (m_scrollMode == ScrollMode::Wrap ? "wrap" : "clamp");
+                Diagnostics::LogInfo(warn.str());
+                m_pixelsPerUnitClampWarned = true;
             }
 
             const float scrollPx = m_worldScrollOffset * effectivePixelsPerUnit * m_parallaxFactor;
