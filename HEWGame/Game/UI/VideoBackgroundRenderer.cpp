@@ -552,13 +552,26 @@ void VideoBackgroundRenderer::Draw()
             const float maxY = std::max(0.0f, 1.0f - uvH);
             const float maxX = std::max(0.0f, 1.0f - uvW);
 
-            const float scrollPx = m_worldScrollOffset * m_pixelsPerUnit * m_parallaxFactor;
-            const float scrollDirection = m_scrollDirection;
-            const float speedAdjustedScrollPx = scrollPx * m_scrollSpeed * scrollDirection;
-
             const float baseOffset01 = std::clamp(m_baseOffset01, 0.0f, 1.0f);
             const float maxOffsetPx = maxY * sourceHeight;
             const float normalizedBaseOffsetPx = baseOffset01 * maxOffsetPx;
+            const float scrollDirection = m_scrollDirection;
+
+            // Clamp mode should follow level progress (0..1) so baseOffset stays stable and
+            // tiny camera movement does not jump the background by many pixels.
+            // Wrap mode intentionally keeps the world-space pixel formula for stylized fast panning.
+            float speedAdjustedScrollPx = 0.0f;
+            if (m_scrollMode == ScrollMode::Clamp)
+            {
+                const float normalizedScroll01 = std::clamp(m_scroll01, 0.0f, 1.0f);
+                speedAdjustedScrollPx = normalizedScroll01 * maxOffsetPx * m_parallaxFactor * m_scrollSpeed * scrollDirection;
+            }
+            else
+            {
+                const float scrollPx = m_worldScrollOffset * m_pixelsPerUnit * m_parallaxFactor;
+                speedAdjustedScrollPx = scrollPx * m_scrollSpeed * scrollDirection;
+            }
+
             const float offsetAppliedScrollPx = normalizedBaseOffsetPx + m_baseOffsetPixels + speedAdjustedScrollPx;
 
             float normalizedY = 0.0f;
@@ -665,7 +678,7 @@ void VideoBackgroundRenderer::Draw()
                 oss << kLogPrefix
                     << "scroll cameraY=" << m_cameraY
                     << " worldScrollOffset=" << m_worldScrollOffset
-                    << " scrollPx=" << scrollPx
+                    << " scrollPx=" << speedAdjustedScrollPx
                     << " uvY=" << uvY
                     << " uvH=" << uvH;
                 Diagnostics::LogInfo(oss.str());
@@ -692,6 +705,7 @@ void VideoBackgroundRenderer::Draw(const BackgroundLayerDrawContext& context)
     m_cameraY = context.cameraY;
     m_worldScrollOffset = context.worldScrollOffset;
     m_pixelsPerUnit = std::max(0.0f, context.pixelsPerUnit);
+    m_scroll01 = std::clamp(context.normalizedScroll01, 0.0f, 1.0f);
     SetViewportSize(context.viewportWidth, context.viewportHeight);
     Draw();
 }
