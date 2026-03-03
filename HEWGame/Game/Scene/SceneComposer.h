@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "GuidelineActor.h"
+#include "IBackgroundLayerRenderer.h"
 #include "SceneGame.h"
 #include "StageLayoutLoader.h"
 
@@ -61,7 +62,7 @@ public:
         std::unique_ptr<GuidelineActor> guidelineActor;
         std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;
         std::unique_ptr<UIManager> uiManager;
-        std::unique_ptr<BackgroundRenderer> backgroundRenderer;
+        std::unique_ptr<IBackgroundLayerRenderer> backgroundRenderer;
         std::unique_ptr<EffectSystem> effectSystem;
         std::vector<StageObject> stageObjects;
         std::vector<std::shared_ptr<Entities::PhysicalEntity>> stagePhysicsEntities;

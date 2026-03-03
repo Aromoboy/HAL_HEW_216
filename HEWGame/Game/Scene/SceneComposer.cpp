@@ -9,6 +9,7 @@
 #include <sstream>
 
 #include "BackgroundRenderer.h"
+#include "VideoBackgroundRenderer.h"
 #include "ConfigSectionReader.h"
 #include "Core/UpdateScheduler.h"
 #include "GameplayConfig.h"
@@ -526,8 +527,33 @@ void SceneComposer::ComposeLayout(Composition& result)
 
 void SceneComposer::ComposeUI(Composition& result)
 {
+    const std::string backgroundVideo = result.stageData.GetBackgroundVideoPath();
     const std::string backgroundTexture = result.stageData.GetBackgroundTexturePath();
-    if (!backgroundTexture.empty())
+    if (!backgroundVideo.empty())
+    {
+        VideoBackgroundRenderer::ShaderPaths shaderPaths{
+            "Assets/shaders/video_vs.cso",
+            "Assets/shaders/video_ps.cso"
+        };
+
+        auto videoRenderer = std::make_unique<VideoBackgroundRenderer>();
+        if (!videoRenderer->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundVideo))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Video background renderer failed for video '" << backgroundVideo << "'.\n";
+            DebugTrace(oss.str());
+        }
+        else
+        {
+            videoRenderer->SetAutoLoop(result.stageData.IsBackgroundVideoAutoLoop());
+            videoRenderer->SetScrollMode(
+                result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap
+                ? VideoBackgroundRenderer::ScrollMode::Wrap
+                : VideoBackgroundRenderer::ScrollMode::Clamp);
+            result.backgroundRenderer = std::move(videoRenderer);
+        }
+    }
+    else if (!backgroundTexture.empty())
     {
         // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
         constexpr float kDefaultBackgroundParallax = 0.0001f;

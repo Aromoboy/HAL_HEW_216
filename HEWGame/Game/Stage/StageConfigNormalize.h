@@ -45,6 +45,9 @@ namespace Stage
         float guidelineMilestoneBonusSeconds = 0.0f;
         int guidelineMilestoneInterval = 0;
         std::string backgroundTexturePath;
+        std::string backgroundVideoPath;
+        bool backgroundVideoAutoLoop = true;
+        BackgroundScrollMode backgroundScrollMode = BackgroundScrollMode::Clamp;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;

@@ -240,6 +240,21 @@ namespace Stage
         return m_backgroundTexturePath;
     }
 
+    const std::string& StageData::GetBackgroundVideoPath() const noexcept
+    {
+        return m_backgroundVideoPath;
+    }
+
+    bool StageData::IsBackgroundVideoAutoLoop() const noexcept
+    {
+        return m_backgroundVideoAutoLoop;
+    }
+
+    BackgroundScrollMode StageData::GetBackgroundScrollMode() const noexcept
+    {
+        return m_backgroundScrollMode;
+    }
+
     void StageData::ApplyDefaults()
     {
         const StageConfigNormalized defaults = BuildDefaultStageConfig();
@@ -282,6 +297,9 @@ namespace Stage
         m_guidelineMilestoneBonusSeconds = normalized.guidelineMilestoneBonusSeconds;
         m_guidelineMilestoneInterval = normalized.guidelineMilestoneInterval;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
+        m_backgroundVideoPath = normalized.backgroundVideoPath;
+        m_backgroundVideoAutoLoop = normalized.backgroundVideoAutoLoop;
+        m_backgroundScrollMode = normalized.backgroundScrollMode;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
     }
