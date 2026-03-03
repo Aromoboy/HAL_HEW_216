@@ -2,12 +2,65 @@
 
 #include <box2d/box2d.h>
 
+#include <algorithm>
+
+#include <cmath>
+#include <limits>
+#include <sstream>
+
 #include "Core/UpdateScheduler.h"
 #include "Sweets/BaseSweets.h"
 #include "Systems/Physics/PhysicsMachine.h"
 
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
 namespace
 {
+#if defined(_WIN32) && defined(_DEBUG)
+    void DebugTrace(const std::string& message)
+    {
+        ::OutputDebugStringA(message.c_str());
+    }
+#else
+    void DebugTrace(const std::string& message)
+    {
+        (void)message;
+    }
+#endif
+
+    constexpr const char* kLogPrefix = "[SweetsManager] ";
+    constexpr int kLogRepeatSuppressionFrames = 15;
+
+    struct RepeatedLogGate
+    {
+        int lastValue = std::numeric_limits<int>::min();
+        int suppressCount = 0;
+
+        bool ShouldLog(int value)
+        {
+            if (value != lastValue)
+            {
+                lastValue = value;
+                suppressCount = 0;
+                return true;
+            }
+
+            ++suppressCount;
+            if (suppressCount >= kLogRepeatSuppressionFrames)
+            {
+                suppressCount = 0;
+                return true;
+            }
+
+            return false;
+        }
+    };
+
     std::string NormalizeTag(const std::string& tag)
     {
         return SweetsSpace::NormalizeKey(tag);
@@ -355,6 +408,112 @@ namespace SweetsSpace
     int SweetsManager::GetSweetsCount() const
     {
         return m_registry.CountAll();
+    }
+
+    void SweetsManager::NotifyStageMoved(float minX, float maxX, float minY, float maxY, float deltaY)
+    {
+        if (!m_physicsMachine || std::fabs(deltaY) <= 1e-5f)
+        {
+            return;
+        }
+
+        const float sanitizedMinX = std::min(minX, maxX);
+        const float sanitizedMaxX = std::max(minX, maxX);
+        const float sanitizedMinY = std::min(minY, maxY);
+        const float sanitizedMaxY = std::max(minY, maxY);
+
+        constexpr float kVerticalNearThreshold = 0.25f;
+        constexpr float kHorizontalNearThreshold = 0.35f;
+
+        std::vector<std::shared_ptr<ActiveSweets>> candidates;
+        candidates.reserve(m_registry.CountAll());
+
+        auto collectState = [&](SweetsState state)
+        {
+            for (const auto& sweets : m_registry.GetByState(state))
+            {
+                if (!sweets || sweets->IsPendingDestroy())
+                {
+                    continue;
+                }
+                candidates.push_back(sweets);
+            }
+        };
+
+        collectState(SweetsState::Active);
+        collectState(SweetsState::Ground);
+
+        int affectedCount = 0;
+        int wokeCount = 0;
+        int suspendedCandidates = 0;
+
+        for (const auto& sweets : candidates)
+        {
+            sweets->SyncColliderBounds();
+            const AABB bounds = sweets->GetAABB();
+
+            const bool overlapX = bounds.min.x <= sanitizedMaxX && bounds.max.x >= sanitizedMinX;
+            const bool overlapY = bounds.min.y <= sanitizedMaxY && bounds.max.y >= sanitizedMinY;
+            const bool overlap = overlapX && overlapY;
+
+            const bool nearHorizontal = overlapX
+                && (std::fabs(bounds.min.y - sanitizedMaxY) <= kVerticalNearThreshold
+                    || std::fabs(bounds.max.y - sanitizedMinY) <= kVerticalNearThreshold);
+            const bool nearVertical = overlapY
+                && (std::fabs(bounds.min.x - sanitizedMaxX) <= kHorizontalNearThreshold
+                    || std::fabs(bounds.max.x - sanitizedMinX) <= kHorizontalNearThreshold);
+
+            if (!(overlap || nearHorizontal || nearVertical))
+            {
+                continue;
+            }
+
+            ++affectedCount;
+            const auto wakeStatus = m_physicsMachine->WakeBody(*sweets, true);
+            if (wakeStatus == Systems::PhysicsMachine::WakeBodyStatus::Woke)
+            {
+                ++wokeCount;
+            }
+            else if (wakeStatus == Systems::PhysicsMachine::WakeBodyStatus::NoBody)
+            {
+                ++suspendedCandidates;
+            }
+
+            m_lifecycle.MarkForStateReevaluation(sweets);
+        }
+
+#if defined(_DEBUG)
+        static RepeatedLogGate osaraDeltaGate;
+        static RepeatedLogGate affectedGate;
+        static RepeatedLogGate wokeGate;
+        static RepeatedLogGate suspendedGate;
+
+        const int deltaMilli = static_cast<int>(std::lround(deltaY * 1000.0f));
+        if (osaraDeltaGate.ShouldLog(deltaMilli))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "osara moved +ΔY=" << deltaY << "\n";
+            DebugTrace(oss.str());
+        }
+        if (affectedGate.ShouldLog(affectedCount))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "affected sweets count=" << affectedCount << "\n";
+            DebugTrace(oss.str());
+        }
+        if (wokeGate.ShouldLog(wokeCount))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "woke sweets count=" << wokeCount << "\n";
+            DebugTrace(oss.str());
+        }
+        if (suspendedGate.ShouldLog(suspendedCandidates))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "still suspended candidates=" << suspendedCandidates << "\n";
+            DebugTrace(oss.str());
+        }
+#endif
     }
 
     void SweetsManager::OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets)

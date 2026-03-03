@@ -2835,37 +2835,58 @@ void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
     {
         return;
     }
-    //徐々に上に移動したい
 
+    float deltaY = osaraMoveSpeed * ctx.dt;
+    if (deltaY > m_OsaraToAddRemaining)
+    {
+        deltaY = m_OsaraToAddRemaining;
+    }
 
-        float deltaY = osaraMoveSpeed * ctx.dt;
-     //   DebugTrace("deltaY = " + std::to_string(deltaY) + "\n");
-     //   DebugTrace("Remaining BEFORE = " + std::to_string(m_OsaraToAddRemaining) + "\n");
-        if (deltaY > m_OsaraToAddRemaining)
+    bool movedAnyOsara = false;
+    float movedMinX = std::numeric_limits<float>::max();
+    float movedMaxX = std::numeric_limits<float>::lowest();
+    float movedMinY = std::numeric_limits<float>::max();
+    float movedMaxY = std::numeric_limits<float>::lowest();
+
+    for (auto& obj : m_stageObjects)
+    {
+        if (!IsOsara(obj))
         {
-            deltaY = m_OsaraToAddRemaining;
+            continue;
         }
-        //  float moveY = guidelineDelta - deltaY;
 
-        for (auto& obj : m_stageObjects)
+        obj.baseY += deltaY;
+
+        if (obj.physicsEntity)
         {
-            if (!IsOsara(obj)) continue;
-
-            obj.baseY += deltaY;
-          //  obj.transform.position.y += deltaY;
-
-            //if (obj.physicsEntity)
-            //{
-            //    obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
-            //}
+            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+            obj.physicsEntity->SyncColliderBounds();
+            const AABB bounds = obj.physicsEntity->GetAABB();
+            movedMinX = std::min(movedMinX, bounds.min.x);
+            movedMaxX = std::max(movedMaxX, bounds.max.x);
+            movedMinY = std::min(movedMinY, bounds.min.y);
+            movedMaxY = std::max(movedMaxY, bounds.max.y);
         }
-        m_OsaraToAddRemaining -= deltaY;
-
-        if (m_OsaraToAddRemaining <= 0.0f)
+        else
         {
-      //      m_OsaraToAddRemaining = 0.0f;
-            m_isOsaraCounting = false;
+            movedMinX = std::min(movedMinX, obj.transform.position.x - 0.5f);
+            movedMaxX = std::max(movedMaxX, obj.transform.position.x + 0.5f);
+            movedMinY = std::min(movedMinY, obj.transform.position.y - 0.5f);
+            movedMaxY = std::max(movedMaxY, obj.transform.position.y + 0.5f);
         }
-  
-  
+
+        movedAnyOsara = true;
+    }
+
+    if (movedAnyOsara && m_sweetsManager)
+    {
+        m_sweetsManager->NotifyStageMoved(movedMinX, movedMaxX, movedMinY, movedMaxY, deltaY);
+    }
+
+    m_OsaraToAddRemaining -= deltaY;
+
+    if (m_OsaraToAddRemaining <= 0.0f)
+    {
+        m_isOsaraCounting = false;
+    }
 }

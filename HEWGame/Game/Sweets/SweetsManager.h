@@ -143,6 +143,7 @@ namespace SweetsSpace
         void SetCreamEnabled(bool enabled);
         int GetSweetsCount() const;
         void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
+        void NotifyStageMoved(float minX, float maxX, float minY, float maxY, float deltaY);
         bool GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const;
     private:
         Systems::DrawSystem* m_drawSystem;

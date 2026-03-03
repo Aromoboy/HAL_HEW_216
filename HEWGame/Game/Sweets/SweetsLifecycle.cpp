@@ -295,6 +295,31 @@ namespace SweetsSpace
             return;
         }
 
+        if (!m_pendingStateReevaluation.empty())
+        {
+            for (const auto& sweets : m_pendingStateReevaluation)
+            {
+                if (!sweets || sweets->IsPendingDestroy())
+                {
+                    continue;
+                }
+
+                auto lookup = m_registry->Lookup().find(sweets);
+                if (lookup == m_registry->Lookup().end())
+                {
+                    continue;
+                }
+
+                const SweetsState current = lookup->second;
+                const SweetsState desired = EvaluateState(*sweets, current, *m_contacts);
+                if (desired != current)
+                {
+                    stateChanges.push_back({ sweets, desired });
+                }
+            }
+            m_pendingStateReevaluation.clear();
+        }
+
         for (auto& entry : m_registry->MutableStateMap())
         {
             SweetsState bucketState = entry.first;
@@ -457,6 +482,16 @@ namespace SweetsSpace
         {
             RemoveSweetsEntry(entry.sweets, DeleteReason::Miss, "MissDespawn", true, &missBatch, entry.notifySpawner);
         }
+    }
+
+    void SweetsLifecycle::MarkForStateReevaluation(const std::shared_ptr<ActiveSweets>& sweets)
+    {
+        if (!sweets || sweets->IsPendingDestroy())
+        {
+            return;
+        }
+
+        m_pendingStateReevaluation.insert(sweets);
     }
 
     void SweetsLifecycle::OnLateUpdate(const Core::UpdateContext& ctx)

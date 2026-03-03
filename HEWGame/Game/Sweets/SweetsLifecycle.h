@@ -54,6 +54,7 @@ namespace SweetsSpace
         bool ReleaseCarriedSweets(const std::shared_ptr<ActiveSweets>& sweets);
 
         bool RegisterWithSystems(const std::shared_ptr<ActiveSweets>& sweets);
+        void MarkForStateReevaluation(const std::shared_ptr<ActiveSweets>& sweets);
         void RemoveSweetsEntry(const std::shared_ptr<ActiveSweets>& sweets,
             DeleteReason reason,
             const char* context,
@@ -89,5 +90,6 @@ namespace SweetsSpace
         bool m_hasVerticalBound{ false };
         float m_minVerticalBound{ 0.0f };
         std::unordered_set<ActiveSweets*> m_registeredPhysicsBodies;
+        std::unordered_set<std::shared_ptr<ActiveSweets>> m_pendingStateReevaluation;
     };
 }
