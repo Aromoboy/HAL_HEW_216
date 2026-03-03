@@ -553,8 +553,9 @@ void SceneComposer::ComposeUI(Composition& result)
             videoBg->SetBaseOffset01(result.stageData.GetBackgroundBaseOffset01());
             videoBg->SetScrollSpeed(result.stageData.GetBackgroundVideoScrollSpeed());
             videoBg->SetZoom(result.stageData.GetBackgroundVideoZoom());
-            // Keep gameplay video start anchored to the bottom (same orientation as other scenes).
-            videoBg->SetInvertY(false);
+            // Gameplay stage config treats backgroundBaseOffset01=1.0 as "start from bottom";
+            // keep Y inversion enabled so camera-driven scroll remains effective from that anchor.
+            videoBg->SetInvertY(true);
             result.backgroundRenderer = std::move(videoBg);
         }
     }
