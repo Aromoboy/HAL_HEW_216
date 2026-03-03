@@ -16,6 +16,7 @@
 #include "Scene.h"
 #include "SoundManagerEX.h" 
 #include "TitleScene.h"
+#include "SceneSlopeTest.h"
 #include "Defines.h"
 #include "ShaderList.h"
 #include "AppGame.h"
@@ -61,7 +62,7 @@ namespace
         void LogBootScenario()
         {
                 Diagnostics::LogInfo(
-                        "[Scenario] startup -> load TitleScene -> spawn 5-10 sweets -> single gameplay loop -> exit request");
+                        "[Scenario] startup -> load SceneSlopeTest -> (Cancel) TitleScene -> spawn 5-10 sweets -> single gameplay loop -> exit request");
                 Diagnostics::LogInfo(
                         "[Scenario] success: no hangs across 3 runs, platform visible, >=3 sweets types readable, player stable");
         }
@@ -182,7 +183,7 @@ HRESULT Init(HWND hWnd, UINT width, UINT height)
         // シーン
         g_sceneManager = std::make_unique<SceneSpace::SceneManager>(g_stepTimer, g_input, g_effectRenderer, g_effectManager);
         g_sceneManager->ConfigureRenderFade(g_renderFadeSettings, g_renderTransitionVideoSettings);
-        g_sceneManager->SetInitialScene(std::make_unique<TitleScene>(*g_sceneManager));
+        g_sceneManager->SetInitialScene(std::make_unique<SceneSlopeTest>(*g_sceneManager));
 
         LogBootScenario();
 
