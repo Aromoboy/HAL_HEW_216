@@ -550,6 +550,8 @@ void SceneComposer::ComposeUI(Composition& result)
                 result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap
                 ? VideoBackgroundRenderer::ScrollMode::Wrap
                 : VideoBackgroundRenderer::ScrollMode::Clamp);
+            // Gameplay camera climbs upward, so the visible window should begin at the video bottom.
+            videoBg->SetInvertY(true);
             result.backgroundRenderer = std::move(videoBg);
         }
     }
