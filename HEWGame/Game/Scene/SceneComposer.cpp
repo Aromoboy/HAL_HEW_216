@@ -555,6 +555,8 @@ void SceneComposer::ComposeUI(Composition& result)
             videoBg->SetZoom(result.stageData.GetBackgroundVideoZoom());
             // Keep gameplay video start anchored to the bottom (same orientation as other scenes).
             videoBg->SetInvertY(false);
+            // Gameplay wants "start from bottom and move upward" while preserving texture orientation.
+            videoBg->SetScrollDirection(-1.0f);
             result.backgroundRenderer = std::move(videoBg);
         }
     }
