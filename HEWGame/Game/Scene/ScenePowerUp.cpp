@@ -166,6 +166,11 @@ namespace SceneSpace
                 {
                     m_videoBackground.reset();
                 }
+                else
+                {
+                    m_videoBackground->SetInvertY(false);
+                    m_videoBackground->SetScroll01(0.0f);
+                }
                 return true;
         }
 
@@ -353,6 +358,8 @@ namespace SceneSpace
                 }
                 if (m_videoBackground)
                 {
+                    const auto& dxContext = GetDXContext();
+                    m_videoBackground->SetViewportSize(static_cast<float>(dxContext.GetWidth()), static_cast<float>(dxContext.GetHeight()));
                     m_videoBackground->Draw();
                 }
                 m_powerUpRenderer->DrawHud(*activeCamera);

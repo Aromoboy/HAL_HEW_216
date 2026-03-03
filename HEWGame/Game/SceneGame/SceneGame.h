@@ -93,6 +93,7 @@ public:
     void DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
     void DrawOverlay() override;
+    float GetVideoScroll01() const override;
     Systems::IPhysicsBinder* GetPhysicsBinder() override;
     Render::ModelRenderer* GetRenderer() override;
     Core::UpdateScheduler& GetScheduler() override;

@@ -67,6 +67,7 @@ namespace SceneSpace
         virtual void OnExit() {}
         virtual void OnTransitionBegin() {}
         virtual void OnTransitionEnd() {}
+        virtual float GetVideoScroll01() const { return 0.0f; }
     };
 
     class SceneManager
