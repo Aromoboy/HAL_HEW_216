@@ -251,6 +251,8 @@ namespace Stage
         result.backgroundScrollMode = BackgroundScrollMode::Clamp;
         result.backgroundBaseOffset01 = 0.0f;
         result.backgroundBaseOffsetPixels = 0.0f;
+        result.backgroundVideoScrollSpeed = 1.0f;
+        result.backgroundVideoZoom = 1.0f;
 
         for (const auto& entry : lines)
         {
@@ -1002,6 +1004,36 @@ namespace Stage
                 {
                     std::ostringstream oss;
                     oss << kLogPrefix << "Failed to parse backgroundBaseOffsetPixels on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundVideoScrollSpeed")
+            {
+                try
+                {
+                    result.backgroundVideoScrollSpeed = std::stof(rawValue);
+                    result.backgroundVideoScrollSpeedSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoScrollSpeed on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundVideoZoom")
+            {
+                try
+                {
+                    result.backgroundVideoZoom = std::stof(rawValue);
+                    result.backgroundVideoZoomSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoZoom on line " << lineNumber
                         << ": " << ex.what() << "\n";
                     result.parseError = true;
                 }

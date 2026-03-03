@@ -99,6 +99,10 @@ namespace Stage
         bool backgroundBaseOffset01Set = false;
         float backgroundBaseOffsetPixels = 0.0f;
         bool backgroundBaseOffsetPixelsSet = false;
+        float backgroundVideoScrollSpeed = 1.0f;
+        bool backgroundVideoScrollSpeedSet = false;
+        float backgroundVideoZoom = 1.0f;
+        bool backgroundVideoZoomSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);

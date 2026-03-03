@@ -447,6 +447,21 @@ void VideoBackgroundRenderer::SetScroll01(float scroll01)
     m_scroll01 = scroll01;
 }
 
+void VideoBackgroundRenderer::SetBaseOffset01(float baseOffset01)
+{
+    m_baseOffset01 = std::clamp(baseOffset01, 0.0f, 1.0f);
+}
+
+void VideoBackgroundRenderer::SetScrollSpeed(float scrollSpeed)
+{
+    m_scrollSpeed = std::max(0.0f, scrollSpeed);
+}
+
+void VideoBackgroundRenderer::SetZoom(float zoom)
+{
+    m_zoom = std::max(1.0f, zoom);
+}
+
 void VideoBackgroundRenderer::SetScrollMode(ScrollMode mode)
 {
     m_scrollMode = mode;
@@ -491,27 +506,36 @@ void VideoBackgroundRenderer::Draw()
             float uvW = visibleSourceWidth / sourceWidth;
             float uvH = visibleSourceHeight / sourceHeight;
 
+            const float zoom = std::max(1.0f, m_zoom);
+            uvW /= zoom;
+            uvH /= zoom;
+
             uvH = std::clamp(uvH, 0.0f, 1.0f);
             uvW = std::clamp(uvW, 0.0f, 1.0f);
 
             const float maxY = std::max(0.0f, 1.0f - uvH);
-            float uvY = 0.0f;
-            if (m_scrollMode == ScrollMode::Wrap && maxY > 0.0f)
+            const float maxX = std::max(0.0f, 1.0f - uvW);
+            const float baseOffset01 = m_invertY ? (1.0f - m_baseOffset01) : m_baseOffset01;
+            const float scaledScroll01 = baseOffset01 + (m_scroll01 * m_scrollSpeed);
+
+            float normalizedY = 0.0f;
+            if (m_scrollMode == ScrollMode::Wrap)
             {
-                const float wrapped = std::fmod(m_scroll01, 1.0f);
-                const float wrapped01 = wrapped < 0.0f ? wrapped + 1.0f : wrapped;
-                uvY = wrapped01 * maxY;
+                const float wrapped = std::fmod(scaledScroll01, 1.0f);
+                normalizedY = wrapped < 0.0f ? wrapped + 1.0f : wrapped;
             }
             else
             {
-                uvY = std::clamp(m_scroll01 * maxY, 0.0f, maxY);
+                normalizedY = std::clamp(scaledScroll01, 0.0f, 1.0f);
             }
+
+            float uvY = normalizedY * maxY;
             if (m_invertY)
             {
                 uvY = maxY - uvY;
             }
 
-            const float uvX = 0.5f * (1.0f - uvW);
+            const float uvX = 0.5f * maxX;
             uvTransform[0] = DirectX::XMFLOAT4(uvX, uvY, uvW, uvH);
 
             ++m_debugScrollLogFrameCounter;
@@ -528,6 +552,8 @@ void VideoBackgroundRenderer::Draw()
         }
     }
 
+    SetDepthTest(false);
+
     m_vertexShader->WriteBuffer(0, m_matrices);
     m_vertexShader->WriteBuffer(1, uvTransform);
     m_vertexShader->Bind();
@@ -536,6 +562,8 @@ void VideoBackgroundRenderer::Draw()
 
     SetSamplerState(SAMPLER_LINEAR);
     m_quad->Draw();
+
+    SetDepthTest(true);
 }
 
 void VideoBackgroundRenderer::Draw(const BackgroundLayerDrawContext& context)
@@ -569,6 +597,9 @@ void VideoBackgroundRenderer::Shutdown()
     m_viewportWidth = 0.0f;
     m_viewportHeight = 0.0f;
     m_scroll01 = 0.0f;
+    m_baseOffset01 = 0.0f;
+    m_scrollSpeed = 1.0f;
+    m_zoom = 1.0f;
     m_cameraY = 0.0f;
     m_debugScrollLogFrameCounter = 0;
     m_invertY = false;

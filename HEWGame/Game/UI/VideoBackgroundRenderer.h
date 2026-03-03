@@ -40,6 +40,9 @@ public:
     void SetAutoLoop(bool enabled);
     void SetViewportSize(float width, float height);
     void SetScroll01(float scroll01);
+    void SetBaseOffset01(float baseOffset01);
+    void SetScrollSpeed(float scrollSpeed);
+    void SetZoom(float zoom);
     void SetScrollMode(ScrollMode mode);
     void SetInvertY(bool invert);
     ID3D11ShaderResourceView* GetTexture() const;
@@ -69,6 +72,9 @@ private:
     float m_viewportWidth = 0.0f;
     float m_viewportHeight = 0.0f;
     float m_scroll01 = 0.0f;
+    float m_baseOffset01 = 0.0f;
+    float m_scrollSpeed = 1.0f;
+    float m_zoom = 1.0f;
     float m_cameraY = 0.0f;
     bool m_invertY = false;
     ScrollMode m_scrollMode = ScrollMode::Clamp;
