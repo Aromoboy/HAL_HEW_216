@@ -1247,7 +1247,7 @@ namespace SweetsSpace
         if (!descriptor)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "スポーン候補選びでスイーツタイプ '" << ToString(*chosenType)
+            oss << kLogPrefix << "スポーン候補選びでスイーツタイプ '" << ::SweetsSpace::ToString(*chosenType)
                 << "' のデスクリプタを見つけられなかったよ \n";
             DebugTrace(oss.str());
             return {};
@@ -1274,7 +1274,7 @@ namespace SweetsSpace
             bool first = true;
             for (const auto& entry : config.weights)
             {
-                oss << (first ? ' ' : ',') << ToString(entry.kind)
+                oss << (first ? ' ' : ',') << ::SweetsSpace::ToString(entry.kind)
                     << ':' << std::fixed << std::setprecision(2) << entry.weight;
                 first = false;
             }
@@ -1368,7 +1368,7 @@ namespace SweetsSpace
 
             std::ostringstream resolved;
             resolved << kLogPrefix << "[SpawnWeights] key='" << entry.first << "' -> type="
-                << ToString(*resolvedType) << " weight=" << spawnWeight << "\n";
+                << ::SweetsSpace::ToString(*resolvedType) << " weight=" << spawnWeight << "\n";
             Diagnostics::LogInfo(resolved.str());
 
             weights.push_back({ *resolvedType, spawnWeight });
@@ -1788,7 +1788,7 @@ namespace SweetsSpace
         warn << kLogPrefix << "[Spawn] 登録済みの種類に weight が足りないよ:";
         for (auto missing : missingTypes)
         {
-            warn << ' ' << ToString(missing);
+            warn << ' ' << ::SweetsSpace::ToString(missing);
         }
         warn << " (registered=" << registeredKindsNormalized.size()
             << " configured=" << presentNormalized.size() << ")\n";
@@ -1809,10 +1809,10 @@ namespace SweetsSpace
             }
 
             config.weights.push_back({ missing, fallbackWeight });
-            presentNormalized.insert(NormalizeKey(ToString(missing)));
+            presentNormalized.insert(NormalizeKey(::SweetsSpace::ToString(missing)));
 
             std::ostringstream added;
-            added << kLogPrefix << "[Spawn] 不足してた種類 '" << ToString(missing)
+            added << kLogPrefix << "[Spawn] 不足してた種類 '" << ::SweetsSpace::ToString(missing)
                 << "' をフォールバック weight=" << std::fixed << std::setprecision(2) << fallbackWeight
                 << " で自動追加したよ (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
             DebugTrace(added.str());
