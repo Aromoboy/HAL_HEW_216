@@ -5,6 +5,7 @@
 #include "Core/IUpdatable.h"
 #include "VideoBackgroundRenderer.h"
 #include "DirectX.h"
+#include "AppGame.h"
 
 #include <cassert>
 #include <algorithm>
@@ -337,7 +338,7 @@ namespace SceneSpace
         }
 
         ScopedTransitionVideoOverlayState overlayStateGuard(GetContext());
-        const auto& dxContext = GetDXContext();
+        const auto& dxContext = App::Game::Instance().GetDXContext();
         m_transitionVideo->SetViewportSize(static_cast<float>(dxContext.GetWidth()), static_cast<float>(dxContext.GetHeight()));
         m_transitionVideo->Draw();
     }
