@@ -481,18 +481,19 @@ void VideoBackgroundRenderer::Draw()
 
     if (validViewport && validSource)
     {
-        const float scale = std::max(sourceWidth / viewportWidth, sourceHeight / viewportHeight);
-        if (std::isfinite(scale) && scale > 0.0f)
+        const float coverScale = std::max(viewportWidth / sourceWidth, viewportHeight / sourceHeight);
+        if (std::isfinite(coverScale) && coverScale > 0.0f)
         {
-            float uvH = (sourceHeight / scale) / viewportHeight;
-            float uvW = (sourceWidth / scale) / viewportWidth;
+            const float visibleSourceWidth = viewportWidth / coverScale;
+            const float visibleSourceHeight = viewportHeight / coverScale;
+
+            float uvW = visibleSourceWidth / sourceWidth;
+            float uvH = visibleSourceHeight / sourceHeight;
 
             uvH = std::clamp(uvH, 0.0f, 1.0f);
             uvW = std::clamp(uvW, 0.0f, 1.0f);
 
             const float maxY = std::max(0.0f, 1.0f - uvH);
-            const float maxX = std::max(0.0f, 1.0f - uvW);
-
             float uvY = 0.0f;
             if (m_scrollMode == ScrollMode::Wrap && maxY > 0.0f)
             {
@@ -509,7 +510,7 @@ void VideoBackgroundRenderer::Draw()
                 uvY = maxY - uvY;
             }
 
-            const float uvX = 0.5f * maxX;
+            const float uvX = 0.5f * (1.0f - uvW);
             uvTransform[0] = DirectX::XMFLOAT4(uvX, uvY, uvW, uvH);
         }
     }
