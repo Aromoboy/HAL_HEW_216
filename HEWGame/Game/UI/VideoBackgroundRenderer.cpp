@@ -1,4 +1,4 @@
-#include "VideoBackgroundRenderer.h"
+﻿#include "VideoBackgroundRenderer.h"
 
 #include <algorithm>
 #include <array>
@@ -9,8 +9,6 @@
 
 #include "DirectX.h"
 #include "Diagnostics/Logger.h"
-
-#include "DirectX.h"
 
 // MF API usage copied and adapted from mediafoundationsamples\MFMP4ToYUVWithoutMFT
 #include <mfapi.h>
