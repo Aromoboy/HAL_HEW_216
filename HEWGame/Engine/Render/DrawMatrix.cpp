@@ -1,6 +1,19 @@
 #include "DrawMatrix.h"
 #include "Defines.h"
 
+DirectX::XMFLOAT4X4 DrawMatrix::ToGpuMatrix(const DirectX::XMMATRIX& matrix, bool transpose)
+{
+	DirectX::XMMATRIX mat = matrix;
+	if (transpose)
+	{
+		mat = DirectX::XMMatrixTranspose(mat);
+	}
+
+	DirectX::XMFLOAT4X4 out{};
+	DirectX::XMStoreFloat4x4(&out, mat);
+	return out;
+}
+
 void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4 &a_fMat, const float3& a_fPos, const float3& a_fScale, const float3& a_fAngle, bool a_bTranspose)
 {
 	// 各トランスフォームの行列を作成
@@ -13,11 +26,7 @@ void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4 &a_fMat, const float3& a_
 
 	// 行列をかけ合わせる
 	DirectX::XMMATRIX mat = S * Rx * Ry * Rz * T;
-	// GPU用に配列を変換
-	if (a_bTranspose) mat = DirectX::XMMatrixTranspose(mat);
-
-	// 描画用の配列を代入
-	DirectX::XMStoreFloat4x4(&a_fMat, mat);
+	a_fMat = ToGpuMatrix(mat, a_bTranspose);
 }
 
 void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_fPos, const float3& a_fScale, const float3& a_fAngle, DirectX::XMMATRIX a_fBone, bool a_bTranspose)
@@ -35,11 +44,7 @@ void DrawMatrix::CreateWorldMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_
 
 	// ボーンの動きを掛け合わせる
 	mat *= a_fBone;
-	// GPU用に配列を変換
-	if (a_bTranspose) mat = DirectX::XMMatrixTranspose(mat);
-
-	// 描画用の配列を代入
-	DirectX::XMStoreFloat4x4(&a_fMat, mat);
+	a_fMat = ToGpuMatrix(mat, a_bTranspose);
 }
 
 
@@ -65,12 +70,7 @@ void DrawMatrix::CreateViewMatrix(DirectX::XMFLOAT4X4& a_fMat, const float3& a_f
         }
 
         DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(eye, focus, up);
-        if (a_bTranspose)
-        {
-                view = DirectX::XMMatrixTranspose(view);
-        }
-
-        DirectX::XMStoreFloat4x4(&a_fMat, view);
+        a_fMat = ToGpuMatrix(view, a_bTranspose);
 }
 void DrawMatrix::CreateProjectionMatrix(DirectX::XMFLOAT4X4& a_fMat, const float a_fFovAngleY, const float AspectRatio, const float NearZ, const float FarZ, bool a_bTranspose)
 {
@@ -100,10 +100,5 @@ void DrawMatrix::CreateProjectionMatrix(DirectX::XMFLOAT4X4& a_fMat, const float
         }
 
         DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH(fov, aspect, nearPlane, farPlane);
-        if (a_bTranspose)
-        {
-                proj = DirectX::XMMatrixTranspose(proj);
-        }
-
-        DirectX::XMStoreFloat4x4(&a_fMat, proj);
+        a_fMat = ToGpuMatrix(proj, a_bTranspose);
 }

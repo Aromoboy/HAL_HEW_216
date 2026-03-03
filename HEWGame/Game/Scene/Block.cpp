@@ -1,18 +1,9 @@
 #include "Block.h"
 
 #include "Geometory.h"
+#include "DrawMatrix.h"
 
 using namespace DirectX;
-
-namespace
-{
-    XMFLOAT4X4 ToFloat4x4(const XMMATRIX& matrix)
-    {
-        XMFLOAT4X4 out{};
-        XMStoreFloat4x4(&out, matrix);
-        return out;
-    }
-}
 
 Block::Block(const XMFLOAT3& size)
 {
@@ -108,6 +99,6 @@ void Block::Draw() const
     XMMATRIX mRotY = XMMatrixRotationY(m_rotate.y);
     XMMATRIX mRotZ = XMMatrixRotationZ(m_rotate.z);
     XMMATRIX mTrans = XMMatrixTranslation(m_pos.x, m_pos.y, m_pos.z);
-    Geometory::SetWorld(ToFloat4x4(mScale * mRotX * mRotY * mRotZ * mTrans));
+    Geometory::SetWorld(DrawMatrix::ToGpuMatrix(mScale * mRotX * mRotY * mRotZ * mTrans));
     Geometory::DrawBox();
 }

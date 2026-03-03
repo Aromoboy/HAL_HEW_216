@@ -42,6 +42,8 @@ void Geometory::Uninit()
 
 void Geometory::SetWorld(DirectX::XMFLOAT4X4 world)
 {
+	// NOTE: world must already follow the constant-buffer transpose policy
+	// (use DrawMatrix::ToGpuMatrix(...) at call sites).
 	m_WVP[0] = world;
 }
 void Geometory::SetView(DirectX::XMFLOAT4X4 view)
