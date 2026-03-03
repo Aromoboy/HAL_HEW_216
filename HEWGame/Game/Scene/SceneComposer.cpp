@@ -551,7 +551,9 @@ void SceneComposer::ComposeUI(Composition& result)
                 ? VideoBackgroundRenderer::ScrollMode::Wrap
                 : VideoBackgroundRenderer::ScrollMode::Clamp);
             videoBg->SetBaseOffset01(result.stageData.GetBackgroundBaseOffset01());
+            videoBg->SetBaseOffsetPixels(result.stageData.GetBackgroundBaseOffsetPixels());
             videoBg->SetScrollSpeed(result.stageData.GetBackgroundVideoScrollSpeed());
+            videoBg->SetParallaxFactor(result.stageData.GetBackgroundVideoParallaxFactor());
             videoBg->SetZoom(result.stageData.GetBackgroundVideoZoom());
             // Keep gameplay video start anchored to the bottom (same orientation as other scenes).
             videoBg->SetInvertY(false);

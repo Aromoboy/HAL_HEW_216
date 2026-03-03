@@ -251,6 +251,7 @@ namespace Stage
         float backgroundBaseOffset01 = parsed.backgroundBaseOffset01;
         float backgroundBaseOffsetPixels = parsed.backgroundBaseOffsetPixels;
         float backgroundVideoScrollSpeed = parsed.backgroundVideoScrollSpeed;
+        float backgroundVideoParallaxFactor = parsed.backgroundVideoParallaxFactor;
         float backgroundVideoZoom = parsed.backgroundVideoZoom;
 
         if (!planeZSet)
@@ -416,6 +417,11 @@ namespace Stage
         if (!parsed.backgroundVideoScrollSpeedSet)
         {
             backgroundVideoScrollSpeed = 1.0f;
+        }
+
+        if (!parsed.backgroundVideoParallaxFactorSet)
+        {
+            backgroundVideoParallaxFactor = 1.0f;
         }
 
         if (!parsed.backgroundVideoZoomSet)
@@ -1035,6 +1041,7 @@ namespace Stage
         normalized.backgroundBaseOffset01 = backgroundBaseOffset01;
         normalized.backgroundBaseOffsetPixels = backgroundBaseOffsetPixels;
         normalized.backgroundVideoScrollSpeed = std::max(0.0f, backgroundVideoScrollSpeed);
+        normalized.backgroundVideoParallaxFactor = std::clamp(backgroundVideoParallaxFactor, 0.0f, 8.0f);
         normalized.backgroundVideoZoom = std::max(1.0f, backgroundVideoZoom);
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
@@ -1092,6 +1099,7 @@ namespace Stage
         normalized.backgroundBaseOffset01 = 0.0f;
         normalized.backgroundBaseOffsetPixels = 0.0f;
         normalized.backgroundVideoScrollSpeed = 1.0f;
+        normalized.backgroundVideoParallaxFactor = 1.0f;
         normalized.backgroundVideoZoom = 1.0f;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;

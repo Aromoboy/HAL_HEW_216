@@ -101,6 +101,8 @@ namespace Stage
         bool backgroundBaseOffsetPixelsSet = false;
         float backgroundVideoScrollSpeed = 1.0f;
         bool backgroundVideoScrollSpeedSet = false;
+        float backgroundVideoParallaxFactor = 1.0f;
+        bool backgroundVideoParallaxFactorSet = false;
         float backgroundVideoZoom = 1.0f;
         bool backgroundVideoZoomSet = false;
     };
