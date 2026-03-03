@@ -233,7 +233,16 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " guidelineTimeBonusSeconds=" << result.stageData.GetGuidelineTimeBonusSeconds()
             << " guidelineMilestoneBonusSeconds=" << result.stageData.GetGuidelineMilestoneBonusSeconds()
             << " guidelineMilestoneInterval=" << result.stageData.GetGuidelineMilestoneInterval()
-            << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
+            << " background='" << result.stageData.GetBackgroundTexturePath() << "'"
+            << " backgroundVideoPath='" << result.stageData.GetBackgroundVideoPath() << "'"
+            << " backgroundScrollMode="
+            << (result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap ? "wrap" : "clamp")
+            << " backgroundBaseOffset01=" << result.stageData.GetBackgroundBaseOffset01()
+            << " backgroundBaseOffsetPixels=" << result.stageData.GetBackgroundBaseOffsetPixels()
+            << " backgroundVideoScrollSpeed=" << result.stageData.GetBackgroundVideoScrollSpeed()
+            << " backgroundVideoParallaxFactor=" << result.stageData.GetBackgroundVideoParallaxFactor()
+            << " backgroundVideoZoom=" << result.stageData.GetBackgroundVideoZoom()
+            << "\n";
         for (std::size_t i = 0; i < result.stageData.GetPlatformCount(); ++i)
         {
             const auto& descriptor = result.stageData.GetPlatform(i);
@@ -557,9 +566,30 @@ void SceneComposer::ComposeUI(Composition& result)
             videoBg->SetZoom(result.stageData.GetBackgroundVideoZoom());
             videoBg->SetClampEdgeReleaseEnabled(result.stageData.IsBackgroundVideoClampEdgeReleaseEnabled());
             // Keep gameplay video start anchored to the bottom (same orientation as other scenes).
-            videoBg->SetInvertY(false);
+            constexpr bool kVideoInvertY = false;
+            videoBg->SetInvertY(kVideoInvertY);
             // Gameplay wants "start from bottom and move upward" while preserving texture orientation.
-            videoBg->SetScrollDirection(-1.0f);
+            constexpr float kVideoScrollDirection = -1.0f;
+            videoBg->SetScrollDirection(kVideoScrollDirection);
+
+            const std::string& stageConfigSource = result.stageData.GetSourcePath();
+            const char* effectiveStageConfigPath = stageConfigSource.empty() ? kGameplayConfigPath : stageConfigSource.c_str();
+            std::ostringstream appliedVideoParamsLog;
+            appliedVideoParamsLog << kLogPrefix
+                << "[VideoBackground] Applied params configPath='" << effectiveStageConfigPath << "'"
+                << " backgroundVideoPath='" << backgroundVideo << "'"
+                << " scrollMode="
+                << (result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap ? "wrap" : "clamp")
+                << " baseOffset01=" << result.stageData.GetBackgroundBaseOffset01()
+                << " baseOffsetPixels=" << result.stageData.GetBackgroundBaseOffsetPixels()
+                << " scrollSpeed=" << result.stageData.GetBackgroundVideoScrollSpeed()
+                << " parallaxFactor=" << result.stageData.GetBackgroundVideoParallaxFactor()
+                << " zoom=" << result.stageData.GetBackgroundVideoZoom()
+                << " scrollDirection=" << kVideoScrollDirection
+                << " invertY=" << (kVideoInvertY ? "true" : "false")
+                << "\n";
+            DebugTrace(appliedVideoParamsLog.str());
+
             result.backgroundRenderer = std::move(videoBg);
         }
     }
