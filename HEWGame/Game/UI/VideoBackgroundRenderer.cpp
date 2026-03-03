@@ -33,6 +33,8 @@ namespace
     constexpr float kDeadRangeInputEpsilon = 1.0e-4f;
     constexpr float kDeadRangeOutputEpsilon = 1.0e-5f;
     constexpr float kClampEdgeReleaseEpsilon = 1.0e-4f;
+    constexpr float kDecodeMinFps = 5.0f;
+    constexpr float kDecodeMaxFps = 60.0f;
 
     void LogVideoError(const char* step, HRESULT hr)
     {
@@ -309,6 +311,9 @@ bool VideoBackgroundRenderer::Initialize(ID3D11Device* device,
         return false;
     }
 
+    m_decodeAccumulator = 0.0f;
+    SetDecodeMaxFps(30.0f);
+
     m_ready = true;
     return true;
 }
@@ -326,7 +331,19 @@ void VideoBackgroundRenderer::Update(float dt)
         return;
     }
 
-    mf.clockTime += dt;
+    if (std::isfinite(dt) && dt > 0.0f)
+    {
+        m_decodeAccumulator += dt;
+    }
+
+    if (m_decodeAccumulator < m_decodeIntervalSeconds)
+    {
+        return;
+    }
+
+    m_decodeAccumulator -= m_decodeIntervalSeconds;
+
+    mf.clockTime += m_decodeIntervalSeconds;
     const LONGLONG uct = static_cast<LONGLONG>(mf.clockTime * kMfTimeBase);
     if (uct < mf.videoTime)
     {
@@ -506,6 +523,16 @@ void VideoBackgroundRenderer::SetClampEdgeReleaseEnabled(bool enabled)
 void VideoBackgroundRenderer::SetInvertY(bool invert)
 {
     m_invertY = invert;
+}
+
+void VideoBackgroundRenderer::SetDecodeMaxFps(float fps)
+{
+    const float clampedFps = std::clamp(std::isfinite(fps) ? fps : 30.0f, kDecodeMinFps, kDecodeMaxFps);
+    m_decodeIntervalSeconds = 1.0f / clampedFps;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "decode target fps=" << clampedFps;
+    Diagnostics::LogInfo(oss.str());
 }
 
 ID3D11ShaderResourceView* VideoBackgroundRenderer::GetTexture() const
@@ -733,6 +760,8 @@ void VideoBackgroundRenderer::Shutdown()
     m_lastDeadRangeNormalizedY = 0.0f;
     m_deadRangeFrameStreak = 0;
     m_deadRangeStateInitialized = false;
+    m_decodeAccumulator = 0.0f;
+    m_decodeIntervalSeconds = 1.0f / 30.0f;
     m_enableClampEdgeRelease = true;
     m_clampEdgeReleaseArmed = false;
     m_invertY = false;

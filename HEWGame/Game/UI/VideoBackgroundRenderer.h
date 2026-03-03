@@ -49,6 +49,7 @@ public:
     void SetScrollMode(ScrollMode mode);
     void SetClampEdgeReleaseEnabled(bool enabled);
     void SetInvertY(bool invert);
+    void SetDecodeMaxFps(float fps);
     ID3D11ShaderResourceView* GetTexture() const;
     void Draw();
     void Draw(const BackgroundLayerDrawContext& context) override;
@@ -95,5 +96,7 @@ private:
     float m_lastDeadRangeNormalizedY = 0.0f;
     uint32_t m_deadRangeFrameStreak = 0;
     bool m_deadRangeStateInitialized = false;
+    float m_decodeAccumulator = 0.0f;
+    float m_decodeIntervalSeconds = 1.0f / 30.0f;
     bool m_mfStarted = false;
 };
