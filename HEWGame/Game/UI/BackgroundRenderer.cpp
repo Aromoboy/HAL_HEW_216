@@ -185,10 +185,12 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         return;
     }
 
+    std::size_t layerIndex = 0;
     for (const auto& layer : m_layers)
     {
         if (!layer.texture)
         {
+            ++layerIndex;
             continue;
         }
 
@@ -198,6 +200,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         if (!hasViewport)
         {
             Diagnostics::LogInfo("[BackgroundRenderer] Viewport size unavailable; skipping background layer.");
+            ++layerIndex;
             continue;
         }
 
@@ -231,6 +234,14 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
             layer.config.baseOffset01,
             layer.config.baseOffsetPixels,
             layerPixelsPerUnit);
+        {
+            std::ostringstream drawLog;
+            drawLog << "[BackgroundRenderer] Draw layer=" << layerIndex
+                << " scrollOffset=" << scrollOffset
+                << " adjustedScrollOffset=" << adjustedScrollOffset
+                << " v0=" << window.v0;
+            Diagnostics::LogInfo(drawLog.str());
+        }
         Sprite::SetUVPos({ window.u0, window.v0 });
         if (!(window.scaleX == 1.0f && window.scaleY == 1.0f))
         {
@@ -238,6 +249,7 @@ void BackgroundRenderer::Draw(float scrollOffset, float pixelsPerUnit) const
         }
         Sprite::SetColor(layer.config.tintColor);
         Sprite::Draw();
+        ++layerIndex;
     }
 
     SetSamplerState(SAMPLER_LINEAR);

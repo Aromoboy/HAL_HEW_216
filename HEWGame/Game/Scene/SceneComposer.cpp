@@ -558,11 +558,12 @@ void SceneComposer::ComposeUI(Composition& result)
     else if (!backgroundTexture.empty())
     {
         // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
-        constexpr float kDefaultBackgroundParallax = 0.0001f;
+        constexpr float kDefaultBackgroundParallax = 0.05f;
         BackgroundRendererConfig backgroundConfig{};
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;
+        layer.invertScroll = false;
         // backgroundBaseOffset01 is normalized in [0..1], and pixel-precise anchoring can be
         // provided via gameplay.cfg using backgroundBaseOffsetPixels.
         layer.scrollOffsetInPixels = true;
