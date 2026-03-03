@@ -3,6 +3,7 @@
 struct BackgroundLayerDrawContext
 {
     float worldScrollOffset = 0.0f;
+    float cameraY = 0.0f;
     float pixelsPerUnit = 1.0f;
     float viewportWidth = 0.0f;
     float viewportHeight = 0.0f;

@@ -69,8 +69,10 @@ private:
     float m_viewportWidth = 0.0f;
     float m_viewportHeight = 0.0f;
     float m_scroll01 = 0.0f;
+    float m_cameraY = 0.0f;
     bool m_invertY = false;
     ScrollMode m_scrollMode = ScrollMode::Clamp;
     bool m_ready = false;
+    uint32_t m_debugScrollLogFrameCounter = 0;
     bool m_mfStarted = false;
 };
