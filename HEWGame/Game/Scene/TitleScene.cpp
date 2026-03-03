@@ -12,7 +12,7 @@
 #include "SceneManager.h"
 #include "TitleRenderer.h"
 #include "SceneResult.h"
- 
+#include "SoundManagerEX.h"
 #include <memory>
 
 int s_TitleBGMHandle = -1;
