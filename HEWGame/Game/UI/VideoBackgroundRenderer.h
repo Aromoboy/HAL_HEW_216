@@ -7,6 +7,7 @@
 
 #include <DirectXMath.h>
 #include <d3d11.h>
+#include <d3d11_1.h>
 #include <wrl/client.h>
 
 #include "IBackgroundLayerRenderer.h"
@@ -60,6 +61,7 @@ private:
     bool CreateFullScreenQuad();
     bool LoadShaders(const ShaderPaths& shader);
     bool CreateVideoTexture(uint32_t width, uint32_t height);
+    bool UpdateTextureFromNV12(const uint8_t* data, size_t dataSize);
     bool UpdateTextureFromIYUV(const uint8_t* data, size_t dataSize);
 
     ID3D11Device* m_device = nullptr;
@@ -70,6 +72,8 @@ private:
     DirectX::XMFLOAT4X4 m_matrices[3]{};
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_srv;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_srvChroma;
+    Microsoft::WRL::ComPtr<ID3D11Device1> m_device1;
     std::unique_ptr<DecoderState> m_decoder;
     uint32_t m_frameWidth = 0;
     uint32_t m_frameHeight = 0;
@@ -96,4 +100,8 @@ private:
     uint32_t m_deadRangeFrameStreak = 0;
     bool m_deadRangeStateInitialized = false;
     bool m_mfStarted = false;
+    bool m_useNv12Path = false;
+    bool m_nv12Supported = false;
+    float m_updateCpuMsAccum = 0.0f;
+    uint32_t m_updateCpuSampleCount = 0;
 };
