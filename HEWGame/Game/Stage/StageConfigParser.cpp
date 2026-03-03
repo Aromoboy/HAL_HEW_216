@@ -1054,6 +1054,22 @@ namespace Stage
                     result.parseError = true;
                 }
             }
+            else if (key == "backgroundVideoClampEdgeRelease")
+            {
+                bool parsedValue = false;
+                if (!TryParseBool(rawValue, parsedValue))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoClampEdgeRelease on line " << lineNumber
+                        << ": expected true/false but got '" << rawValue << "'.\n";
+                    result.parseError = true;
+                }
+                else
+                {
+                    result.backgroundVideoClampEdgeRelease = parsedValue;
+                    result.backgroundVideoClampEdgeReleaseSet = true;
+                }
+            }
             else
             {
                 std::ostringstream oss;

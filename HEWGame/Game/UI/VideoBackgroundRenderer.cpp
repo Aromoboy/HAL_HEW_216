@@ -497,6 +497,12 @@ void VideoBackgroundRenderer::SetScrollMode(ScrollMode mode)
     m_scrollMode = mode;
 }
 
+void VideoBackgroundRenderer::SetClampEdgeReleaseEnabled(bool enabled)
+{
+    m_enableClampEdgeRelease = enabled;
+    m_clampEdgeReleaseArmed = false;
+}
+
 void VideoBackgroundRenderer::SetInvertY(bool invert)
 {
     m_invertY = invert;
@@ -576,7 +582,12 @@ void VideoBackgroundRenderer::Draw()
                 && std::fabs(offsetAppliedScrollPx - m_lastDeadRangeInputScroll01) > kDeadRangeInputEpsilon;
             const bool outputChanged = hasDeadRangeHistory
                 && std::fabs(normalizedY - m_lastDeadRangeNormalizedY) > kDeadRangeOutputEpsilon;
-            const bool clampOutputStuck = (m_scrollMode == ScrollMode::Clamp) && inputChanged && !outputChanged;
+            if (!m_clampEdgeReleaseArmed && std::fabs(m_worldScrollOffset) > kDeadRangeInputEpsilon)
+            {
+                m_clampEdgeReleaseArmed = true;
+            }
+            const bool clampEdgeReleaseActive = m_enableClampEdgeRelease && m_clampEdgeReleaseArmed;
+            const bool clampOutputStuck = (m_scrollMode == ScrollMode::Clamp) && clampEdgeReleaseActive && inputChanged && !outputChanged;
 
             if (clampOutputStuck)
             {
@@ -598,7 +609,8 @@ void VideoBackgroundRenderer::Draw()
                     << " normalizedY=" << normalizedY
                     << " speed=" << m_scrollSpeed
                     << " direction=" << m_scrollDirection
-                    << " baseOffset01=" << baseOffset01;
+                    << " baseOffset01=" << baseOffset01
+                    << " clampEdgeReleaseArmed=" << (m_clampEdgeReleaseArmed ? "true" : "false");
                 Diagnostics::LogInfo(clampWarn.str());
             }
 
@@ -721,6 +733,8 @@ void VideoBackgroundRenderer::Shutdown()
     m_lastDeadRangeNormalizedY = 0.0f;
     m_deadRangeFrameStreak = 0;
     m_deadRangeStateInitialized = false;
+    m_enableClampEdgeRelease = true;
+    m_clampEdgeReleaseArmed = false;
     m_invertY = false;
 }
 

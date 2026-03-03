@@ -280,6 +280,11 @@ namespace Stage
         return m_backgroundVideoZoom;
     }
 
+    bool StageData::IsBackgroundVideoClampEdgeReleaseEnabled() const noexcept
+    {
+        return m_backgroundVideoClampEdgeRelease;
+    }
+
     void StageData::ApplyDefaults()
     {
         const StageConfigNormalized defaults = BuildDefaultStageConfig();
@@ -330,6 +335,7 @@ namespace Stage
         m_backgroundVideoScrollSpeed = normalized.backgroundVideoScrollSpeed;
         m_backgroundVideoParallaxFactor = normalized.backgroundVideoParallaxFactor;
         m_backgroundVideoZoom = normalized.backgroundVideoZoom;
+        m_backgroundVideoClampEdgeRelease = normalized.backgroundVideoClampEdgeRelease;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
     }
@@ -373,6 +379,7 @@ namespace Stage
             << " backgroundVideoScrollSpeed=" << m_backgroundVideoScrollSpeed
             << " backgroundVideoParallaxFactor=" << m_backgroundVideoParallaxFactor
             << " backgroundVideoZoom=" << m_backgroundVideoZoom
+            << " backgroundVideoClampEdgeRelease=" << (m_backgroundVideoClampEdgeRelease ? "true" : "false")
             << " detail=" << detail << "\n";
 
         for (std::size_t i = 0; i < m_platforms.size(); ++i)

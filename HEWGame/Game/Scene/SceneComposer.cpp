@@ -555,6 +555,7 @@ void SceneComposer::ComposeUI(Composition& result)
             videoBg->SetScrollSpeed(result.stageData.GetBackgroundVideoScrollSpeed());
             videoBg->SetParallaxFactor(result.stageData.GetBackgroundVideoParallaxFactor());
             videoBg->SetZoom(result.stageData.GetBackgroundVideoZoom());
+            videoBg->SetClampEdgeReleaseEnabled(result.stageData.IsBackgroundVideoClampEdgeReleaseEnabled());
             // Keep gameplay video start anchored to the bottom (same orientation as other scenes).
             videoBg->SetInvertY(false);
             // Gameplay wants "start from bottom and move upward" while preserving texture orientation.

@@ -105,6 +105,8 @@ namespace Stage
         bool backgroundVideoParallaxFactorSet = false;
         float backgroundVideoZoom = 1.0f;
         bool backgroundVideoZoomSet = false;
+        bool backgroundVideoClampEdgeRelease = false;
+        bool backgroundVideoClampEdgeReleaseSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);

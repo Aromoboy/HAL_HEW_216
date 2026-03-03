@@ -47,6 +47,7 @@ public:
     void SetScrollDirection(float dir);
     void SetZoom(float zoom);
     void SetScrollMode(ScrollMode mode);
+    void SetClampEdgeReleaseEnabled(bool enabled);
     void SetInvertY(bool invert);
     ID3D11ShaderResourceView* GetTexture() const;
     void Draw();
@@ -84,6 +85,8 @@ private:
     float m_cameraY = 0.0f;
     float m_worldScrollOffset = 0.0f;
     float m_pixelsPerUnit = 1.0f;
+    bool m_enableClampEdgeRelease = true;
+    bool m_clampEdgeReleaseArmed = false;
     bool m_invertY = false;
     ScrollMode m_scrollMode = ScrollMode::Clamp;
     bool m_ready = false;
