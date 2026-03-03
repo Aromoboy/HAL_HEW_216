@@ -50,6 +50,8 @@ namespace Stage
         BackgroundScrollMode backgroundScrollMode = BackgroundScrollMode::Clamp;
         float backgroundBaseOffset01 = 0.0f;
         float backgroundBaseOffsetPixels = 0.0f;
+        float backgroundVideoScrollSpeed = 1.0f;
+        float backgroundVideoZoom = 1.0f;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;

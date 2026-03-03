@@ -265,6 +265,16 @@ namespace Stage
         return m_backgroundBaseOffsetPixels;
     }
 
+    float StageData::GetBackgroundVideoScrollSpeed() const noexcept
+    {
+        return m_backgroundVideoScrollSpeed;
+    }
+
+    float StageData::GetBackgroundVideoZoom() const noexcept
+    {
+        return m_backgroundVideoZoom;
+    }
+
     void StageData::ApplyDefaults()
     {
         const StageConfigNormalized defaults = BuildDefaultStageConfig();
@@ -312,6 +322,8 @@ namespace Stage
         m_backgroundScrollMode = normalized.backgroundScrollMode;
         m_backgroundBaseOffset01 = normalized.backgroundBaseOffset01;
         m_backgroundBaseOffsetPixels = normalized.backgroundBaseOffsetPixels;
+        m_backgroundVideoScrollSpeed = normalized.backgroundVideoScrollSpeed;
+        m_backgroundVideoZoom = normalized.backgroundVideoZoom;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
     }
@@ -351,6 +363,9 @@ namespace Stage
             << " guidelineMilestoneBonusSeconds=" << m_guidelineMilestoneBonusSeconds
             << " guidelineMilestoneInterval=" << m_guidelineMilestoneInterval
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
+            << " backgroundVideo='" << m_backgroundVideoPath << "'"
+            << " backgroundVideoScrollSpeed=" << m_backgroundVideoScrollSpeed
+            << " backgroundVideoZoom=" << m_backgroundVideoZoom
             << " detail=" << detail << "\n";
 
         for (std::size_t i = 0; i < m_platforms.size(); ++i)

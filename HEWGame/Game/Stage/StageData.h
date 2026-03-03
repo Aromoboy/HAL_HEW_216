@@ -76,6 +76,8 @@ namespace Stage
         BackgroundScrollMode GetBackgroundScrollMode() const noexcept;
         float GetBackgroundBaseOffset01() const noexcept;
         float GetBackgroundBaseOffsetPixels() const noexcept;
+        float GetBackgroundVideoScrollSpeed() const noexcept;
+        float GetBackgroundVideoZoom() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -124,5 +126,7 @@ namespace Stage
         BackgroundScrollMode m_backgroundScrollMode = BackgroundScrollMode::Clamp;
         float m_backgroundBaseOffset01 = 0.0f;
         float m_backgroundBaseOffsetPixels = 0.0f;
+        float m_backgroundVideoScrollSpeed = 1.0f;
+        float m_backgroundVideoZoom = 1.0f;
     };
 }
