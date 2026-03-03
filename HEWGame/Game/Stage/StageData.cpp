@@ -255,6 +255,16 @@ namespace Stage
         return m_backgroundScrollMode;
     }
 
+    float StageData::GetBackgroundBaseOffset01() const noexcept
+    {
+        return m_backgroundBaseOffset01;
+    }
+
+    float StageData::GetBackgroundBaseOffsetPixels() const noexcept
+    {
+        return m_backgroundBaseOffsetPixels;
+    }
+
     void StageData::ApplyDefaults()
     {
         const StageConfigNormalized defaults = BuildDefaultStageConfig();
@@ -300,6 +310,8 @@ namespace Stage
         m_backgroundVideoPath = normalized.backgroundVideoPath;
         m_backgroundVideoAutoLoop = normalized.backgroundVideoAutoLoop;
         m_backgroundScrollMode = normalized.backgroundScrollMode;
+        m_backgroundBaseOffset01 = normalized.backgroundBaseOffset01;
+        m_backgroundBaseOffsetPixels = normalized.backgroundBaseOffsetPixels;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
     }

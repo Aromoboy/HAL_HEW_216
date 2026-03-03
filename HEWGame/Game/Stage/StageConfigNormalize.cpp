@@ -248,6 +248,8 @@ namespace Stage
         std::string backgroundVideoPath = parsed.backgroundVideoPath;
         bool backgroundVideoAutoLoop = parsed.backgroundVideoAutoLoop;
         BackgroundScrollMode backgroundScrollMode = parsed.backgroundScrollMode;
+        float backgroundBaseOffset01 = parsed.backgroundBaseOffset01;
+        float backgroundBaseOffsetPixels = parsed.backgroundBaseOffsetPixels;
 
         if (!planeZSet)
         {
@@ -397,6 +399,16 @@ namespace Stage
         if (!parsed.backgroundScrollModeSet)
         {
             backgroundScrollMode = BackgroundScrollMode::Clamp;
+        }
+
+        if (!parsed.backgroundBaseOffset01Set)
+        {
+            backgroundBaseOffset01 = 0.0f;
+        }
+
+        if (!parsed.backgroundBaseOffsetPixelsSet)
+        {
+            backgroundBaseOffsetPixels = 0.0f;
         }
 
         if (!platformWidthFractionSet)
@@ -1008,6 +1020,8 @@ namespace Stage
         normalized.backgroundVideoPath = std::move(backgroundVideoPath);
         normalized.backgroundVideoAutoLoop = backgroundVideoAutoLoop;
         normalized.backgroundScrollMode = backgroundScrollMode;
+        normalized.backgroundBaseOffset01 = backgroundBaseOffset01;
+        normalized.backgroundBaseOffsetPixels = backgroundBaseOffsetPixels;
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
         return normalized;
@@ -1061,6 +1075,8 @@ namespace Stage
         normalized.backgroundVideoPath.clear();
         normalized.backgroundVideoAutoLoop = true;
         normalized.backgroundScrollMode = BackgroundScrollMode::Clamp;
+        normalized.backgroundBaseOffset01 = 0.0f;
+        normalized.backgroundBaseOffsetPixels = 0.0f;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
         normalized.secondaryUsedDefaults = false;

@@ -74,6 +74,8 @@ namespace Stage
         const std::string& GetBackgroundVideoPath() const noexcept;
         bool IsBackgroundVideoAutoLoop() const noexcept;
         BackgroundScrollMode GetBackgroundScrollMode() const noexcept;
+        float GetBackgroundBaseOffset01() const noexcept;
+        float GetBackgroundBaseOffsetPixels() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -120,5 +122,7 @@ namespace Stage
         std::string m_backgroundVideoPath;
         bool m_backgroundVideoAutoLoop = true;
         BackgroundScrollMode m_backgroundScrollMode = BackgroundScrollMode::Clamp;
+        float m_backgroundBaseOffset01 = 0.0f;
+        float m_backgroundBaseOffsetPixels = 0.0f;
     };
 }
