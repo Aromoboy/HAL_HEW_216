@@ -271,7 +271,7 @@ namespace SceneSpace
         {
             if (m_videoPlayer)
             {
-                const auto& dxContext = GetDXContext();
+                const auto& dxContext = App::Game::Instance().GetDXContext();
                 m_videoPlayer->SetViewportSize(static_cast<float>(dxContext.GetWidth()), static_cast<float>(dxContext.GetHeight()));
                 m_videoPlayer->Draw();
             }
