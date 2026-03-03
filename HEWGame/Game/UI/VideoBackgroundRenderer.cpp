@@ -1,7 +1,9 @@
-#include "VideoBackgroundRenderer.h"
+﻿#include "VideoBackgroundRenderer.h"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstring>
 #include <sstream>
 
@@ -26,6 +28,13 @@ namespace
 {
     constexpr LONGLONG kMfTimeBase = 10000000;
     constexpr const char* kLogPrefix = "[VideoBackgroundRenderer] ";
+    constexpr uint32_t kScrollDebugLogIntervalFrames = 60;
+    constexpr uint32_t kDeadRangeWarnThresholdFrames = 30;
+    constexpr float kDeadRangeInputEpsilon = 1.0e-4f;
+    constexpr float kDeadRangeOutputEpsilon = 1.0e-5f;
+    constexpr float kClampEdgeReleaseEpsilon = 1.0e-4f;
+    constexpr float kMinEffectivePixelsPerUnit = 1.0f;
+    constexpr float kMaxEffectivePixelsPerUnit = 1000.0f;
 
     void LogVideoError(const char* step, HRESULT hr)
     {
@@ -418,6 +427,89 @@ void VideoBackgroundRenderer::Update(float dt)
     SAFE_RELEASE(sample);
 }
 
+bool VideoBackgroundRenderer::IsFinished() const
+{
+    return m_decoder ? m_decoder->mf.finished : true;
+}
+
+void VideoBackgroundRenderer::SetAutoLoop(bool enabled)
+{
+    if (m_decoder)
+    {
+        m_decoder->mf.autoLoop = enabled;
+    }
+}
+
+void VideoBackgroundRenderer::SetViewportSize(float width, float height)
+{
+    m_viewportWidth = width;
+    m_viewportHeight = height;
+}
+
+void VideoBackgroundRenderer::SetScroll01(float scroll01)
+{
+    m_scroll01 = scroll01;
+}
+
+void VideoBackgroundRenderer::SetBaseOffset01(float baseOffset01)
+{
+    m_baseOffset01 = std::clamp(baseOffset01, 0.0f, 1.0f);
+}
+
+void VideoBackgroundRenderer::SetBaseOffsetPixels(float baseOffsetPixels)
+{
+    if (std::isfinite(baseOffsetPixels))
+    {
+        m_baseOffsetPixels = baseOffsetPixels;
+    }
+    else
+    {
+        m_baseOffsetPixels = 0.0f;
+    }
+}
+
+void VideoBackgroundRenderer::SetScrollSpeed(float scrollSpeed)
+{
+    m_scrollSpeed = std::max(0.0f, scrollSpeed);
+}
+
+void VideoBackgroundRenderer::SetParallaxFactor(float parallaxFactor)
+{
+    if (!std::isfinite(parallaxFactor))
+    {
+        m_parallaxFactor = 1.0f;
+        return;
+    }
+
+    m_parallaxFactor = std::max(0.0f, parallaxFactor);
+}
+
+void VideoBackgroundRenderer::SetScrollDirection(float dir)
+{
+    m_scrollDirection = (dir < 0.0f) ? -1.0f : 1.0f;
+}
+
+void VideoBackgroundRenderer::SetZoom(float zoom)
+{
+    m_zoom = std::max(1.0f, zoom);
+}
+
+void VideoBackgroundRenderer::SetScrollMode(ScrollMode mode)
+{
+    m_scrollMode = mode;
+}
+
+void VideoBackgroundRenderer::SetClampEdgeReleaseEnabled(bool enabled)
+{
+    m_enableClampEdgeRelease = enabled;
+    m_clampEdgeReleaseArmed = false;
+}
+
+void VideoBackgroundRenderer::SetInvertY(bool invert)
+{
+    m_invertY = invert;
+}
+
 ID3D11ShaderResourceView* VideoBackgroundRenderer::GetTexture() const
 {
     return m_srv.Get();
@@ -430,13 +522,198 @@ void VideoBackgroundRenderer::Draw()
         return;
     }
 
+    DirectX::XMFLOAT4 uvTransform[1]{ DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) };
+
+    const float viewportWidth = m_viewportWidth;
+    const float viewportHeight = m_viewportHeight;
+    const float sourceWidth = static_cast<float>(m_frameWidth);
+    const float sourceHeight = static_cast<float>(m_frameHeight);
+
+    const bool validViewport = std::isfinite(viewportWidth) && std::isfinite(viewportHeight)
+        && viewportWidth > 0.0f && viewportHeight > 0.0f;
+    const bool validSource = sourceWidth > 0.0f && sourceHeight > 0.0f;
+
+    if (validViewport && validSource)
+    {
+        const float coverScale = std::max(viewportWidth / sourceWidth, viewportHeight / sourceHeight);
+        if (std::isfinite(coverScale) && coverScale > 0.0f)
+        {
+            const float visibleSourceWidth = viewportWidth / coverScale;
+            const float visibleSourceHeight = viewportHeight / coverScale;
+
+            float uvW = visibleSourceWidth / sourceWidth;
+            float uvH = visibleSourceHeight / sourceHeight;
+
+            const float zoom = std::max(1.0f, m_zoom);
+            uvW /= zoom;
+            uvH /= zoom;
+
+            uvH = std::clamp(uvH, 0.0f, 1.0f);
+            uvW = std::clamp(uvW, 0.0f, 1.0f);
+
+            const float maxY = std::max(0.0f, 1.0f - uvH);
+            const float maxX = std::max(0.0f, 1.0f - uvW);
+
+            const float effectivePixelsPerUnit = std::clamp(m_pixelsPerUnit, kMinEffectivePixelsPerUnit, kMaxEffectivePixelsPerUnit);
+            const bool pixelsPerUnitClamped = std::isfinite(m_pixelsPerUnit)
+                && std::fabs(effectivePixelsPerUnit - m_pixelsPerUnit) > 0.0f;
+            if (pixelsPerUnitClamped && !m_pixelsPerUnitClampWarned)
+            {
+                std::ostringstream warn;
+                warn << kLogPrefix
+                    << "pixelsPerUnit sanity clamp applied"
+                    << " raw m_pixelsPerUnit=" << m_pixelsPerUnit
+                    << " effectivePixelsPerUnit=" << effectivePixelsPerUnit
+                    << " worldScrollOffset=" << m_worldScrollOffset
+                    << " cameraY=" << m_cameraY
+                    << " uvH=" << uvH
+                    << " scrollMode=" << (m_scrollMode == ScrollMode::Wrap ? "wrap" : "clamp");
+                Diagnostics::LogInfo(warn.str());
+                m_pixelsPerUnitClampWarned = true;
+            }
+
+            const float scrollPx = m_worldScrollOffset * effectivePixelsPerUnit * m_parallaxFactor;
+            const float scrollDirection = m_scrollDirection;
+            const float speedAdjustedScrollPx = scrollPx * m_scrollSpeed * scrollDirection;
+
+            const float baseOffset01 = std::clamp(m_baseOffset01, 0.0f, 1.0f);
+            const float maxOffsetPx = maxY * sourceHeight;
+            const float normalizedBaseOffsetPx = baseOffset01 * maxOffsetPx;
+            const float offsetAppliedScrollPx = normalizedBaseOffsetPx + m_baseOffsetPixels + speedAdjustedScrollPx;
+
+            float normalizedY = 0.0f;
+            if (maxOffsetPx > 0.0f)
+            {
+                if (m_scrollMode == ScrollMode::Wrap)
+                {
+                    const float wrappedOffsetPx = std::fmod(offsetAppliedScrollPx, maxOffsetPx);
+                    const float normalizedOffsetPx = wrappedOffsetPx < 0.0f ? wrappedOffsetPx + maxOffsetPx : wrappedOffsetPx;
+                    normalizedY = normalizedOffsetPx / maxOffsetPx;
+                }
+                else
+                {
+                    const float clampedOffsetPx = std::clamp(offsetAppliedScrollPx, 0.0f, maxOffsetPx);
+                    normalizedY = clampedOffsetPx / maxOffsetPx;
+                }
+            }
+
+            const bool hasDeadRangeHistory = m_deadRangeStateInitialized;
+            const bool inputChanged = hasDeadRangeHistory
+                && std::fabs(offsetAppliedScrollPx - m_lastDeadRangeInputScroll01) > kDeadRangeInputEpsilon;
+            const bool outputChanged = hasDeadRangeHistory
+                && std::fabs(normalizedY - m_lastDeadRangeNormalizedY) > kDeadRangeOutputEpsilon;
+            if (!m_clampEdgeReleaseArmed && std::fabs(m_worldScrollOffset) > kDeadRangeInputEpsilon)
+            {
+                m_clampEdgeReleaseArmed = true;
+            }
+            const bool clampEdgeReleaseActive = m_enableClampEdgeRelease && m_clampEdgeReleaseArmed;
+            const bool clampOutputStuck = (m_scrollMode == ScrollMode::Clamp) && clampEdgeReleaseActive && inputChanged && !outputChanged;
+
+            if (clampOutputStuck)
+            {
+                // Guard against immediate edge sticking in clamp mode:
+                // keep the UV in a tiny safe band away from exact 0/1 when input is still changing.
+                if (normalizedY <= 0.0f)
+                {
+                    normalizedY = kClampEdgeReleaseEpsilon;
+                }
+                else if (normalizedY >= 1.0f)
+                {
+                    normalizedY = 1.0f - kClampEdgeReleaseEpsilon;
+                }
+
+                std::ostringstream clampWarn;
+                clampWarn << kLogPrefix
+                    << "clamp dead-range detected"
+                    << " inputOffsetPx=" << offsetAppliedScrollPx
+                    << " normalizedY=" << normalizedY
+                    << " speed=" << m_scrollSpeed
+                    << " direction=" << m_scrollDirection
+                    << " baseOffset01=" << baseOffset01
+                    << " clampEdgeReleaseArmed=" << (m_clampEdgeReleaseArmed ? "true" : "false");
+                Diagnostics::LogInfo(clampWarn.str());
+            }
+
+            if (!hasDeadRangeHistory)
+            {
+                m_lastDeadRangeInputScroll01 = offsetAppliedScrollPx;
+                m_lastDeadRangeNormalizedY = normalizedY;
+                m_deadRangeFrameStreak = 0;
+                m_deadRangeStateInitialized = true;
+            }
+            else
+            {
+                if (inputChanged && !outputChanged)
+                {
+                    ++m_deadRangeFrameStreak;
+                    if (m_deadRangeFrameStreak >= kDeadRangeWarnThresholdFrames)
+                    {
+                        std::ostringstream warn;
+                        warn << kLogPrefix
+                            << "warn dead-range: normalizedY is not changing while input scroll changes"
+                            << " inputOffsetPx=" << offsetAppliedScrollPx
+                            << " normalizedY=" << normalizedY
+                            << " speed=" << m_scrollSpeed
+                            << " baseOffset01=" << baseOffset01
+                            << " mode=" << (m_scrollMode == ScrollMode::Wrap ? "wrap" : "clamp");
+                        Diagnostics::LogInfo(warn.str());
+                        m_deadRangeFrameStreak = 0;
+                    }
+                }
+                else
+                {
+                    m_deadRangeFrameStreak = 0;
+                }
+
+                m_lastDeadRangeInputScroll01 = offsetAppliedScrollPx;
+                m_lastDeadRangeNormalizedY = normalizedY;
+            }
+
+            float uvY = normalizedY * maxY;
+            if (m_invertY)
+            {
+                uvY = maxY - uvY;
+            }
+
+            const float uvX = 0.5f * maxX;
+            uvTransform[0] = DirectX::XMFLOAT4(uvX, uvY, uvW, uvH);
+
+            ++m_debugScrollLogFrameCounter;
+            if ((m_debugScrollLogFrameCounter % kScrollDebugLogIntervalFrames) == 0)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "scroll cameraY=" << m_cameraY
+                    << " worldScrollOffset=" << m_worldScrollOffset
+                    << " scrollPx=" << scrollPx
+                    << " uvY=" << uvY
+                    << " uvH=" << uvH;
+                Diagnostics::LogInfo(oss.str());
+            }
+        }
+    }
+
+    SetDepthTest(false);
+
     m_vertexShader->WriteBuffer(0, m_matrices);
+    m_vertexShader->WriteBuffer(1, uvTransform);
     m_vertexShader->Bind();
     m_pixelShader->SetTexture(0, m_srv.Get());
     m_pixelShader->Bind();
 
     SetSamplerState(SAMPLER_LINEAR);
     m_quad->Draw();
+
+    SetDepthTest(true);
+}
+
+void VideoBackgroundRenderer::Draw(const BackgroundLayerDrawContext& context)
+{
+    m_cameraY = context.cameraY;
+    m_worldScrollOffset = context.worldScrollOffset;
+    m_pixelsPerUnit = std::max(0.0f, context.pixelsPerUnit);
+    SetViewportSize(context.viewportWidth, context.viewportHeight);
+    Draw();
 }
 
 void VideoBackgroundRenderer::Shutdown()
@@ -459,6 +736,27 @@ void VideoBackgroundRenderer::Shutdown()
     m_context = nullptr;
     m_frameWidth = 0;
     m_frameHeight = 0;
+    m_viewportWidth = 0.0f;
+    m_viewportHeight = 0.0f;
+    m_scroll01 = 0.0f;
+    m_baseOffset01 = 0.0f;
+    m_baseOffsetPixels = 0.0f;
+    m_scrollSpeed = 1.0f;
+    m_parallaxFactor = 1.0f;
+    m_scrollDirection = 1.0f;
+    m_zoom = 1.0f;
+    m_cameraY = 0.0f;
+    m_worldScrollOffset = 0.0f;
+    m_pixelsPerUnit = 1.0f;
+    m_debugScrollLogFrameCounter = 0;
+    m_lastDeadRangeInputScroll01 = 0.0f;
+    m_lastDeadRangeNormalizedY = 0.0f;
+    m_deadRangeFrameStreak = 0;
+    m_deadRangeStateInitialized = false;
+    m_pixelsPerUnitClampWarned = false;
+    m_enableClampEdgeRelease = true;
+    m_clampEdgeReleaseArmed = false;
+    m_invertY = false;
 }
 
 bool VideoBackgroundRenderer::CreateFullScreenQuad()

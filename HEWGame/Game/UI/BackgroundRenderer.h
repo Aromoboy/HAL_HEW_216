@@ -6,6 +6,8 @@
 
 #include <DirectXMath.h>
 
+#include "IBackgroundLayerRenderer.h"
+
 class Texture;
 
 struct BackgroundRendererConfig
@@ -23,6 +25,7 @@ struct BackgroundRendererConfig
         bool invertScroll = true;
         SamplingMode samplingMode = SamplingMode::Wrap;
         float baseOffset01 = 0.0f;
+        float baseOffsetPixels = 0.0f;
         bool scrollOffsetInPixels = false;
         DirectX::XMFLOAT4 tintColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
@@ -30,7 +33,7 @@ struct BackgroundRendererConfig
     std::vector<BackgroundLayer> layers;
 };
 
-class BackgroundRenderer
+class BackgroundRenderer : public IBackgroundLayerRenderer
 {
 public:
     BackgroundRenderer();
@@ -40,6 +43,8 @@ public:
     void Shutdown();
     // Aspect correction is handled via the UV window; sprite size stays at 2x2 in clip space.
     void Draw(float scrollOffset, float pixelsPerUnit) const;
+    void Update(float dt) override;
+    void Draw(const BackgroundLayerDrawContext& context) override;
 
 private:
     std::unique_ptr<Texture> LoadTexture(const std::string& path) const;

@@ -241,9 +241,11 @@ namespace Entities
 
         const std::string playerIdleAnimationPath = "Assets/Animation/yousei_IdleAnimations.fbx";
         const std::string playerStabAnimationPath = "Assets/Animation/yousei_StabAnimations.fbx";
+        const std::string playerMoveAnimationPath = "Assets/Animation/yousei_MoveAnimations.fbx";
 
         m_idleAnimation = animationCache.Get(playerIdleAnimationPath);
         m_stabAnimation = animationCache.Get(playerStabAnimationPath);
+        m_moveAnimation = animationCache.Get(playerMoveAnimationPath);
 
         if (m_idleAnimation)
         {
@@ -255,7 +257,15 @@ namespace Entities
             m_stabAnimation->SetLoop(false);
         }
 
+        if (m_moveAnimation)
+        {
+            m_moveAnimation->SetLoop(true);
+        }
+
         m_activeAnimation = m_idleAnimation;
+        m_activAnimationState = IDLE;
+        m_dontActionAnimationState = IDLE;
+        m_activeAnimation->Step(0.2f);
         player.m_animation = m_activeAnimation;
 
         if (!modelPath.empty())
@@ -329,12 +339,15 @@ namespace Entities
 
             if (m_activeAnimation == m_stabAnimation && m_activeAnimation->IsPlayEnd())
             {
-                m_activeAnimation = m_idleAnimation;
+                m_activAnimationState == CARRY;
+                m_activeAnimation = m_moveAnimation;
                 player.m_animation = m_activeAnimation;
-                if (m_idleAnimation)
+                if (m_activeAnimation)
                 {
-                    m_idleAnimation->SetLoop(true);
+                    m_activeAnimation->SetLoop(true);
+                    m_activeAnimation->Play();
                 }
+
             }
         }
     }
@@ -354,9 +367,27 @@ namespace Entities
         renderer.Draw(*player.m_model, m_renderTransform, &camera, m_activeAnimation.get());
     }
 
+    void PlayerModel::PlayIdle(Player& player)
+    {
+        m_dontActionAnimationState = IDLE;
+        if (m_activAnimationState == STAB || m_activAnimationState == CARRY ||  m_activAnimationState == IDLE)
+        {
+            return;
+        }
+        m_activAnimationState = IDLE;
+        m_activeAnimation = m_idleAnimation;
+        player.m_animation = m_activeAnimation;
+        if (m_activeAnimation)
+        {
+            m_activeAnimation->SetLoop(true);
+            m_activeAnimation->Play();
+        }
+    }
+
     void PlayerModel::PlayStabAnimation(Player& player)
     {
         m_activeAnimation = m_stabAnimation;
+        m_activAnimationState = STAB;
         player.m_animation = m_activeAnimation;
         if (m_activeAnimation)
         {
@@ -364,6 +395,49 @@ namespace Entities
             m_activeAnimation->Play();
         }
     }
+
+    void PlayerModel::PlayMove(Player& player)
+    {
+        m_dontActionAnimationState = MOVE;
+        if (m_activAnimationState == STAB || m_activAnimationState == CARRY || m_activAnimationState == MOVE)
+        {
+            return;
+        }
+        m_activAnimationState = MOVE;
+        m_activeAnimation = m_moveAnimation;
+        player.m_animation = m_activeAnimation;
+        if (m_activeAnimation)
+        {
+            m_activeAnimation->SetLoop(true);
+            m_activeAnimation->Play();
+        }
+    }
+
+    void PlayerModel::PlayUnCarry(Player& player)
+    {
+        if (m_activAnimationState != CARRY && m_activAnimationState != STAB) return;
+
+        switch (m_dontActionAnimationState)
+        {
+        case IDLE:
+            m_activAnimationState = IDLE;
+            m_activeAnimation = m_idleAnimation;
+            break;
+
+        case MOVE:
+            m_activAnimationState = MOVE;
+            m_activeAnimation = m_moveAnimation;
+            break;
+        }
+
+        player.m_animation = m_activeAnimation;
+        if (m_activeAnimation)
+        {
+            m_activeAnimation->SetLoop(true);
+        }
+    }
+
+
 
     Transform PlayerModel::GetRenderTransform() const
     {
@@ -373,6 +447,11 @@ namespace Entities
     std::shared_ptr<Animation> PlayerModel::GetActiveAnimation() const
     {
         return m_activeAnimation;
+    }
+
+    bool PlayerModel::IsActionAnimation()
+    {
+        return false;
     }
 
     void PlayerModel::RefreshRenderTransform()

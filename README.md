@@ -104,6 +104,17 @@ HEWGame/Assets/Config/gameplay.cfg の [stage.checklist] セクション
 
 Stage::StageData はこのセクションを読み込み、デフォルト適用・サニタイズを行ってステージ設定として保持します。
 
+背景設定キー（`[stage.checklist]`）:
+
+- `backgroundTexture`: 静止画背景パス（既存仕様）。
+- `backgroundVideoPath`: 動画背景パス（任意）。指定時は `VideoBackgroundRenderer` を優先して使用。
+- `backgroundVideoAutoLoop`: `true/false`（省略時 `true`）。動画背景のループ再生有無。
+- `backgroundScrollMode`: `clamp` / `wrap`（省略時 `clamp`）。動画背景の縦 pan におけるスクロールモード。
+- `backgroundBaseOffset01`: `0.0..1.0`（省略時 `0.0`）。静止画背景の開始オフセット（正規化）。
+- `backgroundBaseOffsetPixels`: 実数（省略時 `0.0`）。静止画背景の開始オフセット（ピクセル）。`scrollOffsetInPixels=true` 時に `backgroundBaseOffset01` と合算して適用。
+- `backgroundVideoParallaxFactor`: 実数（省略時 `1.0`）。動画背景のワールドスクロールに対する parallax 係数。`scrollPx = worldScrollOffset * pixelsPerUnit * backgroundVideoParallaxFactor` で計算。
+- `backgroundVideoClampEdgeRelease`: `true/false`（省略時 `false`）。`clamp` モード時の端張り付き回避を有効化。`true` でもカメラが明示的に動き出すまでは適用しない。
+
 設定ローダー（概要）
 
 ConfigLoader
@@ -702,6 +713,18 @@ class Render_BackgroundRenderer["BackgroundRenderer"] {
   +Draw()
 }
 
+class Render_IBackgroundLayerRenderer["IBackgroundLayerRenderer"] {
+  <<interface>>
+  +Update(dt)
+  +Draw(context)
+}
+
+class Render_VideoBackgroundRenderer["VideoBackgroundRenderer"] {
+  +Initialize(device, context, shader, mp4Path) bool
+  +SetAutoLoop(enabled)
+  +SetScrollMode(mode)
+}
+
 Scene_SceneGame *-- Sys_PhysicsBinder
 Scene_SceneGame *-- Sys_DrawSystem
 Scene_SceneGame *-- Sweets_Manager
@@ -712,7 +735,10 @@ Scene_SceneGame *-- Stage_StageData
 Scene_SceneGame *-- GF_PhaseManager
 Scene_SceneGame *-- Rules_GameplayRulesSystem
 Scene_SceneGame *-- Guide_GuidelineSystem
-Scene_SceneGame *-- Render_BackgroundRenderer
+Render_BackgroundRenderer ..|> Render_IBackgroundLayerRenderer
+Render_VideoBackgroundRenderer ..|> Render_IBackgroundLayerRenderer
+
+Scene_SceneGame *-- Render_IBackgroundLayerRenderer
 
 Scene_SceneGame ..> Core_UpdateScheduler : registers nodes
 Scene_SceneGame ..> Sys_PhysicsBinder : contact handlers

@@ -389,6 +389,7 @@ namespace Entities
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "DropCarriedSweets invoked\n");
             DropCarriedSweets(player);
+            model.PlayUnCarry(player);
             return;
         }
 

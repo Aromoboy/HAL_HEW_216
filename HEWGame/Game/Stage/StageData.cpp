@@ -240,6 +240,56 @@ namespace Stage
         return m_backgroundTexturePath;
     }
 
+    const std::string& StageData::GetBackgroundVideoPath() const noexcept
+    {
+        return m_backgroundVideoPath;
+    }
+
+    bool StageData::IsBackgroundVideoAutoLoop() const noexcept
+    {
+        return m_backgroundVideoAutoLoop;
+    }
+
+    BackgroundScrollMode StageData::GetBackgroundScrollMode() const noexcept
+    {
+        return m_backgroundScrollMode;
+    }
+
+    float StageData::GetBackgroundBaseOffset01() const noexcept
+    {
+        return m_backgroundBaseOffset01;
+    }
+
+    float StageData::GetBackgroundBaseOffsetPixels() const noexcept
+    {
+        return m_backgroundBaseOffsetPixels;
+    }
+
+    float StageData::GetBackgroundVideoScrollSpeed() const noexcept
+    {
+        return m_backgroundVideoScrollSpeed;
+    }
+
+    float StageData::GetBackgroundVideoParallaxFactor() const noexcept
+    {
+        return m_backgroundVideoParallaxFactor;
+    }
+
+    float StageData::GetBackgroundVideoZoom() const noexcept
+    {
+        return m_backgroundVideoZoom;
+    }
+
+    bool StageData::IsBackgroundVideoClampEdgeReleaseEnabled() const noexcept
+    {
+        return m_backgroundVideoClampEdgeRelease;
+    }
+
+    const std::string& StageData::GetSourcePath() const noexcept
+    {
+        return m_sourcePath;
+    }
+
     void StageData::ApplyDefaults()
     {
         const StageConfigNormalized defaults = BuildDefaultStageConfig();
@@ -282,6 +332,15 @@ namespace Stage
         m_guidelineMilestoneBonusSeconds = normalized.guidelineMilestoneBonusSeconds;
         m_guidelineMilestoneInterval = normalized.guidelineMilestoneInterval;
         m_backgroundTexturePath = normalized.backgroundTexturePath;
+        m_backgroundVideoPath = normalized.backgroundVideoPath;
+        m_backgroundVideoAutoLoop = normalized.backgroundVideoAutoLoop;
+        m_backgroundScrollMode = normalized.backgroundScrollMode;
+        m_backgroundBaseOffset01 = normalized.backgroundBaseOffset01;
+        m_backgroundBaseOffsetPixels = normalized.backgroundBaseOffsetPixels;
+        m_backgroundVideoScrollSpeed = normalized.backgroundVideoScrollSpeed;
+        m_backgroundVideoParallaxFactor = normalized.backgroundVideoParallaxFactor;
+        m_backgroundVideoZoom = normalized.backgroundVideoZoom;
+        m_backgroundVideoClampEdgeRelease = normalized.backgroundVideoClampEdgeRelease;
         m_sourcePath = sourcePath;
         m_loadedFromFile = loadedFromFile;
     }
@@ -321,6 +380,11 @@ namespace Stage
             << " guidelineMilestoneBonusSeconds=" << m_guidelineMilestoneBonusSeconds
             << " guidelineMilestoneInterval=" << m_guidelineMilestoneInterval
             << " backgroundTexture='" << m_backgroundTexturePath << "'"
+            << " backgroundVideo='" << m_backgroundVideoPath << "'"
+            << " backgroundVideoScrollSpeed=" << m_backgroundVideoScrollSpeed
+            << " backgroundVideoParallaxFactor=" << m_backgroundVideoParallaxFactor
+            << " backgroundVideoZoom=" << m_backgroundVideoZoom
+            << " backgroundVideoClampEdgeRelease=" << (m_backgroundVideoClampEdgeRelease ? "true" : "false")
             << " detail=" << detail << "\n";
 
         for (std::size_t i = 0; i < m_platforms.size(); ++i)

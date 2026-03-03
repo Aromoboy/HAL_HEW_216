@@ -12,15 +12,16 @@
 #include <algorithm>
 
 // 各オフセット
-constexpr float2 kIconPositionOffset = { -0.18f, -0.008f };
-constexpr float2 kFramePositionOffset = { -0.18f, -0.008f };
-constexpr float2 kBackFramePositionOffset = { 0.00f,  0.000f };
-constexpr float2 kCostIconPositionOffset = { 0.10f,  -0.050f };
-constexpr float2 kNamePositionOffset = { 0.31f,  0.05f };
-constexpr float2 kInfomationPositionOffset = { 0.170f,  0.000f };
-constexpr float2 kLevelPositionOffset = { 0.50f,  0.045f };
-constexpr float2 kCostPositionOffset = { 0.50f,  -0.060f }; 
-constexpr float2 kCostNumberPositionOffset = { 0.68f,  0.290f };
+constexpr float2 kBackFramePositionOffset = { 0.00f,  0.35f };
+constexpr float2 kIconPositionOffset = { -0.18f, -0.17f + kBackFramePositionOffset.y };
+constexpr float2 kFramePositionOffset = { -0.18f, -0.17f + kBackFramePositionOffset.y };
+constexpr float2 kCostIconPositionOffset = { 0.13f,  -0.215f + kBackFramePositionOffset.y };
+constexpr float2 kNamePositionOffset = { 0.31f,  -0.11f + kBackFramePositionOffset.y };
+constexpr float2 kInfomationPositionOffset = { 0.170f,  -0.17f + kBackFramePositionOffset.y };
+constexpr float2 kLevelPositionOffset = { 0.50f,  -0.1155f + kBackFramePositionOffset.y };
+constexpr float2 kCostPositionOffset = { 0.50f,  -0.23f + kBackFramePositionOffset.y }; 
+constexpr float2 kCostNumberPositionOffset = { 0.68f,  0.340f };
+constexpr float2 kHudFairyPositionOffset = { -5.39f,  -0.250f };
 constexpr float kIconScaleOffset = 0.5f;
 constexpr float kFrameScaleOffset = 0.5f;
 constexpr float kBackFrameScaleOffset = 1.8f;
@@ -30,6 +31,7 @@ constexpr float kInfomationScaleOffset = 0.05f;
 constexpr float kLevelScaleOffset = 0.06f;
 constexpr float kCostScaleOffset = 0.05f;
 constexpr float kCostNumberScaleOffset = 0.08f;
+constexpr float2 kHudFairyIconScaleOffset = { 0.65f, 0.43f };
 
 constexpr float kNodeNameCharCount = 5.0f * 3.0f;
 constexpr float kInfoCharCount = 15.0f * 3.0f;
@@ -45,8 +47,9 @@ constexpr const char* kBackFrameTexturenName = "BackFrame";
 constexpr const char* kBackgroundTextureName = "PowerUpBG";
 
 
-constexpr float2 kHudCostIconPositionOffset = { 0.40f,  0.30f };
+constexpr float2 kHudCostIconPositionOffset = { 0.35f,  0.35f };
 constexpr float kHudCostIconScaleOffset = 0.25f;
+
 
 
 
@@ -128,6 +131,7 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 	m_number = a_cache.Get(kNumberTextureName);
 	m_cost = a_cache.Get(kCostTextureName);
+	m_fairy = a_cache.Get("Fairy");
 	m_iconFrame = a_cache.Get(kFrameTextureName);
 	m_backFrame = a_cache.Get(kBackFrameTexturenName);
 	m_background = a_cache.Get(kBackgroundTextureName);
@@ -178,18 +182,31 @@ void PowerUpRenderer::DrawCost(int cost, const CameraSpace::ICamera& camera)
 	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
 
 	int count  = 0;
-	while (cost)
+	if (cost)
 	{
-		float3 pos(kCostNumberPositionOffset.x - kCostNumberInterval * count, kCostNumberPositionOffset.y, 1.0f);
+		while (cost)
+		{
+			float3 pos(kCostNumberPositionOffset.x - kCostNumberInterval * count, kCostNumberPositionOffset.y, 1.0f);
+			float3 scale(kCostNumberScaleOffset, kCostNumberScaleOffset, 1.0f);
+			DirectX::XMFLOAT4X4 world;
+			DrawMatrix::CreateWorldMatrix(world, pos, scale, float3());
+
+			int drawNum = cost % 10;
+			DrawSprite(m_number, world, view, proj, DrawSpriteData(float2(0.1f * drawNum, 0.0f), float2(0.1f, 1.0f)));
+			cost /= 10;
+			count++;
+		}
+	}
+	else
+	{
+		float3 pos(kCostNumberPositionOffset.x, kCostNumberPositionOffset.y, 1.0f);
 		float3 scale(kCostNumberScaleOffset, kCostNumberScaleOffset, 1.0f);
 		DirectX::XMFLOAT4X4 world;
 		DrawMatrix::CreateWorldMatrix(world, pos, scale, float3());
 
-		int drawNum = cost % 10;
-		DrawSprite(m_number, world, view, proj, DrawSpriteData(float2(0.1f * drawNum, 0.0f), float2(0.1f, 1.0f)));
-		cost /= 10;
-		count++;
+		DrawSprite(m_number, world, view, proj, DrawSpriteData(float2(0.0f, 0.0f), float2(0.1f, 1.0f)));
 	}
+
 }
 
 void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
@@ -216,6 +233,22 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
 
 	DrawSprite(m_cost, world, view, proj);
+
+
+	// バックフレーム描画
+	offset.x = kHudFairyPositionOffset.x;
+	offset.y = kHudFairyPositionOffset.y;
+	position.x = offset.x;
+	position.y = offset.y;
+	position.z = 1.0f;
+	scale.x = kHudFairyIconScaleOffset.x;
+	scale.y = kHudFairyIconScaleOffset.y;
+	scale.z = 1.0f;
+
+	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
+	DrawSprite(m_fairy, world, view, proj);
+
+
 }
 
 void PowerUpRenderer::DrawCursor(std::shared_ptr<Texture2D> a_texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera& camera, float a_alpha)
@@ -584,6 +617,9 @@ bool PowerUpRenderer::CreateTextResources()
 	LOGFONTA font = {};
 	font.lfHeight = -static_cast<LONG>(m_config.fontSizePixels);
 	font.lfWeight = FW_SEMIBOLD;
+	font.lfQuality = CLEARTYPE_QUALITY;
+	font.lfOutPrecision = OUT_TT_PRECIS;
+	font.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 	strcpy_s(font.lfFaceName, "Segoe UI");
 	m_font = CreateFontIndirectA(&font);
 	if (!m_font)

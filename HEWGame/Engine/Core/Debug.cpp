@@ -68,6 +68,8 @@ namespace
 #endif
 }
 
+bool DebugLog::EnableConsoleOutput = false;
+
 void DebugLog::Init(HWND hwnd)
 {
         g_hwnd = hwnd;
@@ -90,7 +92,8 @@ void DebugLog::DebugMessage(const std::string& message)
         HANDLE stdoutHandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
         canWriteToConsole = stdoutHandle != INVALID_HANDLE_VALUE && stdoutHandle != nullptr && _isatty(_fileno(stdout)) != 0;
 
-        if (!canWriteToConsole)
+    #if defined(_DEBUG)
+        if (!canWriteToConsole && EnableConsoleOutput)
         {
                 FILE* newStdout = nullptr;
                 if (::AllocConsole() && freopen_s(&newStdout, "CONOUT$", "w", stdout) == 0)
@@ -99,6 +102,7 @@ void DebugLog::DebugMessage(const std::string& message)
                         canWriteToConsole = true;
                 }
         }
+    #endif
 #endif
 
         if (canWriteToConsole)

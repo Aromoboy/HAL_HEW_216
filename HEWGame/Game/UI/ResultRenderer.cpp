@@ -260,7 +260,7 @@ void ResultRenderer::Draw(const ResultDisplayData& data)
     RenderFream(data);
 }
 
-void ResultRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size)
+void ResultRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, float2 a_size, float3 a_color, float a_alpha, float2 a_uvPos, float2 a_uvScale)
 {
     float3 pos(0.0f, 0.0f, 0.0f);
     float3 size(1.0f, 1.0f, 1.0f);
@@ -274,7 +274,7 @@ void ResultRenderer::Draw(std::shared_ptr<Texture2D> a_texture, float2 a_pos, fl
 
     DrawMatrix::CreateViewMatrix(view, float3(0.0f, 0.0f, -10.0f), float3(0.0f, 0.0f, 1000.0f), float3(0.0f, 1.0f, 0.0f));
     DrawMatrix::CreateProjectionMatrix(proj, 60.0f, 16.0f / 9.0f, 0.0001f, 1000.0f);
-    DrawSprite(a_texture, world, view, proj, DrawSpriteData(float2(0.0f, 0.0f), float2(1.0f, 1.0f), a_pos, a_size));
+    DrawSprite(a_texture, world, view, proj, DrawSpriteData(a_uvPos, a_uvScale, a_pos, a_size, a_color, a_alpha));
 }
 
 void ResultRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const DirectX::XMFLOAT4X4& worldMatrix, const DirectX::XMFLOAT4X4& viewMatrix, const DirectX::XMFLOAT4X4& projMatrix, const DrawSpriteData& drawData)

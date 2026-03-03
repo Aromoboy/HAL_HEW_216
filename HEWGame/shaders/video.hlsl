@@ -5,13 +5,20 @@ Texture2D    txYUV        : register(t0);
 SamplerState samLinear    : register(s0);
 
 //--------------------------------------------------------------------------------------
+cbuffer VideoUvParam : register(b1)
+{
+  float2 uvPos;
+  float2 uvScale;
+}
+
+//--------------------------------------------------------------------------------------
 // Nothing special here
 v2f VS(VS_INPUT input) {
   v2f output;
   output.Pos = mul(input.Pos, World);
   output.Pos = mul(output.Pos, View);
   output.Pos = mul(output.Pos, Projection);
-  output.Tex = input.Tex;
+  output.Tex = input.Tex * uvScale + uvPos;
   output.Color = input.Color;
   return output;
 }

@@ -89,6 +89,24 @@ namespace Stage
         bool guidelineMilestoneIntervalSet = false;
         std::string backgroundTexturePath;
         bool backgroundTextureSet = false;
+        std::string backgroundVideoPath;
+        bool backgroundVideoPathSet = false;
+        bool backgroundVideoAutoLoop = true;
+        bool backgroundVideoAutoLoopSet = false;
+        BackgroundScrollMode backgroundScrollMode = BackgroundScrollMode::Clamp;
+        bool backgroundScrollModeSet = false;
+        float backgroundBaseOffset01 = 0.0f;
+        bool backgroundBaseOffset01Set = false;
+        float backgroundBaseOffsetPixels = 0.0f;
+        bool backgroundBaseOffsetPixelsSet = false;
+        float backgroundVideoScrollSpeed = 1.0f;
+        bool backgroundVideoScrollSpeedSet = false;
+        float backgroundVideoParallaxFactor = 1.0f;
+        bool backgroundVideoParallaxFactorSet = false;
+        float backgroundVideoZoom = 1.0f;
+        bool backgroundVideoZoomSet = false;
+        bool backgroundVideoClampEdgeRelease = false;
+        bool backgroundVideoClampEdgeReleaseSet = false;
     };
 
     StageConfigParseResult ParseStageConfig(const std::vector<Config::SectionLine>& lines);

@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "GuidelineActor.h"
+#include "IBackgroundLayerRenderer.h"
 #include "SceneGame.h"
 #include "StageLayoutLoader.h"
 
@@ -55,12 +56,13 @@ public:
         SceneGameConfig::MaterialTuningSettings materialTuningSettings{};
         SceneGameConfig::SweetsOutOfBoundsSettings sweetsOutOfBoundsSettings{};
         SceneGameConfig::SweetsSpawnLimitSettings sweetsSpawnLimitSettings{};
+        SceneGameConfig::SweetsSpawnDebugSettings sweetsSpawnDebugSettings{};
         std::unique_ptr<Systems::PhysicsBinder> physicsBinder;
         std::unique_ptr<Systems::DrawSystem> drawSystem;
         std::unique_ptr<GuidelineActor> guidelineActor;
         std::unique_ptr<SweetsSpace::SweetsManager> sweetsManager;
         std::unique_ptr<UIManager> uiManager;
-        std::unique_ptr<BackgroundRenderer> backgroundRenderer;
+        std::unique_ptr<IBackgroundLayerRenderer> backgroundRenderer;
         std::unique_ptr<EffectSystem> effectSystem;
         std::vector<StageObject> stageObjects;
         std::vector<std::shared_ptr<Entities::PhysicalEntity>> stagePhysicsEntities;

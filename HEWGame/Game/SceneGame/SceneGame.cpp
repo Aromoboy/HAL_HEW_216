@@ -1,5 +1,4 @@
-﻿//なんでマージしないのー？
-#include "Transform.h"
+﻿#include "Transform.h"
 #include "SceneGame.h"
 #include "Geometory.h"
 #include "DrawMatrix.h"
@@ -50,6 +49,7 @@
 #include <string>
 #include <utility>
 #include <iterator>
+#include <chrono>
 #include <box2d/box2d.h>
 #include <DirectXMath.h>
 #include "Physical.h"
@@ -83,12 +83,14 @@ namespace
         constexpr const char* kLogPrefix = "[SceneComposer] ";
         constexpr bool kEnableDrawSystemVerboseLogging = false;
         constexpr bool kEnableStageModelVerboseLogging = false;
-        constexpr float kDefaultPlaySeconds = 60.0f;
+        constexpr float kDefaultPlaySeconds = 45.0f;
         constexpr float kCountdownLogIntervalSeconds = 5.0f;
         constexpr float kBaseScorePerMeter = 100.0f;
         constexpr float kScoreToPointsMultiplier = 1.0f;
         constexpr float kGuidelineGlobalCooldownSeconds = 0.15f;
         constexpr float kShadowReceiverTolerance = 0.05f;
+        constexpr float kBackgroundCameraRangeFallbackThresholdDefault = 150.0f;
+        constexpr std::chrono::milliseconds kBackgroundNormalizationLogInterval(2000);
         SceneGameConfig::CameraRigSettings ApplyGameplayCameraOverrides(SceneGameConfig::CameraRigSettings settings)
         {
             settings.fixedPosition = false;
@@ -114,6 +116,25 @@ namespace
         {
             return std::isfinite(value) != 0;
         }
+
+        float ReadBackgroundCameraRangeFallbackThreshold()
+        {
+            const char* value = std::getenv("r.BackgroundCameraRangeFallbackThreshold");
+            if (!value)
+            {
+                return kBackgroundCameraRangeFallbackThresholdDefault;
+            }
+
+            const float parsed = std::strtof(value, nullptr);
+            if (!IsFiniteFloat(parsed) || parsed <= 0.0f)
+            {
+                return kBackgroundCameraRangeFallbackThresholdDefault;
+            }
+
+            return parsed;
+        }
+
+        float g_backgroundCameraRangeFallbackThreshold = ReadBackgroundCameraRangeFallbackThreshold();
 
         bool OverlapsShadowReceiverXZ(const AABB& a, const AABB& b)
         {
@@ -471,6 +492,20 @@ bool SceneGame::Load(Core::Input& input)
     m_physicsBinder = std::move(composition->physicsBinder);
     m_drawSystem = std::move(composition->drawSystem);
     m_sweetsManager = std::move(composition->sweetsManager);
+    m_baseLiveCap = static_cast<uint32_t>(std::max(0, composition->sweetsSpawnLimitSettings.spawnTotalCap));
+    m_maxLiveCap = static_cast<uint32_t>(std::max(
+        static_cast<int>(m_baseLiveCap),
+        composition->sweetsSpawnLimitSettings.spawnLiveCapMax));
+    m_currentLiveCap = std::min(m_baseLiveCap, m_maxLiveCap);
+    {
+        std::string growthMode = composition->sweetsSpawnLimitSettings.liveCapGrowthMode;
+        std::transform(growthMode.begin(), growthMode.end(), growthMode.begin(), [](unsigned char ch)
+            {
+                return static_cast<char>(std::tolower(ch));
+            });
+        m_liveCapDoublePerPhase = (growthMode == "doubleperphase");
+    }
+
     if (m_sweetsManager)
     {
         m_sweetsManager->SetOutOfBoundsSettings(
@@ -479,6 +514,7 @@ bool SceneGame::Load(Core::Input& input)
             m_sweetsOutOfBoundsSettings.outOfBoundsRespawnDelaySeconds);
         m_sweetsManager->SetGrabRespawnDelaySeconds(
             m_sweetsOutOfBoundsSettings.grabRespawnDelaySeconds);
+        m_sweetsManager->SetLiveSweetsCap(static_cast<int>(m_currentLiveCap));
     }
     m_uiManager = std::move(composition->uiManager);
     m_backgroundRenderer = std::move(composition->backgroundRenderer);
@@ -590,6 +626,41 @@ bool SceneGame::Load(Core::Input& input)
     m_stageObjects = std::move(composition->stageObjects);
     m_stageObjectsInitial = m_stageObjects;
     m_stagePhysicsEntities = std::move(composition->stagePhysicsEntities);
+    if (m_sweetsManager)
+    {
+        std::optional<AABB> cakeBounds;
+        for (const auto& obj : m_stageObjects)
+        {
+            if (!IsCakeStageObject(obj))
+            {
+                continue;
+            }
+
+            const auto& physicsEntity = obj.physicsEntity;
+            if (!physicsEntity)
+            {
+                continue;
+            }
+
+            physicsEntity->SyncColliderBounds();
+            const AABB bounds = physicsEntity->GetAABB();
+            if (!cakeBounds)
+            {
+                cakeBounds = bounds;
+            }
+            else
+            {
+                cakeBounds->min.x = std::min(cakeBounds->min.x, bounds.min.x);
+                cakeBounds->min.y = std::min(cakeBounds->min.y, bounds.min.y);
+                cakeBounds->min.z = std::min(cakeBounds->min.z, bounds.min.z);
+                cakeBounds->max.x = std::max(cakeBounds->max.x, bounds.max.x);
+                cakeBounds->max.y = std::max(cakeBounds->max.y, bounds.max.y);
+                cakeBounds->max.z = std::max(cakeBounds->max.z, bounds.max.z);
+            }
+        }
+
+        m_sweetsManager->SetCakeBounds(cakeBounds);
+    }
     ApplyPowerUpEffects(m_playerPowerUpData);
 
 #if defined(_DEBUG)
@@ -648,11 +719,11 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
 
 
 
-    if (m_pendingRetryReset)
-    {
-        m_pendingRetryReset = false;
-        SetStageState(StageState::Playing);
-    }
+    //if (m_pendingRetryReset)
+    //{
+    //    m_pendingRetryReset = false;
+    //    SetStageState(StageState::Playing);
+    //}
 }
 
 void SceneGame::Draw()
@@ -782,10 +853,12 @@ void SceneGame::OnEnter()
         m_countdownTextures[i] = std::make_shared<Texture>();
     }
 
-    m_countdownTextures[0]->Create("Assets/Texture/start.png", true);
+    m_countdownTextures[0]->Create("Assets/Texture/start_remake.png", true);
     m_countdownTextures[1]->Create("Assets/Texture/1-1.png", true);
     m_countdownTextures[2]->Create("Assets/Texture/2-1.png", true);
     m_countdownTextures[3]->Create("Assets/Texture/3-1.png", true);
+    m_finishTexture = std::make_shared<Texture>();
+    m_finishTexture->Create("Assets/Texture/Finish_remake.png", true);
     m_whistleTimer = 0.0f;
     m_whistlePlayed = false;
     m_bgmStarted = false;
@@ -1147,7 +1220,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         m_physicsBinder->ValidatePlayerPhysicsRegistration();
     }
-    const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
+    /*const bool isPlaying = (m_stageState == StageState::Playing) && m_gameStarted;
     const GameplayRulesSystem::UpdateInput rulesInput{
         isPlaying,
         ctx.dt,
@@ -1158,10 +1231,13 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     const GameplayRulesSystem::UpdateResult rulesResult = m_gameplayRules.Update(rulesInput);
     if (rulesResult.timeUp && m_stageState == StageState::Playing)
     {
+        if (auto* soundMgr = SoundManagerEX::GetInstance())
+        {
+            soundMgr->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
+        }
         SetStageState(StageState::TimeUp);
-
-     
-       
+        OnStageResult();
+        m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_gameplayRules.ComputeScore(&m_phaseManager)));
         return;
 
 
@@ -1171,8 +1247,18 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
         BroadcastPhaseAdvance(rulesResult.currentPhase);
-    }
+    }*/
+    
     m_guidelineSystem.TickCooldowns(ctx.dt);
+    if (m_backgroundRenderer)
+    {
+        m_backgroundRenderer->Update(ctx.dt);
+    }
+
+    if (m_pendingBackgroundScrollOriginReanchor && m_gameCamera)
+    {
+        ReanchorBackgroundScrollOrigin("UpdateDeferred");
+    }
 
 #if defined(_DEBUG)
     if (m_sweetsManager)
@@ -1237,7 +1323,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     {
         Core::Input* input = GetInput();
 
-        // --- カウントダウン処理 ---
+        // カウントダウン
         if (!m_gameStarted)
         {
             m_startCountdownTimer += ctx.dt;
@@ -1248,12 +1334,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
                 if (m_startCountdownNumber > 1)
                 {
-                    m_startCountdownNumber--; // 3→2→1
-
-                    if (auto* soundMgr = SoundManagerEX::GetInstance())
-                    {
-                        soundMgr->PlaySoundEX("Assets/Audio/SE_CountDown.wav", false, 0.7f);
-                    }
+                    m_startCountdownNumber--;
+                    if (auto* sm = SoundManagerEX::GetInstance())
+                        sm->PlaySoundEX("Assets/Audio/SE_CountDown.wav", false, 0.7f);
                 }
                 else if (m_startCountdownNumber == 1)
                 {
@@ -1262,12 +1345,11 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
                     if (!m_whistlePlayed)
                     {
-                        if (auto* soundMgr = SoundManagerEX::GetInstance())
-                        {
-                            soundMgr->PlaySoundEX("Assets/Audio/SE_Start.wav", false, 0.7f);
-                            m_whistlePlayed = true;
-                            m_whistleTimer = 0.0f;
-                        }
+                        if (auto* sm = SoundManagerEX::GetInstance())
+                            sm->PlaySoundEX("Assets/Audio/SE_Start.wav", false, 0.7f);
+
+                        m_whistlePlayed = true;
+                        m_whistleTimer = 0.0f;
                     }
                 }
                 else if (m_showStartImage)
@@ -1281,22 +1363,49 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             return;
         }
 
-        // --- BGM開始処理（ゲーム開始後も実行） ---
+        const GameplayRulesSystem::UpdateInput rulesInput{
+            m_gameStarted,
+            ctx.dt,
+            m_sweetsManager.get(),
+            &m_phaseManager,
+            m_clearPhaseCount
+        };
+        const GameplayRulesSystem::UpdateResult rulesResult =
+            m_gameplayRules.Update(rulesInput);
+        m_realtimeScore = m_gameplayRules.GetCurrentScore();
+
+        if (rulesResult.timeUp)
+        {
+            if (auto* sm = SoundManagerEX::GetInstance())
+                sm->PlaySoundEX("Assets/Audio/SE_Finish.wav", false, 0.7f);
+
+            SetStageState(StageState::TimeUp);
+            EnsureResultSaved();
+            OnStageResult();
+            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager, (int)m_gameplayRules.GetCurrentTowerHeight(), m_gameplayRules.ComputeScore(&m_phaseManager)));
+            return;
+        }
+
+        if (rulesResult.phaseAdvanced && rulesResult.currentPhase > rulesResult.previousPhase)
+        {
+            UpdateCameraBoundsForPhase(m_gameplayRules.GetMaxTowerHeight());
+            BroadcastPhaseAdvance(rulesResult.currentPhase);
+        }
+
         if (m_whistlePlayed && !m_bgmStarted)
         {
             m_whistleTimer += ctx.dt;
-
             if (m_whistleTimer >= 0.8f)
             {
-                if (auto* soundMgr = SoundManagerEX::GetInstance())
-                {
-                    m_gameBGMHandle = soundMgr->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.6f);
-                    m_bgmStarted = true;
+                if (auto* sm = SoundManagerEX::GetInstance())
+                    m_gameBGMHandle =
+                    sm->PlaySoundEX("Assets/Audio/BGM_MainGame.wav", true, 0.6f);
 
-                }
+                m_bgmStarted = true;
             }
         }
 
+// --- タイムアップ判定 ---
 
         if (input)
         {
@@ -1341,9 +1450,24 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
           //  m_isScoreCounting = true;
          //   m_scoreToAddRemaining += scorePerPhase;
 
+            if (auto* soundMgr = SoundManagerEX::GetInstance())
+            {
+                soundMgr->PlaySoundEX("Assets/Audio/SE_PhaseUp.wav", false, 0.8f);
+            }
+
             const float guidelineDelta = guidelineResult.guidelineHeightMeters - m_lastGuidelineHeight;
             m_lastGuidelineHeight = guidelineResult.guidelineHeightMeters;
             UpdateCameraBoundsForPhase(guidelineResult.guidelineHeightMeters);
+
+   //         DebugTrace("guidelineDelta = " + std::to_string(guidelineDelta) + "\n");
+   //         DebugTrace("Remaining set to = " + std::to_string(m_OsaraToAddRemaining) + "\n");
+
+            if (guidelineDelta > 0.01f)
+            {
+                m_isOsaraCounting = true;
+                m_OsaraToAddRemaining = guidelineDelta;
+   //             DebugTrace("Remaining SET = " + std::to_string(m_OsaraToAddRemaining) + "\n");
+            }
             if (guidelineDelta != 0.0f)
             {
                 if (m_sweetsManager)
@@ -1358,14 +1482,17 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                         continue;
                     }
 
-                    obj.baseY += guidelineDelta;
-                    obj.transform.position.y += guidelineDelta;
+
+                //    obj.baseY += guidelineDelta;
+                //    obj.transform.position.y += guidelineDelta;
 
                     if (obj.physicsEntity)
                     {
                         obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
                     }
                 }
+
+
             }
         }
         //+200 スコア入った時徐々に増える
@@ -1386,16 +1513,29 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         //        m_scoreAddTimer = 0.0;
         //    }
         //}
-
+       
         break;
     }
     case StageState::TimeUp:
+        SetStageState(StageState::Finish);
+        m_finishTimer = 0.0f;   // Finish演出用タイマー初期化
+        break;
+    case StageState::Finish:
+        m_finishTimer += ctx.dt;
+        // FINISHを表示してからリザルトへ
+        if (m_finishTimer >= 2.0f)
+        {
+            SetStageState(StageState::ShowingResult);
+        }
+        break;
     case StageState::Cleared:
         SetStageState(StageState::ShowingResult);
         break;
     case StageState::ShowingResult:
         break;
     }
+
+    UpdateOsaraGradualMove(ctx);
 
     for (auto& obj : m_stageObjects)
     {
@@ -1876,7 +2016,11 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 
     // scrollOffsetUsedForBackground is in world units (meters). pixelsPerUnit is derived from the active camera.
     float scrollOffsetUsedForBackground = 0.0f;
+    float cameraY = 0.0f;
     float pixelsPerUnit = 1.0f;
+    float viewportWidth = 0.0f;
+    float viewportHeight = 0.0f;
+    float normalizedScroll01 = 0.0f;
 
     auto baseCamera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(activeCamera);
     assert(baseCamera && "SceneGame background requires a BaseCamera.");
@@ -1886,13 +2030,39 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
-        scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
+        if (m_pendingBackgroundScrollOriginReanchor)
+        {
+            if (m_gameCamera)
+            {
+                ReanchorBackgroundScrollOrigin("DrawWorldDeferred");
+            }
+            else
+            {
+                const float oldOriginY = m_backgroundScrollOriginY;
+                const float cameraAnchorY = baseCamera->GetPosition().y;
+                m_backgroundScrollOriginY = cameraAnchorY;
+                m_pendingBackgroundScrollOriginReanchor = false;
+
+                std::ostringstream reanchorLog;
+                reanchorLog << kLogPrefix
+                    << "[BackgroundReanchor] source=DrawWorldDeferredActiveCamera"
+                    << " cameraY=" << std::fixed << std::setprecision(3) << cameraAnchorY
+                    << " oldOriginY=" << oldOriginY
+                    << " newOriginY=" << m_backgroundScrollOriginY
+                    << "\n";
+                ::DebugTrace(reanchorLog.str());
+            }
+        }
+
+        cameraY = baseCamera->GetPosition().y;
+        scrollOffsetUsedForBackground = cameraY - m_backgroundScrollOriginY;
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
         {
             RenderTarget* defaultRTV = GetDefaultRTV();
             if (defaultRTV)
             {
-                const float viewportHeight = static_cast<float>(defaultRTV->GetHeight());
+                viewportWidth = static_cast<float>(defaultRTV->GetWidth());
+                viewportHeight = static_cast<float>(defaultRTV->GetHeight());
                 if (viewportHeight > 0.0f)
                 {
                     float3 planeSample{ 0.0f, 0.0f, 0.0f };
@@ -1917,9 +2087,75 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                 }
             }
         }
+
+        std::string normalizationSource = "height-based";
+        float levelHeight = std::max({ 1.0f,
+            m_guidelineSystem.GetHeightMeters(),
+            m_gameplayRules.GetCurrentTowerHeight(),
+            m_gameplayRules.GetPeakTowerHeight() });
+        const bool canUseLevelHeight = IsFiniteFloat(levelHeight) && levelHeight > 0.0f;
+        if (canUseLevelHeight)
+        {
+            normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / levelHeight, 0.0f, 1.0f);
+        }
+        else
+        {
+            normalizationSource = "origin-window";
+            const float localWindowHeight = std::max(1.0f, g_backgroundCameraRangeFallbackThreshold);
+            normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / localWindowHeight, 0.0f, 1.0f);
+        }
+
+        bool usedCameraRangeFallback = false;
+        float cameraRange = 0.0f;
+        if (!canUseLevelHeight && m_cameraRig)
+        {
+            const auto minY = m_cameraRig->GetClampMinY();
+            const auto maxY = m_cameraRig->GetClampMaxY();
+            if (minY && maxY && IsFiniteFloat(*minY) && IsFiniteFloat(*maxY) && *maxY > *minY)
+            {
+                cameraRange = *maxY - *minY;
+                const bool cameraRangeIsAdequate = cameraRange <= g_backgroundCameraRangeFallbackThreshold;
+                if (cameraRangeIsAdequate)
+                {
+                    normalizedScroll01 = std::clamp((cameraY - *minY) / cameraRange, 0.0f, 1.0f);
+                    normalizationSource = "camera-range-fallback";
+                    usedCameraRangeFallback = true;
+                }
+            }
+        }
+
+        {
+            static auto s_lastNormalizationLogTime = std::chrono::steady_clock::time_point{};
+            const auto now = std::chrono::steady_clock::now();
+            if (s_lastNormalizationLogTime.time_since_epoch().count() == 0 ||
+                now - s_lastNormalizationLogTime >= kBackgroundNormalizationLogInterval)
+            {
+                s_lastNormalizationLogTime = now;
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "background-normalization source=" << normalizationSource
+                    << " cameraY=" << cameraY
+                    << " normalizedScroll01=" << normalizedScroll01
+                    << " scrollOffset=" << scrollOffsetUsedForBackground
+                    << " levelHeight=" << levelHeight
+                    << " cameraRange=" << cameraRange
+                    << " fallbackThreshold=" << g_backgroundCameraRangeFallbackThreshold
+                    << " usedCameraRangeFallback=" << (usedCameraRangeFallback ? "true" : "false")
+                    << "\n";
+                DebugTrace(oss.str());
+            }
+        }
+
         if (m_backgroundRenderer)
         {
-            m_backgroundRenderer->Draw(scrollOffsetUsedForBackground, pixelsPerUnit);
+            BackgroundLayerDrawContext backgroundContext{};
+            backgroundContext.worldScrollOffset = scrollOffsetUsedForBackground;
+            backgroundContext.cameraY = cameraY;
+            backgroundContext.pixelsPerUnit = pixelsPerUnit;
+            backgroundContext.viewportWidth = viewportWidth;
+            backgroundContext.viewportHeight = viewportHeight;
+            backgroundContext.normalizedScroll01 = normalizedScroll01;
+            m_backgroundRenderer->Draw(backgroundContext);
         }
     }
 
@@ -2085,10 +2321,23 @@ void SceneGame::DrawOverlay()
         Sprite::SetOffset({ 0.0f, 0.0f }); 
         Sprite::SetSize({ 1.0f, 1.0f });   
         Sprite::SetColor({ 1,1,1,1 });
-
         Sprite::Draw();
     }
-    
+
+    // FINISH表示
+    if (m_stageState == StageState::Finish)
+    {
+        Sprite::ScopedPassDefaults guard;
+
+        Sprite::SetTexture(m_finishTexture.get());
+
+        // 画面中央に表示
+        Sprite::SetOffset({ 0.0f, 0.0f });
+        Sprite::SetSize({ 1.0f, 1.0f }); 
+        Sprite::SetColor({ 1,1,1,1 });
+        Sprite::Draw();
+    }
+
 #if defined(_DEBUG)
 #endif
 }
@@ -2278,8 +2527,8 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
 
     m_gameCamera->SetPosition(cameraPosition);
-    m_backgroundScrollOriginY = m_gameCamera->GetPosition().y;
     m_gameCamera->SetRotation(cameraRotation);
+    ReanchorBackgroundScrollOrigin("ConfigureCamera");
 // BaseCamera::RecalculateViewを直接呼び出す代わりに、パブリック API 経由でビューの更新を強制
 // BaseCamera::RecalculateViewは保護されたメソッドです GetView はトランスフォームが変更された際に遅延評価で再計算
     (void)m_gameCamera->GetView();
@@ -2308,6 +2557,39 @@ void SceneGame::ConfigureCamera(const SceneGameConfig::CameraRigSettings& settin
     }
     ::DebugTrace(oss.str());
 
+}
+
+
+void SceneGame::QueueBackgroundScrollOriginReanchor(const char* sourceTag)
+{
+    m_pendingBackgroundScrollOriginReanchor = true;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[BackgroundReanchor] queued source="
+        << (sourceTag ? sourceTag : "unknown")
+        << " oldOriginY=" << std::fixed << std::setprecision(3) << m_backgroundScrollOriginY << "\n";
+    ::DebugTrace(oss.str());
+}
+
+void SceneGame::ReanchorBackgroundScrollOrigin(const char* sourceTag)
+{
+    if (!m_gameCamera)
+    {
+        QueueBackgroundScrollOriginReanchor(sourceTag ? sourceTag : "camera-missing");
+        return;
+    }
+
+    const float oldOriginY = m_backgroundScrollOriginY;
+    const float newOriginY = m_gameCamera->GetPosition().y;
+    m_backgroundScrollOriginY = newOriginY;
+    m_pendingBackgroundScrollOriginReanchor = false;
+
+    std::ostringstream oss;
+    oss << kLogPrefix << "[BackgroundReanchor] source=" << (sourceTag ? sourceTag : "unknown")
+        << " cameraY=" << std::fixed << std::setprecision(3) << newOriginY
+        << " oldOriginY=" << std::fixed << std::setprecision(3) << oldOriginY
+        << " newOriginY=" << newOriginY << "\n";
+    ::DebugTrace(oss.str());
 }
 
 void SceneGame::UpdateCameraBoundsForPhase(float heightMeters)
@@ -2419,15 +2701,18 @@ void SceneGame::SetStageState(StageState newState)
 void SceneGame::OnStageStart()
 {
     ResetPlaySession();
+
+    m_whistlePlayed = false;
+    m_whistleTimer = 0.0f;
+    m_bgmStarted = false;
+
     m_resultFinalized = false;
     m_resultSaved = false;
 
-    // カウントダウン開始
-    m_startCountdownNumber = 3;   // 秒数
+    m_startCountdownNumber = 3;
     m_startCountdownTimer = 0.0f;
     m_gameStarted = false;
 
-    // この時点ではプレイヤーやスイーツは止めておく
     ToggleGameplaySystems(false);
 }
 
@@ -2524,10 +2809,53 @@ bool SceneGame::EnsureResultSaved()
 
 void SceneGame::BroadcastPhaseAdvance(int newPhase)
 {
+    const uint32_t guidelineReachedCount = static_cast<uint32_t>(std::max(0, m_gameplayRules.GetPhaseUpCount()));
+    const uint32_t oldCap = m_currentLiveCap;
+
+    uint32_t newLiveCap = m_baseLiveCap;
+    if (m_liveCapDoublePerPhase)
+    {
+        newLiveCap = m_baseLiveCap;
+        for (uint32_t i = 0; i < guidelineReachedCount; ++i)
+        {
+            if (newLiveCap >= m_maxLiveCap)
+            {
+                newLiveCap = m_maxLiveCap;
+                break;
+            }
+
+            if (newLiveCap > (std::numeric_limits<uint32_t>::max)() / 2u)
+            {
+                newLiveCap = (std::numeric_limits<uint32_t>::max)();
+            }
+            else
+            {
+                newLiveCap *= 2u;
+            }
+        }
+    }
+
+    if (newLiveCap > m_maxLiveCap)
+    {
+        newLiveCap = m_maxLiveCap;
+    }
+
+    m_currentLiveCap = newLiveCap;
+    if (m_sweetsManager)
+    {
+        m_sweetsManager->SetLiveSweetsCap(static_cast<int>(newLiveCap));
+    }
+
     std::ostringstream oss;
     const float peakHeight = m_gameplayRules.GetPeakTowerHeight();
     oss << kLogPrefix << "Broadcasting phase " << newPhase
-        << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")\n";
+        << " (stackedPeak=" << std::fixed << std::setprecision(2) << peakHeight << ")"
+        << " [LiveCapUpdate phase=" << newPhase
+        << " guidelineReachedCount=" << guidelineReachedCount
+        << " oldCap=" << oldCap
+        << " newCap=" << newLiveCap
+        << " currentLive=" << (m_sweetsManager ? m_sweetsManager->GetSweetsCount() : 0)
+        << "]\n";
     ::DebugTrace(oss.str());
     // BroadcastPhaseAdvance は、他のセッション制御が開始される前にここで終了すべき
 }
@@ -2624,7 +2952,18 @@ void SceneGame::ResetPlaySession()
         DebugTrace(std::string(kLogPrefix) + "ResetPlaySession skipped camera rig realignment: camera rig missing.\n");
     }
 
+    if (m_gameCamera)
+    {
+        // Retry reset aligns the camera rig first, then snaps background origin to the aligned camera position.
+        ReanchorBackgroundScrollOrigin("ResetPlaySession");
+    }
+    else
+    {
+        QueueBackgroundScrollOriginReanchor("ResetPlaySession");
+    }
+
     m_gameplayRules.ResetSession();
+    m_realtimeScore = m_gameplayRules.GetCurrentScore();
     m_guidelineSystem.ResetSession();
     ResetGuidelineHeight();
     ToggleGameplaySystems(true);
@@ -2716,4 +3055,79 @@ int SceneGame::GetSweetsCount() const
 bool SceneGame::IsOsara(const StageObject& obj)
 {
     return obj.modelPath.find("osara") != std::string::npos;
+}
+
+void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
+{
+    if (!m_isOsaraCounting || m_OsaraToAddRemaining <= 0.0f)
+    {
+        return;
+    }
+
+    float deltaY = osaraMoveSpeed * ctx.dt;
+    if (deltaY > m_OsaraToAddRemaining)
+    {
+        deltaY = m_OsaraToAddRemaining;
+    }
+
+    bool movedAnyOsara = false;
+    float movedMinX = std::numeric_limits<float>::max();
+    float movedMaxX = std::numeric_limits<float>::lowest();
+    float movedMinY = std::numeric_limits<float>::max();
+    float movedMaxY = std::numeric_limits<float>::lowest();
+
+    for (auto& obj : m_stageObjects)
+    {
+        if (!IsOsara(obj))
+        {
+            continue;
+        }
+
+        obj.baseY += deltaY;
+
+        if (obj.physicsEntity)
+        {
+            obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
+            obj.physicsEntity->SyncColliderBounds();
+            const AABB bounds = obj.physicsEntity->GetAABB();
+            movedMinX = std::min(movedMinX, bounds.min.x);
+            movedMaxX = std::max(movedMaxX, bounds.max.x);
+            movedMinY = std::min(movedMinY, bounds.min.y);
+            movedMaxY = std::max(movedMaxY, bounds.max.y);
+        }
+        else
+        {
+            movedMinX = std::min(movedMinX, obj.transform.position.x - 0.5f);
+            movedMaxX = std::max(movedMaxX, obj.transform.position.x + 0.5f);
+            movedMinY = std::min(movedMinY, obj.transform.position.y - 0.5f);
+            movedMaxY = std::max(movedMaxY, obj.transform.position.y + 0.5f);
+        }
+
+        movedAnyOsara = true;
+    }
+
+    if (movedAnyOsara && m_sweetsManager)
+    {
+        m_sweetsManager->NotifyStageMoved(movedMinX, movedMaxX, movedMinY, movedMaxY, deltaY);
+    }
+
+    m_OsaraToAddRemaining -= deltaY;
+
+    if (m_OsaraToAddRemaining <= 0.0f)
+    {
+        m_isOsaraCounting = false;
+    }
+}
+
+
+float SceneGame::GetVideoScroll01() const
+{
+    const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
+    const float peakHeight = std::max(currentHeight, m_gameplayRules.GetPeakTowerHeight());
+    if (!std::isfinite(currentHeight) || !std::isfinite(peakHeight) || peakHeight <= 0.0f)
+    {
+        return 0.0f;
+    }
+
+    return std::clamp(currentHeight / peakHeight, 0.0f, 1.0f);
 }

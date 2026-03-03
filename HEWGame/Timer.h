@@ -2,7 +2,7 @@
 class Timer
 {
 public:
-	Timer();
+	Timer(float a_maxTime);
 	~Timer();
 
 	void StepTime(float a_deltatime);	//deltatime分時間を減らしていく

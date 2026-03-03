@@ -2,6 +2,14 @@
 
 This document captures the **current** `UpdateNode` execution order for the main gameplay scene (`SceneGame`) based on the configured phases, priorities, and registration order.
 
+## Background ownership and draw flow
+
+- `SceneComposer::ComposeUI` creates exactly one background renderer via `IBackgroundLayerRenderer` abstraction.
+  - `backgroundVideoPath` is set: instantiate `VideoBackgroundRenderer` and apply `backgroundVideoAutoLoop` / `backgroundScrollMode`.
+  - otherwise: instantiate legacy `BackgroundRenderer` from `backgroundTexture`.
+- `SceneGame` owns this renderer (`std::unique_ptr<IBackgroundLayerRenderer>`), updates it in `SceneGame::Update(const Core::UpdateContext&)`, and draws it in `SceneGame::DrawWorld`.
+- `SceneGame::DrawWorld` passes a `BackgroundLayerDrawContext` containing viewport size and normalized scroll (`0..1`) derived from camera/guideline/level height.
+
 ## Scheduling rules
 
 The scheduler sorts registered nodes by:

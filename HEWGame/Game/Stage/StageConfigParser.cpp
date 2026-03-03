@@ -144,6 +144,38 @@ namespace
         outIndex = hasIndex ? parsedIndex : 0;
         return true;
     }
+
+    bool TryParseBool(const std::string& rawValue, bool& outValue)
+    {
+        const std::string lowered = ToLowerCopy(rawValue);
+        if (lowered == "1" || lowered == "true" || lowered == "yes" || lowered == "on")
+        {
+            outValue = true;
+            return true;
+        }
+        if (lowered == "0" || lowered == "false" || lowered == "no" || lowered == "off")
+        {
+            outValue = false;
+            return true;
+        }
+        return false;
+    }
+
+    bool TryParseBackgroundScrollMode(const std::string& rawValue, Stage::BackgroundScrollMode& outMode)
+    {
+        const std::string lowered = ToLowerCopy(rawValue);
+        if (lowered == "clamp")
+        {
+            outMode = Stage::BackgroundScrollMode::Clamp;
+            return true;
+        }
+        if (lowered == "wrap")
+        {
+            outMode = Stage::BackgroundScrollMode::Wrap;
+            return true;
+        }
+        return false;
+    }
 }
 
 namespace Stage
@@ -214,6 +246,14 @@ namespace Stage
         result.guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
         result.guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         result.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        result.backgroundVideoPath.clear();
+        result.backgroundVideoAutoLoop = true;
+        result.backgroundScrollMode = BackgroundScrollMode::Clamp;
+        result.backgroundBaseOffset01 = 0.0f;
+        result.backgroundBaseOffsetPixels = 0.0f;
+        result.backgroundVideoScrollSpeed = 1.0f;
+        result.backgroundVideoParallaxFactor = 1.0f;
+        result.backgroundVideoZoom = 1.0f;
 
         for (const auto& entry : lines)
         {
@@ -900,6 +940,134 @@ namespace Stage
                 {
                     result.backgroundTexturePath = rawValue;
                     result.backgroundTextureSet = true;
+                }
+            }
+            else if (key == "backgroundVideoPath")
+            {
+                result.backgroundVideoPath = rawValue;
+                result.backgroundVideoPathSet = true;
+            }
+            else if (key == "backgroundVideoAutoLoop")
+            {
+                bool parsedValue = true;
+                if (!TryParseBool(rawValue, parsedValue))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoAutoLoop on line " << lineNumber
+                        << ": expected true/false but got '" << rawValue << "'.\n";
+                    result.parseError = true;
+                }
+                else
+                {
+                    result.backgroundVideoAutoLoop = parsedValue;
+                    result.backgroundVideoAutoLoopSet = true;
+                }
+            }
+            else if (key == "backgroundScrollMode")
+            {
+                BackgroundScrollMode parsedMode = BackgroundScrollMode::Clamp;
+                if (!TryParseBackgroundScrollMode(rawValue, parsedMode))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundScrollMode on line " << lineNumber
+                        << ": expected clamp/wrap but got '" << rawValue << "'.\n";
+                    result.parseError = true;
+                }
+                else
+                {
+                    result.backgroundScrollMode = parsedMode;
+                    result.backgroundScrollModeSet = true;
+                }
+            }
+            else if (key == "backgroundBaseOffset01")
+            {
+                try
+                {
+                    result.backgroundBaseOffset01 = std::stof(rawValue);
+                    result.backgroundBaseOffset01Set = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundBaseOffset01 on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundBaseOffsetPixels")
+            {
+                try
+                {
+                    result.backgroundBaseOffsetPixels = std::stof(rawValue);
+                    result.backgroundBaseOffsetPixelsSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundBaseOffsetPixels on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundVideoScrollSpeed")
+            {
+                try
+                {
+                    result.backgroundVideoScrollSpeed = std::stof(rawValue);
+                    result.backgroundVideoScrollSpeedSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoScrollSpeed on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundVideoParallaxFactor")
+            {
+                try
+                {
+                    result.backgroundVideoParallaxFactor = std::stof(rawValue);
+                    result.backgroundVideoParallaxFactorSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoParallaxFactor on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundVideoZoom")
+            {
+                try
+                {
+                    result.backgroundVideoZoom = std::stof(rawValue);
+                    result.backgroundVideoZoomSet = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoZoom on line " << lineNumber
+                        << ": " << ex.what() << "\n";
+                    result.parseError = true;
+                }
+            }
+            else if (key == "backgroundVideoClampEdgeRelease")
+            {
+                bool parsedValue = false;
+                if (!TryParseBool(rawValue, parsedValue))
+                {
+                    std::ostringstream oss;
+                    oss << kLogPrefix << "Failed to parse backgroundVideoClampEdgeRelease on line " << lineNumber
+                        << ": expected true/false but got '" << rawValue << "'.\n";
+                    result.parseError = true;
+                }
+                else
+                {
+                    result.backgroundVideoClampEdgeRelease = parsedValue;
+                    result.backgroundVideoClampEdgeReleaseSet = true;
                 }
             }
             else

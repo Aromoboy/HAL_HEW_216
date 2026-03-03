@@ -15,6 +15,8 @@
 
 namespace Diagnostics
 {
+	inline bool EnableConsoleOutput = false;
+
 	inline void LogLine(const std::string& level, const std::string& message)
 	{
 		std::ostringstream oss;
@@ -31,7 +33,8 @@ namespace Diagnostics
 		HANDLE stderrHandle = ::GetStdHandle(STD_ERROR_HANDLE);
 		canWriteToConsole = stderrHandle != INVALID_HANDLE_VALUE && stderrHandle != nullptr && _isatty(_fileno(stderr)) != 0;
 
-		if (!canWriteToConsole)
+	#if defined(_DEBUG)
+		if (!canWriteToConsole && EnableConsoleOutput)
 		{
 			FILE* newStderr = nullptr;
 			if (::AllocConsole() && freopen_s(&newStderr, "CONOUT$", "w", stderr) == 0)
@@ -39,6 +42,7 @@ namespace Diagnostics
 				canWriteToConsole = true;
 			}
 		}
+	#endif
 #endif
 
 		if (canWriteToConsole)

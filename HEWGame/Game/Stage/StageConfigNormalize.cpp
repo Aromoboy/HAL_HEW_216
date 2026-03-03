@@ -245,6 +245,15 @@ namespace Stage
         float guidelineMilestoneBonusSeconds = parsed.guidelineMilestoneBonusSeconds;
         int guidelineMilestoneInterval = parsed.guidelineMilestoneInterval;
         std::string backgroundTexturePath = parsed.backgroundTexturePath;
+        std::string backgroundVideoPath = parsed.backgroundVideoPath;
+        bool backgroundVideoAutoLoop = parsed.backgroundVideoAutoLoop;
+        BackgroundScrollMode backgroundScrollMode = parsed.backgroundScrollMode;
+        float backgroundBaseOffset01 = parsed.backgroundBaseOffset01;
+        float backgroundBaseOffsetPixels = parsed.backgroundBaseOffsetPixels;
+        float backgroundVideoScrollSpeed = parsed.backgroundVideoScrollSpeed;
+        float backgroundVideoParallaxFactor = parsed.backgroundVideoParallaxFactor;
+        float backgroundVideoZoom = parsed.backgroundVideoZoom;
+        bool backgroundVideoClampEdgeRelease = parsed.backgroundVideoClampEdgeRelease;
 
         if (!planeZSet)
         {
@@ -379,6 +388,51 @@ namespace Stage
             std::ostringstream oss;
             oss << kLogPrefix << "backgroundTexture not specified; defaulting to '"
                 << backgroundTexturePath << "'.\n";
+        }
+
+        if (!parsed.backgroundVideoPathSet)
+        {
+            backgroundVideoPath.clear();
+        }
+
+        if (!parsed.backgroundVideoAutoLoopSet)
+        {
+            backgroundVideoAutoLoop = true;
+        }
+
+        if (!parsed.backgroundScrollModeSet)
+        {
+            backgroundScrollMode = BackgroundScrollMode::Clamp;
+        }
+
+        if (!parsed.backgroundBaseOffset01Set)
+        {
+            backgroundBaseOffset01 = 0.0f;
+        }
+
+        if (!parsed.backgroundBaseOffsetPixelsSet)
+        {
+            backgroundBaseOffsetPixels = 0.0f;
+        }
+
+        if (!parsed.backgroundVideoScrollSpeedSet)
+        {
+            backgroundVideoScrollSpeed = 1.0f;
+        }
+
+        if (!parsed.backgroundVideoParallaxFactorSet)
+        {
+            backgroundVideoParallaxFactor = 1.0f;
+        }
+
+        if (!parsed.backgroundVideoZoomSet)
+        {
+            backgroundVideoZoom = 1.0f;
+        }
+
+        if (!parsed.backgroundVideoClampEdgeReleaseSet)
+        {
+            backgroundVideoClampEdgeRelease = false;
         }
 
         if (!platformWidthFractionSet)
@@ -987,6 +1041,15 @@ namespace Stage
         normalized.guidelineMilestoneBonusSeconds = guidelineMilestoneBonusSeconds;
         normalized.guidelineMilestoneInterval = guidelineMilestoneInterval;
         normalized.backgroundTexturePath = std::move(backgroundTexturePath);
+        normalized.backgroundVideoPath = std::move(backgroundVideoPath);
+        normalized.backgroundVideoAutoLoop = backgroundVideoAutoLoop;
+        normalized.backgroundScrollMode = backgroundScrollMode;
+        normalized.backgroundBaseOffset01 = backgroundBaseOffset01;
+        normalized.backgroundBaseOffsetPixels = backgroundBaseOffsetPixels;
+        normalized.backgroundVideoScrollSpeed = std::max(0.0f, backgroundVideoScrollSpeed);
+        normalized.backgroundVideoParallaxFactor = std::clamp(backgroundVideoParallaxFactor, 0.0f, 8.0f);
+        normalized.backgroundVideoZoom = std::max(1.0f, backgroundVideoZoom);
+        normalized.backgroundVideoClampEdgeRelease = backgroundVideoClampEdgeRelease;
         normalized.insertedFallbackAnchor = insertedFallbackAnchor;
 
         return normalized;
@@ -1037,6 +1100,15 @@ namespace Stage
         normalized.guidelineMilestoneBonusSeconds = StageConfigDefaults::kDefaultGuidelineMilestoneBonusSeconds;
         normalized.guidelineMilestoneInterval = StageConfigDefaults::kDefaultGuidelineMilestoneInterval;
         normalized.backgroundTexturePath = StageConfigDefaults::DefaultBackgroundTexturePath();
+        normalized.backgroundVideoPath.clear();
+        normalized.backgroundVideoAutoLoop = true;
+        normalized.backgroundScrollMode = BackgroundScrollMode::Clamp;
+        normalized.backgroundBaseOffset01 = 0.0f;
+        normalized.backgroundBaseOffsetPixels = 0.0f;
+        normalized.backgroundVideoScrollSpeed = 1.0f;
+        normalized.backgroundVideoParallaxFactor = 1.0f;
+        normalized.backgroundVideoZoom = 1.0f;
+        normalized.backgroundVideoClampEdgeRelease = false;
         normalized.parseError = false;
         normalized.primaryUsedDefaults = true;
         normalized.secondaryUsedDefaults = false;

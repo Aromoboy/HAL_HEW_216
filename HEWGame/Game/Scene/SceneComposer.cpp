@@ -9,6 +9,7 @@
 #include <sstream>
 
 #include "BackgroundRenderer.h"
+#include "VideoBackgroundRenderer.h"
 #include "ConfigSectionReader.h"
 #include "Core/UpdateScheduler.h"
 #include "GameplayConfig.h"
@@ -115,6 +116,7 @@ void SceneComposer::ComposeConfig(Composition& result)
     result.materialTuningSettings = SceneGameConfig::LoadMaterialTuningSettings();
     result.sweetsOutOfBoundsSettings = SceneGameConfig::LoadSweetsOutOfBoundsSettings();
     result.sweetsSpawnLimitSettings = SceneGameConfig::LoadSweetsSpawnLimitSettings();
+    result.sweetsSpawnDebugSettings = SceneGameConfig::LoadSweetsSpawnDebugSettings();
 
     const char* stageConfigSectionUsed = GameplayConfig::kSectionStageChecklist;
     bool stageLoaded = result.stageData.LoadFromFile(kGameplayConfigPath, stageConfigSectionUsed);
@@ -231,7 +233,16 @@ void SceneComposer::ComposeConfig(Composition& result)
             << " guidelineTimeBonusSeconds=" << result.stageData.GetGuidelineTimeBonusSeconds()
             << " guidelineMilestoneBonusSeconds=" << result.stageData.GetGuidelineMilestoneBonusSeconds()
             << " guidelineMilestoneInterval=" << result.stageData.GetGuidelineMilestoneInterval()
-            << " background='" << result.stageData.GetBackgroundTexturePath() << "'\n";
+            << " background='" << result.stageData.GetBackgroundTexturePath() << "'"
+            << " backgroundVideoPath='" << result.stageData.GetBackgroundVideoPath() << "'"
+            << " backgroundScrollMode="
+            << (result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap ? "wrap" : "clamp")
+            << " backgroundBaseOffset01=" << result.stageData.GetBackgroundBaseOffset01()
+            << " backgroundBaseOffsetPixels=" << result.stageData.GetBackgroundBaseOffsetPixels()
+            << " backgroundVideoScrollSpeed=" << result.stageData.GetBackgroundVideoScrollSpeed()
+            << " backgroundVideoParallaxFactor=" << result.stageData.GetBackgroundVideoParallaxFactor()
+            << " backgroundVideoZoom=" << result.stageData.GetBackgroundVideoZoom()
+            << "\n";
         for (std::size_t i = 0; i < result.stageData.GetPlatformCount(); ++i)
         {
             const auto& descriptor = result.stageData.GetPlatform(i);
@@ -454,6 +465,9 @@ void SceneComposer::ComposePhysics(Composition& result)
         result.sweetsManager->SetLiveSweetsCap(result.sweetsSpawnLimitSettings.spawnTotalCap);
         result.sweetsManager->SetSpawnPointCap(result.sweetsSpawnLimitSettings.spawnPerPointCap);
         result.sweetsManager->SetSpawnPerPointInitial(result.sweetsSpawnLimitSettings.spawnPerPointInitial);
+        result.sweetsManager->SetSpawnDebugDiagnostics(
+            result.sweetsSpawnDebugSettings.enabled,
+            result.sweetsSpawnDebugSettings.rateLimitSeconds);
         const bool spawnConfigLoaded = result.sweetsManager->LoadSpawnTuningConfig(kGameplayConfigPath);
         {
             std::ostringstream oss;
@@ -522,27 +536,90 @@ void SceneComposer::ComposeLayout(Composition& result)
 
 void SceneComposer::ComposeUI(Composition& result)
 {
+    const std::string backgroundVideo = result.stageData.GetBackgroundVideoPath();
     const std::string backgroundTexture = result.stageData.GetBackgroundTexturePath();
-    if (!backgroundTexture.empty())
+    if (!backgroundVideo.empty())
+    {
+        VideoBackgroundRenderer::ShaderPaths shaderPaths{
+            "Assets/shaders/video_vs.cso",
+            "Assets/shaders/video_ps.cso"
+        };
+
+        auto videoBg = std::make_unique<VideoBackgroundRenderer>();
+        if (!videoBg->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundVideo))
+        {
+            std::ostringstream oss;
+            oss << kLogPrefix << "Video background renderer failed for video '" << backgroundVideo << "'.\n";
+            DebugTrace(oss.str());
+        }
+        else
+        {
+            videoBg->SetAutoLoop(result.stageData.IsBackgroundVideoAutoLoop());
+            videoBg->SetScrollMode(
+                result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap
+                ? VideoBackgroundRenderer::ScrollMode::Wrap
+                : VideoBackgroundRenderer::ScrollMode::Clamp);
+            videoBg->SetBaseOffset01(result.stageData.GetBackgroundBaseOffset01());
+            videoBg->SetBaseOffsetPixels(result.stageData.GetBackgroundBaseOffsetPixels());
+            videoBg->SetScrollSpeed(result.stageData.GetBackgroundVideoScrollSpeed());
+            videoBg->SetParallaxFactor(result.stageData.GetBackgroundVideoParallaxFactor());
+            videoBg->SetZoom(result.stageData.GetBackgroundVideoZoom());
+            videoBg->SetClampEdgeReleaseEnabled(result.stageData.IsBackgroundVideoClampEdgeReleaseEnabled());
+            // Keep gameplay video start anchored to the bottom (same orientation as other scenes).
+            constexpr bool kVideoInvertY = false;
+            videoBg->SetInvertY(kVideoInvertY);
+            // Gameplay wants "start from bottom and move upward" while preserving texture orientation.
+            constexpr float kVideoScrollDirection = -1.0f;
+            videoBg->SetScrollDirection(kVideoScrollDirection);
+
+            const std::string& stageConfigSource = result.stageData.GetSourcePath();
+            const char* effectiveStageConfigPath = stageConfigSource.empty() ? kGameplayConfigPath : stageConfigSource.c_str();
+            std::ostringstream appliedVideoParamsLog;
+            appliedVideoParamsLog << kLogPrefix
+                << "[VideoBackground] Applied params configPath='" << effectiveStageConfigPath << "'"
+                << " backgroundVideoPath='" << backgroundVideo << "'"
+                << " scrollMode="
+                << (result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap ? "wrap" : "clamp")
+                << " baseOffset01=" << result.stageData.GetBackgroundBaseOffset01()
+                << " baseOffsetPixels=" << result.stageData.GetBackgroundBaseOffsetPixels()
+                << " scrollSpeed=" << result.stageData.GetBackgroundVideoScrollSpeed()
+                << " parallaxFactor=" << result.stageData.GetBackgroundVideoParallaxFactor()
+                << " zoom=" << result.stageData.GetBackgroundVideoZoom()
+                << " scrollDirection=" << kVideoScrollDirection
+                << " invertY=" << (kVideoInvertY ? "true" : "false")
+                << "\n";
+            DebugTrace(appliedVideoParamsLog.str());
+
+            result.backgroundRenderer = std::move(videoBg);
+        }
+    }
+    else if (!backgroundTexture.empty())
     {
         // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
-        constexpr float kDefaultBackgroundParallax = 0.0001f;
+        constexpr float kDefaultBackgroundParallax = 0.05f;
         BackgroundRendererConfig backgroundConfig{};
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;
-        layer.scrollOffsetInPixels = false;
+        layer.invertScroll = false;
+        // backgroundBaseOffset01 is normalized in [0..1], and pixel-precise anchoring can be
+        // provided via gameplay.cfg using backgroundBaseOffsetPixels.
+        layer.scrollOffsetInPixels = true;
         layer.samplingMode = BackgroundRendererConfig::SamplingMode::Clamp;
-        layer.baseOffset01 = 4.00f;
+        layer.baseOffset01 = result.stageData.GetBackgroundBaseOffset01();
+        layer.baseOffsetPixels = result.stageData.GetBackgroundBaseOffsetPixels();
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         backgroundConfig.layers.push_back(layer);
-        result.backgroundRenderer = std::make_unique<BackgroundRenderer>();
-        if (!result.backgroundRenderer->Initialize(backgroundConfig))
+        auto bg = std::make_unique<BackgroundRenderer>();
+        if (!bg->Initialize(backgroundConfig))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Background renderer failed for texture '" << backgroundTexture << "'.\n";
             DebugTrace(oss.str());
-            result.backgroundRenderer.reset();
+        }
+        else
+        {
+            result.backgroundRenderer = std::move(bg);
         }
     }
     else

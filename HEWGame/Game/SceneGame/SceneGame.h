@@ -23,13 +23,14 @@
 #include "Transform.h"
 #include "Stage/StageData.h"
 #include "GameFlow/PhaseManager.h"
-#include "BackgroundRenderer.h"
+#include "IBackgroundLayerRenderer.h"
 #include "StageLayoutLoader.h"
 #include "SceneGameConfigTypes.h"
 #include "BlobShadowRenderer.h"
 #include "ISceneServices.h"
 #include "Save/PlayerData.h"
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -67,6 +68,7 @@ public:
         TimeUp,
         Cleared,
         ShowingResult,
+        Finish,
     };
 
     using PlayerColliderTuning = SceneGameConfig::PlayerColliderTuning;
@@ -91,6 +93,7 @@ public:
     void DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) override;
     void Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera) final;
     void DrawOverlay() override;
+    float GetVideoScroll01() const override;
     Systems::IPhysicsBinder* GetPhysicsBinder() override;
     Render::ModelRenderer* GetRenderer() override;
     Core::UpdateScheduler& GetScheduler() override;
@@ -100,6 +103,8 @@ public:
 
 private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
+    void ReanchorBackgroundScrollOrigin(const char* sourceTag);
+    void QueueBackgroundScrollOriginReanchor(const char* sourceTag);
     void UpdateCameraBoundsForPhase(float heightMeters);
 #if defined(_DEBUG)
     void HandleColliderDebugCommands(const Core::UpdateContext& ctx);
@@ -120,6 +125,7 @@ private:
     int GetSweetsCount() const;
     int m_gameBGMHandle = -1;
     void Initialize(const Stage::StageData& stageData);
+    void UpdateOsaraGradualMove(const Core::UpdateContext& ctx);
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -157,9 +163,10 @@ protected:
     bool m_resultSaved = false;
     std::unique_ptr<SceneGameUIOverlay> m_uiOverlay;
     std::unique_ptr<UIManager> m_uiManager;
-    std::unique_ptr<BackgroundRenderer> m_backgroundRenderer;
+    std::unique_ptr<IBackgroundLayerRenderer> m_backgroundRenderer;
     std::unique_ptr<BlobShadowRenderer> m_blobShadowRenderer;
     float m_backgroundScrollOriginY = 0.0f;
+    bool m_pendingBackgroundScrollOriginReanchor = false;
     RenderPostProcessSettings m_renderPostProcessSettings{};
     SceneLightingSettings m_lightingSettings{};
     BlobShadowSettings m_blobShadowSettings{};
@@ -190,6 +197,10 @@ protected:
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
+    uint32_t m_baseLiveCap = 0;
+    uint32_t m_maxLiveCap = 0;
+    uint32_t m_currentLiveCap = 0;
+    bool m_liveCapDoublePerPhase = false;
     // 仮で作った何回フェーズを超えたらクリアになるかの判定
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
@@ -203,14 +214,20 @@ protected:
     float m_whistleTimer = 0.0f;
     bool m_whistlePlayed = false;
     bool m_bgmStarted = false;
+    bool  m_showFinishImage = false;
+    float m_finishTimer = 0.0f;
+    bool  m_finishDone = false;
+    std::shared_ptr<Texture> m_finishTexture;
     SceneSpace::SceneManager* m_manager = nullptr;
     //スコア変数　ゲーム開始時100ポイントついてる
     int m_realtimeScore = 100;
     float m_lastApprovePeakHeight = 0.0f;
     //カウントアップ型スコア加算（ゲームにスコア表示するなら、、、）
-    bool m_isScoreCounting = false;
-    int  m_scoreToAddRemaining = 0;
-    float m_scoreAddTimer = 0.0f;
+    bool m_isOsaraCounting = false;
+    float  m_OsaraToAddRemaining = 0.0f;
+    float m_OsaraAddTimer = 0.0f;
+
+    float osaraMoveSpeed = 0.5f;
 };
 
 #endif

@@ -15,7 +15,6 @@
 
 
 constexpr float2 kUnitDistanse = { 1.4f, -0.5f };
-constexpr float2 kTitleBackMagnification = { 0.0115f, 0.0115f };
 constexpr float2 kTitleNodeMagnification = { 0.01f, 0.01f };
 
 constexpr float2 kTitleStartNodeOffset	 = {  3.0f,  0.0f };
@@ -46,7 +45,6 @@ TitleManager::TitleManager(Core::UpdateScheduler* a_scheduler, TextureCache& a_c
 		TitleNode(a_cache.Get("SelectPowerUpSceneNode"), kTitlePowerUpNodeOffset + kSelectPowerUpNodeOffset, float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y)),
 		TitleNode(a_cache.Get("SelectGameEndNode"), kTitleEndNodeOffset + kSelectEndNodeOffset, float2(SCREEN_WIDTH* kTitleNodeMagnification.x, SCREEN_HEIGHT* kTitleNodeMagnification.y))
 	)
-	, m_backTexture(a_cache.Get("TitleBack"))
 {
 }
 
@@ -122,8 +120,6 @@ void TitleManager::SetFormat(const TitleCursor::NodeFormat& a_format)
 void TitleManager::DrawAll(TitleRenderer& a_titleRenderer)
 {
 	SetDepthTest(false);
-	a_titleRenderer.Draw(m_backTexture, float2(0.0f, 0.0f), float2(SCREEN_WIDTH * kTitleBackMagnification.x, SCREEN_HEIGHT * kTitleBackMagnification.y));
-
 	for (auto it : m_nodes)
 	{
 		a_titleRenderer.Draw(it.nodeTexture, it.pos, it.size);

@@ -15,7 +15,7 @@
  
 #include <memory>
 
-static int s_TitleBGMHandle = -1;
+int s_TitleBGMHandle = -1;
 
 TitleScene::TitleScene(SceneSpace::SceneManager& manager)
     : m_manager(&manager)
@@ -38,7 +38,6 @@ bool TitleScene::Load(Core::Input& input)
     cache.Load("SelectGameSceneNode", GetDevice(), L"Assets/Texture/STARTUIselect.png");
     cache.Load("SelectPowerUpSceneNode", GetDevice(), L"Assets/Texture/GREADUPUIselect.png");
     cache.Load("SelectGameEndNode", GetDevice(), L"Assets/Texture/ENDUIselect.png");
-    cache.Load("TitleBack", GetDevice(), L"Assets/Texture/Title.png");
     m_renderer = std::make_unique<TitleRenderer>();
     m_titleManager = std::make_unique<TitleManager>(&GetUpdateScheduler(), cache, format, input);
 
@@ -52,11 +51,13 @@ void TitleScene::Update(Core::StepTimer& timer, Core::Input& input)
         m_video->Update(timer.DeltaTime());
     }
 
+
     RootUpdate(timer, input);
 }
 
 void TitleScene::Draw()
 {
+    // RootDraw triggers Draw(const Camera&) where the background is rendered.
     RootDraw();
 }
 
@@ -221,47 +222,7 @@ void TitleScene::Update(const Core::UpdateContext& ctx)
     if (m_titleManager->GetGameEndRequest())
     {
         m_manager->GameEndRequest();
-    }
-
-    if (input->IsTrigger(VK_F1))
-    {
-        m_shouldStopBGM = true;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<EffectTestScene>(*m_manager));
-        }
-        return;
-    }
-
-    if (input->IsTrigger(VK_SPACE))
-    {
-        m_shouldStopBGM = false;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SettingScene>(*m_manager));
-        }
-        return;
-    }
-
-    if (input->IsTrigger(Core::ActionId::Cancel))
-    {
-        m_shouldStopBGM = false;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<TitleScene>(*m_manager));
-        }
-    }
-
-
-    if (input->IsTrigger('O'))
-    {
-        m_shouldStopBGM = false;
-        if (m_manager)
-        {
-            m_manager->RequestSceneChange(std::make_unique<SceneSpace::SceneResult>(*m_manager));
-        }
-    }
-
+    }    
 }
 
 void TitleScene::Draw(const std::shared_ptr<::CameraSpace::ICamera>& activeCamera)

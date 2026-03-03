@@ -15,6 +15,7 @@
 #include "Vector.h"
 #include "TitleRenderer.h"
 #include "TitleCursor.h"
+#include "SceneResult.h"
 
 namespace Core
 {
@@ -98,12 +99,10 @@ public:
 	bool m_cursorRegistered = false;
 	// 全てのノードとカーソルを描画
 	void DrawAll(TitleRenderer& TitleRenderer);
-
+	void DrawAll(ResultRenderer& ResultRender);
 
 private:
 	Core::UpdateScheduler* m_scheduler;
-
-	std::shared_ptr<Texture2D> m_backTexture;
 
 	TitleCursor::NodeFormat m_format;
 

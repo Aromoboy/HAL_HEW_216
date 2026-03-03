@@ -1,8 +1,8 @@
 ﻿#include "Timer.h"
 #include <algorithm>
 
-Timer::Timer()
-	:m_maxTime(5.0f)
+Timer::Timer(float a_maxTime)
+	:m_maxTime(a_maxTime)
 {
 }
 
