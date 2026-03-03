@@ -16,3 +16,12 @@ This checklist uses the `stage.checklist` section in `Assets/Config/gameplay.cfg
 | ✅ | Pivot vs. collider | Visual pivot adjustments on the platform do not move its collider; collider dimensions follow the descriptor scale while the pivot only shifts rendering. |
 
 Use this table as regression evidence after running the scene; update the notes column when a run reveals differences or confirms parity.
+
+
+## SceneSlopeTest technical decision (current sprint)
+- Keep the visualization path in `SceneSlopeTest` on existing `Geometory` helpers only:
+  - solid primitives via `Geometory::DrawSphere` / `Geometory::DrawBox`;
+  - debug lines via `Geometory::AddLine` / `Geometory::DrawLines`.
+- Do **not** integrate DirectXTK `PrimitiveBatch` in this sprint.
+- Do **not** change the core render pipeline/backends under `Engine/Render` for this task.
+- Scope changes to `HEWGame/Game/Scene/SceneSlopeTest.cpp` plus minimal stability-only adjustments in `HEWGame/Game/Scene/Collision.cpp`.
