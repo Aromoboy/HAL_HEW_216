@@ -49,9 +49,13 @@ Collision::Result Collision::Hit(const Triangle& tri, const XMFLOAT3& point)
     Result result = { false };
     constexpr float EPS = 1e-6f;
 
+    // Stability note: avoid normalizing near-zero cross vectors.
+    // Point-on-edge and tiny triangles can produce zero-length vectors,
+    // and XMVector3Normalize() on them can generate non-finite values.
     XMVECTOR vPoint = XMLoadFloat3(&point);
 
     XMVECTOR vCross[3] = {};
+    float crossLen[3] = {};
     for (int i = 0; i < 3; ++i)
     {
         const XMFLOAT3& p0 = tri.p[i];
@@ -64,22 +68,43 @@ Collision::Result Collision::Hit(const Triangle& tri, const XMFLOAT3& point)
         XMVECTOR vToPt = XMVectorSubtract(vPoint, vP0);
 
         vCross[i] = XMVector3Cross(vEdge, vToPt);
-        vCross[i] = XMVector3Normalize(vCross[i]);
+        XMStoreFloat(&crossLen[i], XMVector3Length(vCross[i]));
     }
 
-    float m01 = 0.0f;
-    float m12 = 0.0f;
-    float m20 = 0.0f;
-    XMStoreFloat(&m01, XMVector3Dot(vCross[0], vCross[1]));
-    XMStoreFloat(&m12, XMVector3Dot(vCross[1], vCross[2]));
-    XMStoreFloat(&m20, XMVector3Dot(vCross[2], vCross[0]));
-
-    if (m01 >= -EPS && m12 >= -EPS && m20 >= -EPS)
+    float refLen = 0.0f;
+    XMVECTOR refCross = XMVectorZero();
+    for (int i = 0; i < 3; ++i)
     {
-        result.isHit = true;
-        result.point = point;
-        XMStoreFloat3(&result.dir, vCross[0]);
+        if (crossLen[i] > refLen)
+        {
+            refLen = crossLen[i];
+            refCross = vCross[i];
+        }
     }
 
+    if (refLen <= EPS)
+    {
+        return result;
+    }
+
+    XMVECTOR refN = XMVector3Normalize(refCross);
+    for (int i = 0; i < 3; ++i)
+    {
+        if (crossLen[i] <= EPS)
+        {
+            continue;
+        }
+
+        float d = 0.0f;
+        XMStoreFloat(&d, XMVector3Dot(refN, XMVector3Normalize(vCross[i])));
+        if (d < -EPS)
+        {
+            return result;
+        }
+    }
+
+    result.isHit = true;
+    result.point = point;
+    XMStoreFloat3(&result.dir, refN);
     return result;
 }

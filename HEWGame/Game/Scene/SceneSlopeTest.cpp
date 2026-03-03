@@ -15,6 +15,13 @@ using namespace DirectX;
 
 namespace
 {
+    // Sprint decision note:
+    // - Keep slope test debug rendering on existing Geometory helpers.
+    // - Do not add DirectXTK PrimitiveBatch in this sprint.
+    // - Do not touch Engine/Render pipeline/backend for this scene task.
+    // Current rendering path in this file:
+    //   * Solid primitives: Geometory::DrawBox / Geometory::DrawSphere
+    //   * Debug lines:      Geometory::AddLine / Geometory::DrawLines
     static float Length(const XMFLOAT3& v)
     {
         XMVECTOR vv = XMLoadFloat3(&v);
@@ -313,6 +320,10 @@ void SceneSlopeTest::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& ac
     {
         m_pFloor->Draw();
     }
+
+    const XMFLOAT4 trajectoryColor = { 0.2f, 0.9f, 0.3f, 1.0f };
+    Geometory::AddLine(m_ball.pos, Add(m_ball.pos, Mul(m_ball.vel, 0.2f)), trajectoryColor);
+    Geometory::DrawLines();
 
     XMMATRIX ballMat = XMMatrixScaling(m_ball.radius * 2.0f, m_ball.radius * 2.0f, m_ball.radius * 2.0f)
         * XMMatrixTranslation(m_ball.pos.x, m_ball.pos.y, m_ball.pos.z);
