@@ -337,6 +337,8 @@ namespace SceneSpace
         }
 
         ScopedTransitionVideoOverlayState overlayStateGuard(GetContext());
+        const auto& dxContext = GetDXContext();
+        m_transitionVideo->SetViewportSize(static_cast<float>(dxContext.GetWidth()), static_cast<float>(dxContext.GetHeight()));
         m_transitionVideo->Draw();
     }
 
@@ -388,6 +390,8 @@ namespace SceneSpace
             else
             {
                 m_transitionVideo->Update(m_timer.DeltaTime());
+                const float scroll01 = m_activeScene ? m_activeScene->GetVideoScroll01() : 0.0f;
+                m_transitionVideo->SetScroll01(scroll01);
                 if (frameIndex - m_lastTransitionVideoProgressLogFrame >= kTransitionVideoProgressLogIntervalFrames)
                 {
                     std::ostringstream oss;
@@ -451,6 +455,7 @@ namespace SceneSpace
                     }
 
                     m_transitionVideo->SetAutoLoop(false);
+                    m_transitionVideo->SetInvertY(false);
                     m_videoTransitionInProgress = true;
                     m_lastTransitionVideoProgressLogFrame = frameIndex;
                     m_transitionVideoDrawLogged = false;

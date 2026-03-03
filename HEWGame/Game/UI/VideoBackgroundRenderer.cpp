@@ -1,7 +1,9 @@
 #include "VideoBackgroundRenderer.h"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstring>
 #include <sstream>
 
@@ -433,6 +435,22 @@ void VideoBackgroundRenderer::SetAutoLoop(bool enabled)
     }
 }
 
+void VideoBackgroundRenderer::SetViewportSize(float width, float height)
+{
+    m_viewportWidth = width;
+    m_viewportHeight = height;
+}
+
+void VideoBackgroundRenderer::SetScroll01(float scroll01)
+{
+    m_scroll01 = scroll01;
+}
+
+void VideoBackgroundRenderer::SetInvertY(bool invert)
+{
+    m_invertY = invert;
+}
+
 ID3D11ShaderResourceView* VideoBackgroundRenderer::GetTexture() const
 {
     return m_srv.Get();
@@ -445,7 +463,44 @@ void VideoBackgroundRenderer::Draw()
         return;
     }
 
+    DirectX::XMFLOAT4 uvTransform[1]{ DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) };
+
+    const float viewportWidth = m_viewportWidth;
+    const float viewportHeight = m_viewportHeight;
+    const float sourceWidth = static_cast<float>(m_frameWidth);
+    const float sourceHeight = static_cast<float>(m_frameHeight);
+
+    const bool validViewport = std::isfinite(viewportWidth) && std::isfinite(viewportHeight)
+        && viewportWidth > 0.0f && viewportHeight > 0.0f;
+    const bool validSource = sourceWidth > 0.0f && sourceHeight > 0.0f;
+
+    if (validViewport && validSource)
+    {
+        const float scale = std::max(sourceWidth / viewportWidth, sourceHeight / viewportHeight);
+        if (std::isfinite(scale) && scale > 0.0f)
+        {
+            float uvH = (sourceHeight / scale) / viewportHeight;
+            float uvW = (sourceWidth / scale) / viewportWidth;
+
+            uvH = std::clamp(uvH, 0.0f, 1.0f);
+            uvW = std::clamp(uvW, 0.0f, 1.0f);
+
+            const float maxY = std::max(0.0f, 1.0f - uvH);
+            const float maxX = std::max(0.0f, 1.0f - uvW);
+
+            float uvY = std::clamp(m_scroll01 * maxY, 0.0f, maxY);
+            if (m_invertY)
+            {
+                uvY = maxY - uvY;
+            }
+
+            const float uvX = 0.5f * maxX;
+            uvTransform[0] = DirectX::XMFLOAT4(uvX, uvY, uvW, uvH);
+        }
+    }
+
     m_vertexShader->WriteBuffer(0, m_matrices);
+    m_vertexShader->WriteBuffer(1, uvTransform);
     m_vertexShader->Bind();
     m_pixelShader->SetTexture(0, m_srv.Get());
     m_pixelShader->Bind();
@@ -474,6 +529,10 @@ void VideoBackgroundRenderer::Shutdown()
     m_context = nullptr;
     m_frameWidth = 0;
     m_frameHeight = 0;
+    m_viewportWidth = 0.0f;
+    m_viewportHeight = 0.0f;
+    m_scroll01 = 0.0f;
+    m_invertY = false;
 }
 
 bool VideoBackgroundRenderer::CreateFullScreenQuad()

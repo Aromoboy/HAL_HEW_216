@@ -2948,3 +2948,16 @@ void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
         m_isOsaraCounting = false;
     }
 }
+
+
+float SceneGame::GetVideoScroll01() const
+{
+    const float currentHeight = m_gameplayRules.GetCurrentTowerHeight();
+    const float peakHeight = std::max(currentHeight, m_gameplayRules.GetPeakTowerHeight());
+    if (!std::isfinite(currentHeight) || !std::isfinite(peakHeight) || peakHeight <= 0.0f)
+    {
+        return 0.0f;
+    }
+
+    return std::clamp(currentHeight / peakHeight, 0.0f, 1.0f);
+}

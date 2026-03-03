@@ -110,6 +110,11 @@ namespace SceneSpace
         {
             m_videoPlayer.reset();
         }
+        else
+        {
+            m_videoPlayer->SetInvertY(false);
+            m_videoPlayer->SetScroll01(0.0f);
+        }
         m_texStartRed.Create("Assets/Texture/タイトル画面UI5.png");
         m_texStartGreen.Create("Assets/Texture/タイトル画面UI6.png");
         m_texPowerUpRed.Create("Assets/Texture/タイトル画面UI3.png");
@@ -266,6 +271,8 @@ namespace SceneSpace
         {
             if (m_videoPlayer)
             {
+                const auto& dxContext = GetDXContext();
+                m_videoPlayer->SetViewportSize(static_cast<float>(dxContext.GetWidth()), static_cast<float>(dxContext.GetHeight()));
                 m_videoPlayer->Draw();
             }
 

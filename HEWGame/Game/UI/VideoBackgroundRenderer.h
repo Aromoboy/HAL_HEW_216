@@ -31,6 +31,9 @@ public:
     void Update(float dt);
     bool IsFinished() const;
     void SetAutoLoop(bool enabled);
+    void SetViewportSize(float width, float height);
+    void SetScroll01(float scroll01);
+    void SetInvertY(bool invert);
     ID3D11ShaderResourceView* GetTexture() const;
     void Draw();
     void Shutdown();
@@ -54,6 +57,10 @@ private:
     std::unique_ptr<DecoderState> m_decoder;
     uint32_t m_frameWidth = 0;
     uint32_t m_frameHeight = 0;
+    float m_viewportWidth = 0.0f;
+    float m_viewportHeight = 0.0f;
+    float m_scroll01 = 0.0f;
+    bool m_invertY = false;
     bool m_ready = false;
     bool m_mfStarted = false;
 };
