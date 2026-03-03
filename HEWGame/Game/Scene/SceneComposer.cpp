@@ -536,8 +536,8 @@ void SceneComposer::ComposeUI(Composition& result)
             "Assets/shaders/video_ps.cso"
         };
 
-        auto videoRenderer = std::make_unique<VideoBackgroundRenderer>();
-        if (!videoRenderer->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundVideo))
+        auto videoBg = std::make_unique<VideoBackgroundRenderer>();
+        if (!videoBg->Initialize(GetDevice(), GetContext(), shaderPaths, backgroundVideo))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Video background renderer failed for video '" << backgroundVideo << "'.\n";
@@ -545,12 +545,12 @@ void SceneComposer::ComposeUI(Composition& result)
         }
         else
         {
-            videoRenderer->SetAutoLoop(result.stageData.IsBackgroundVideoAutoLoop());
-            videoRenderer->SetScrollMode(
+            videoBg->SetAutoLoop(result.stageData.IsBackgroundVideoAutoLoop());
+            videoBg->SetScrollMode(
                 result.stageData.GetBackgroundScrollMode() == Stage::BackgroundScrollMode::Wrap
                 ? VideoBackgroundRenderer::ScrollMode::Wrap
                 : VideoBackgroundRenderer::ScrollMode::Clamp);
-            result.backgroundRenderer = std::move(videoRenderer);
+            result.backgroundRenderer = std::move(videoBg);
         }
     }
     else if (!backgroundTexture.empty())
@@ -569,13 +569,16 @@ void SceneComposer::ComposeUI(Composition& result)
         layer.baseOffsetPixels = result.stageData.GetBackgroundBaseOffsetPixels();
         layer.tintColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         backgroundConfig.layers.push_back(layer);
-        result.backgroundRenderer = std::make_unique<BackgroundRenderer>();
-        if (!result.backgroundRenderer->Initialize(backgroundConfig))
+        auto bg = std::make_unique<BackgroundRenderer>();
+        if (!bg->Initialize(backgroundConfig))
         {
             std::ostringstream oss;
             oss << kLogPrefix << "Background renderer failed for texture '" << backgroundTexture << "'.\n";
             DebugTrace(oss.str());
-            result.backgroundRenderer.reset();
+        }
+        else
+        {
+            result.backgroundRenderer = std::move(bg);
         }
     }
     else
