@@ -113,6 +113,7 @@ Stage::StageData はこのセクションを読み込み、デフォルト適用
 - `backgroundBaseOffset01`: `0.0..1.0`（省略時 `0.0`）。静止画背景の開始オフセット（正規化）。
 - `backgroundBaseOffsetPixels`: 実数（省略時 `0.0`）。静止画背景の開始オフセット（ピクセル）。`scrollOffsetInPixels=true` 時に `backgroundBaseOffset01` と合算して適用。
 - `backgroundVideoParallaxFactor`: 実数（省略時 `1.0`）。動画背景のワールドスクロールに対する parallax 係数。`scrollPx = worldScrollOffset * pixelsPerUnit * backgroundVideoParallaxFactor` で計算。
+- `backgroundVideoClampEdgeRelease`: `true/false`（省略時 `false`）。`clamp` モード時の端張り付き回避を有効化。`true` でもカメラが明示的に動き出すまでは適用しない。
 
 設定ローダー（概要）
 

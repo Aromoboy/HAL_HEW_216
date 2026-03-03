@@ -79,6 +79,7 @@ namespace Stage
         float GetBackgroundVideoScrollSpeed() const noexcept;
         float GetBackgroundVideoParallaxFactor() const noexcept;
         float GetBackgroundVideoZoom() const noexcept;
+        bool IsBackgroundVideoClampEdgeReleaseEnabled() const noexcept;
     private:
         void ApplyDefaults();
         void ApplyNormalizedConfig(const StageConfigNormalized& normalized, const std::string& sourcePath, bool loadedFromFile);
@@ -130,5 +131,6 @@ namespace Stage
         float m_backgroundVideoScrollSpeed = 1.0f;
         float m_backgroundVideoParallaxFactor = 1.0f;
         float m_backgroundVideoZoom = 1.0f;
+        bool m_backgroundVideoClampEdgeRelease = false;
     };
 }

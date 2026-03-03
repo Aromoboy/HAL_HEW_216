@@ -53,6 +53,7 @@ namespace Stage
         float backgroundVideoScrollSpeed = 1.0f;
         float backgroundVideoParallaxFactor = 1.0f;
         float backgroundVideoZoom = 1.0f;
+        bool backgroundVideoClampEdgeRelease = false;
 
         bool parseError = false;
         bool primaryUsedDefaults = false;
