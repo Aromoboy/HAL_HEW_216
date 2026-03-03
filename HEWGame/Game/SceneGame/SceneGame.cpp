@@ -1989,6 +1989,7 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 
     // scrollOffsetUsedForBackground is in world units (meters). pixelsPerUnit is derived from the active camera.
     float scrollOffsetUsedForBackground = 0.0f;
+    float cameraY = 0.0f;
     float pixelsPerUnit = 1.0f;
     float viewportWidth = 0.0f;
     float viewportHeight = 0.0f;
@@ -2002,7 +2003,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
     }
     else
     {
-        scrollOffsetUsedForBackground = baseCamera->GetPosition().y - m_backgroundScrollOriginY;
+        cameraY = baseCamera->GetPosition().y;
+        scrollOffsetUsedForBackground = cameraY - m_backgroundScrollOriginY;
         if (auto perspectiveCamera = std::dynamic_pointer_cast<CameraSpace::PerspectiveCamera>(activeCamera))
         {
             RenderTarget* defaultRTV = GetDefaultRTV();
@@ -2035,16 +2037,33 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
             }
         }
 
-        const float levelHeight = std::max({ 1.0f,
-            m_guidelineSystem.GetHeightMeters(),
-            m_gameplayRules.GetCurrentTowerHeight(),
-            m_gameplayRules.GetPeakTowerHeight() });
-        normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / levelHeight, 0.0f, 1.0f);
+        bool usedCameraRange = false;
+        if (m_cameraRig)
+        {
+            const auto minY = m_cameraRig->GetClampMinY();
+            const auto maxY = m_cameraRig->GetClampMaxY();
+            if (minY && maxY && IsFiniteFloat(*minY) && IsFiniteFloat(*maxY) && *maxY > *minY)
+            {
+                const float cameraRange = *maxY - *minY;
+                normalizedScroll01 = std::clamp((cameraY - *minY) / cameraRange, 0.0f, 1.0f);
+                usedCameraRange = true;
+            }
+        }
+
+        if (!usedCameraRange)
+        {
+            const float levelHeight = std::max({ 1.0f,
+                m_guidelineSystem.GetHeightMeters(),
+                m_gameplayRules.GetCurrentTowerHeight(),
+                m_gameplayRules.GetPeakTowerHeight() });
+            normalizedScroll01 = std::clamp(scrollOffsetUsedForBackground / levelHeight, 0.0f, 1.0f);
+        }
 
         if (m_backgroundRenderer)
         {
             BackgroundLayerDrawContext backgroundContext{};
             backgroundContext.worldScrollOffset = scrollOffsetUsedForBackground;
+            backgroundContext.cameraY = cameraY;
             backgroundContext.pixelsPerUnit = pixelsPerUnit;
             backgroundContext.viewportWidth = viewportWidth;
             backgroundContext.viewportHeight = viewportHeight;

@@ -30,6 +30,7 @@ namespace
 {
     constexpr LONGLONG kMfTimeBase = 10000000;
     constexpr const char* kLogPrefix = "[VideoBackgroundRenderer] ";
+    constexpr uint32_t kScrollDebugLogIntervalFrames = 60;
 
     void LogVideoError(const char* step, HRESULT hr)
     {
@@ -512,6 +513,18 @@ void VideoBackgroundRenderer::Draw()
 
             const float uvX = 0.5f * (1.0f - uvW);
             uvTransform[0] = DirectX::XMFLOAT4(uvX, uvY, uvW, uvH);
+
+            ++m_debugScrollLogFrameCounter;
+            if ((m_debugScrollLogFrameCounter % kScrollDebugLogIntervalFrames) == 0)
+            {
+                std::ostringstream oss;
+                oss << kLogPrefix
+                    << "scroll cameraY=" << m_cameraY
+                    << " scroll01=" << m_scroll01
+                    << " uvY=" << uvY
+                    << " uvH=" << uvH;
+                Diagnostics::LogInfo(oss.str());
+            }
         }
     }
 
@@ -527,6 +540,7 @@ void VideoBackgroundRenderer::Draw()
 
 void VideoBackgroundRenderer::Draw(const BackgroundLayerDrawContext& context)
 {
+    m_cameraY = context.cameraY;
     SetViewportSize(context.viewportWidth, context.viewportHeight);
     SetScroll01(context.normalizedScroll01);
     Draw();
@@ -555,6 +569,8 @@ void VideoBackgroundRenderer::Shutdown()
     m_viewportWidth = 0.0f;
     m_viewportHeight = 0.0f;
     m_scroll01 = 0.0f;
+    m_cameraY = 0.0f;
+    m_debugScrollLogFrameCounter = 0;
     m_invertY = false;
 }
 
