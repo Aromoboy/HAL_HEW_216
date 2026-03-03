@@ -59,6 +59,13 @@ namespace Systems
     class PhysicsMachine : public Core::UpdateNode
     {
     public:
+        enum class WakeBodyStatus
+        {
+            Woke,
+            AlreadyAwake,
+            NoBody,
+        };
+
         using SystemPtr = std::shared_ptr<IPhysicsSystem>;
         using ContactListenerPtr = std::shared_ptr<Box2DContactListener>;
 
@@ -81,6 +88,7 @@ namespace Systems
         void ClearBodies();
 
         b2BodyId FindBody(const Entities::PhysicalEntity& body) const;
+        WakeBodyStatus WakeBody(const Entities::PhysicalEntity& body, bool touchVelocity = true);
         b2WorldId GetWorldId() const;
         b2JointId CreateWeldJoint(const Entities::PhysicalEntity& bodyA,
             const Entities::PhysicalEntity& bodyB,
