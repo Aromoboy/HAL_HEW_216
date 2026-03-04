@@ -295,6 +295,30 @@ namespace Systems
         return b2_nullBodyId;
     }
 
+    PhysicsMachine::WakeBodyStatus PhysicsMachine::WakeBody(const Entities::PhysicalEntity& body, bool touchVelocity)
+    {
+        const b2BodyId bodyId = FindBody(body);
+        if (!b2Body_IsValid(bodyId))
+        {
+            return WakeBodyStatus::NoBody;
+        }
+
+        if (b2Body_IsAwake(bodyId))
+        {
+            return WakeBodyStatus::AlreadyAwake;
+        }
+
+        b2Body_SetAwake(bodyId, true);
+
+        if (touchVelocity)
+        {
+            const b2Vec2 linearVelocity = b2Body_GetLinearVelocity(bodyId);
+            b2Body_SetLinearVelocity(bodyId, linearVelocity);
+        }
+
+        return WakeBodyStatus::Woke;
+    }
+
     b2WorldId PhysicsMachine::GetWorldId() const
     {
         return m_box2dSystem ? m_box2dSystem->GetWorldId() : b2_nullWorldId;

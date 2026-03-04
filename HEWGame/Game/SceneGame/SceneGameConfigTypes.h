@@ -1,4 +1,4 @@
-#ifndef SCENE_GAME_CONFIG_TYPES_H_
+﻿#ifndef SCENE_GAME_CONFIG_TYPES_H_
 #define SCENE_GAME_CONFIG_TYPES_H_
 
 #include "Transform.h"
@@ -67,6 +67,12 @@ namespace SceneGameConfig
         float holdSeconds = 0.0f;
         float3 color{ 0.0f, 0.0f, 0.0f };
         RenderFadeEasing easing = RenderFadeEasing::Linear;
+    };
+
+    struct RenderTransitionVideoSettings
+    {
+        bool enable = true;
+        std::string path = "Assets/Video/Fade.mp4";
     };
 
     struct LightingSettings
@@ -149,7 +155,15 @@ namespace SceneGameConfig
         int spawnPerPointCap = 6;
         int spawnPerPointInitial = 0;
         int spawnTotalCap = 12;
+        std::string liveCapGrowthMode = "fixed";
+        int spawnLiveCapMax = 256;
         bool hasSpawnLimits = false;
+    };
+
+    struct SweetsSpawnDebugSettings
+    {
+        bool enabled = false;
+        float rateLimitSeconds = 1.0f;
     };
 
     using MaterialTuningProfile = ::MaterialTuningProfile;

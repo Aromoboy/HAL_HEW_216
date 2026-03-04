@@ -29,6 +29,8 @@ public:
         const ShaderPaths& shader,
         const std::string& mp4Path);
     void Update(float dt);
+    bool IsFinished() const;
+    void SetAutoLoop(bool enabled);
     ID3D11ShaderResourceView* GetTexture() const;
     void Draw();
     void Shutdown();

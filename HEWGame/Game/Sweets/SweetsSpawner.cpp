@@ -11,6 +11,7 @@
 #include <map>
 #include <sstream>
 #include <unordered_map>
+#include <string_view>
 
 #include "Config/ConfigSectionReader.h"
 #include "Diagnostics/Logger.h"
@@ -51,6 +52,23 @@ namespace
     constexpr bool kAutoIncludeMissingWeightKinds = true;
     constexpr std::size_t kMaxSpawnQueueEntries = 16;
     constexpr float kDefaultSpawnHeightOffset = 8.0f;
+
+    template <typename T>
+    std::string JoinCounts(const std::vector<T>& values)
+    {
+        std::ostringstream oss;
+        oss << "[";
+        for (std::size_t i = 0; i < values.size(); ++i)
+        {
+            if (i > 0)
+            {
+                oss << ",";
+            }
+            oss << values[i];
+        }
+        oss << "]";
+        return oss.str();
+    }
     std::string TrimToken(const std::string& value)
     {
         auto begin = value.begin();
@@ -241,6 +259,12 @@ namespace SweetsSpace
 
     void SweetsSpawner::RunSpawnScheduler(float deltaSeconds)
     {
+        if (deltaSeconds > 0.0f)
+        {
+            m_spawnDebugClockSeconds += deltaSeconds;
+        }
+
+        const std::size_t queueBefore = m_spawnQueue.size();
         const int liveSweets = CountLiveSweets();
         const bool liveCapActive = (m_liveSweetsCap > 0);
         const bool spawnBlockedByCap = liveCapActive && liveSweets >= m_liveSweetsCap;
@@ -253,6 +277,8 @@ namespace SweetsSpace
             ApplyDefaultSpawnConfig();
             if (m_spawnTuningConfig.weights.empty())
             {
+                const auto snapshot = BuildDebugSnapshot(liveSweets, 0, SpawnBlockReason::NoWeights);
+                LogBlockReasonTransition(SpawnBlockReason::NoWeights, snapshot);
                 return;
             }
         }
@@ -288,6 +314,10 @@ namespace SweetsSpace
         {
             m_spawnTimer += deltaSeconds;
             const float remainingCooldown = std::max(0.0f, adjustedInterval - m_spawnTimer);
+            const int desiredLiveTarget = ComputeDesiredLiveTarget(std::max(0, m_batchStackTarget - m_stackedInBatch));
+            const auto snapshot = BuildDebugSnapshot(liveSweets, desiredLiveTarget, SpawnBlockReason::CoolingDown);
+            LogBlockReasonTransition(SpawnBlockReason::CoolingDown, snapshot);
+            LogQueueTransition(queueBefore, m_spawnQueue.size(), snapshot);
             if (remainingCooldown > 0.0f)
             {
                 return;
@@ -302,6 +332,10 @@ namespace SweetsSpace
         if (spawnBlockedByCap)
         {
             m_burstTimer = std::min(m_activeBurstInterval, m_burstTimer + deltaSeconds);
+            const int desiredLiveTarget = ComputeDesiredLiveTarget(std::max(0, m_batchStackTarget - m_stackedInBatch));
+            const auto snapshot = BuildDebugSnapshot(liveSweets, desiredLiveTarget, SpawnBlockReason::BlockedByLiveCap);
+            LogBlockReasonTransition(SpawnBlockReason::BlockedByLiveCap, snapshot);
+            LogQueueTransition(queueBefore, m_spawnQueue.size(), snapshot);
             return;
         }
 
@@ -314,6 +348,9 @@ namespace SweetsSpace
         {
             EmitSpawnRequests(deltaSeconds);
             m_lastLiveSweetsCount = CountLiveSweets();
+            const auto snapshot = BuildDebugSnapshot(liveSweets, desiredLiveTarget, SpawnBlockReason::None);
+            LogBlockReasonTransition(SpawnBlockReason::None, snapshot);
+            LogQueueTransition(queueBefore, m_spawnQueue.size(), snapshot);
             return;
         }
 
@@ -333,6 +370,9 @@ namespace SweetsSpace
 
             EmitSpawnRequests(deltaSeconds);
             m_lastLiveSweetsCount = CountLiveSweets();
+            const auto snapshot = BuildDebugSnapshot(liveSweets, desiredLiveTarget, SpawnBlockReason::None);
+            LogBlockReasonTransition(SpawnBlockReason::None, snapshot);
+            LogQueueTransition(queueBefore, m_spawnQueue.size(), snapshot);
             return;
         }
 
@@ -354,6 +394,9 @@ namespace SweetsSpace
             EmitSpawnRequests(deltaSeconds);
             m_lastLiveSweetsCount = CountLiveSweets();
             m_pendingTopUpCount = 0;
+            const auto snapshot = BuildDebugSnapshot(liveSweets, desiredLiveTarget, SpawnBlockReason::None);
+            LogBlockReasonTransition(SpawnBlockReason::None, snapshot);
+            LogQueueTransition(queueBefore, m_spawnQueue.size(), snapshot);
             return;
         }
 
@@ -379,6 +422,9 @@ namespace SweetsSpace
 
         EmitSpawnRequests(deltaSeconds);
         m_lastLiveSweetsCount = CountLiveSweets();
+        const auto snapshot = BuildDebugSnapshot(liveSweets, desiredLiveTarget, SpawnBlockReason::None);
+        LogBlockReasonTransition(SpawnBlockReason::None, snapshot);
+        LogQueueTransition(queueBefore, m_spawnQueue.size(), snapshot);
     }
 
     bool SweetsSpawner::LoadSpawnTuningConfig(const std::string& path)
@@ -725,6 +771,118 @@ namespace SweetsSpace
         DebugTrace(oss.str());
     }
 
+    void SweetsSpawner::SetSpawnDebugDiagnostics(bool enabled, float rateLimitSeconds)
+    {
+        m_spawnDebugDiagnosticsEnabled = enabled;
+        m_spawnDebugRateLimitSeconds = std::max(0.0f, rateLimitSeconds);
+        m_spawnRateLimitStates.clear();
+        m_lastSpawnBlockReason = SpawnBlockReason::None;
+        m_nextSpawnOriginSelectionFailedLogged = false;
+    }
+
+    const char* SweetsSpawner::ToString(SpawnBlockReason reason)
+    {
+        switch (reason)
+        {
+        case SpawnBlockReason::BlockedByLiveCap:
+            return "BlockedByLiveCap";
+        case SpawnBlockReason::BlockedByPerPointCap:
+            return "BlockedByPerPointCap";
+        case SpawnBlockReason::NoOrigins:
+            return "NoOrigins";
+        case SpawnBlockReason::NoWeights:
+            return "NoWeights";
+        case SpawnBlockReason::CoolingDown:
+            return "CoolingDown";
+        default:
+            return "None";
+        }
+    }
+
+    SweetsSpawner::SpawnDebugSnapshot SweetsSpawner::BuildDebugSnapshot(int liveSweets, int desiredLiveTarget, SpawnBlockReason reason) const
+    {
+        SpawnDebugSnapshot snapshot{};
+        snapshot.liveSweets = liveSweets;
+        snapshot.desiredLiveTarget = desiredLiveTarget;
+        snapshot.liveSweetsCap = m_liveSweetsCap;
+        snapshot.queueSize = static_cast<int>(m_spawnQueue.size());
+        snapshot.currentBurstRemaining = m_currentBurstRemaining;
+        snapshot.pendingTopUpCount = m_pendingTopUpCount;
+        snapshot.spawnOriginLiveCountsPrimary = m_spawnOriginLiveCountsPrimary;
+        snapshot.spawnOriginLiveCountsSecondary = m_spawnOriginLiveCountsSecondary;
+        snapshot.spawnPerPointCap = m_spawnPerPointCap;
+        snapshot.blockReason = reason;
+        return snapshot;
+    }
+
+    void SweetsSpawner::LogSpawnDebugEvent(const std::string& key, std::string_view message)
+    {
+        if (!m_spawnDebugDiagnosticsEnabled)
+        {
+            return;
+        }
+
+        auto& state = m_spawnRateLimitStates[key];
+        const float elapsed = m_spawnDebugClockSeconds - state.lastLogTimeSeconds;
+        const bool allowNow = (state.lastLogTimeSeconds < 0.0f)
+            || (m_spawnDebugRateLimitSeconds <= 0.0f)
+            || (elapsed >= m_spawnDebugRateLimitSeconds);
+
+        if (!allowNow)
+        {
+            ++state.suppressedCount;
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << kLogPrefix << "[SpawnDebug] key=" << key << " " << message;
+        if (state.suppressedCount > 0)
+        {
+            oss << " suppressed x" << state.suppressedCount;
+            state.suppressedCount = 0;
+        }
+        oss << "\n";
+        DebugTrace(oss.str());
+
+        state.lastLogTimeSeconds = m_spawnDebugClockSeconds;
+    }
+
+    void SweetsSpawner::LogBlockReasonTransition(SpawnBlockReason reason, const SpawnDebugSnapshot& snapshot)
+    {
+        if (m_lastSpawnBlockReason == reason)
+        {
+            return;
+        }
+
+        m_lastSpawnBlockReason = reason;
+        std::ostringstream oss;
+        oss << "reason=" << ToString(reason)
+            << " live=" << snapshot.liveSweets << "/" << snapshot.desiredLiveTarget
+            << " cap=" << snapshot.liveSweetsCap
+            << " queue=" << snapshot.queueSize
+            << " burstRemaining=" << snapshot.currentBurstRemaining
+            << " pendingTopUp=" << snapshot.pendingTopUpCount
+            << " primaryOcc=" << JoinCounts(snapshot.spawnOriginLiveCountsPrimary)
+            << " secondaryOcc=" << JoinCounts(snapshot.spawnOriginLiveCountsSecondary)
+            << " perPointCap=" << snapshot.spawnPerPointCap;
+        LogSpawnDebugEvent("block.transition", oss.str());
+    }
+
+    void SweetsSpawner::LogQueueTransition(std::size_t previousSize, std::size_t currentSize, const SpawnDebugSnapshot& snapshot)
+    {
+        if (!((previousSize == 0 && currentSize > 0) || (previousSize > 0 && currentSize == 0)))
+        {
+            return;
+        }
+
+        std::ostringstream oss;
+        oss << "queueTransition=" << previousSize << "->" << currentSize
+            << " reason=" << ToString(snapshot.blockReason)
+            << " live=" << snapshot.liveSweets
+            << " desired=" << snapshot.desiredLiveTarget;
+        LogSpawnDebugEvent("queue.transition", oss.str());
+    }
+
     bool SweetsSpawner::RequestSupplementalSpawn(int count, const char* context)
     {
         if (count <= 0)
@@ -990,6 +1148,10 @@ namespace SweetsSpace
             const auto originSelection = NextSpawnOrigin();
             if (!originSelection)
             {
+                const bool noOrigins = m_spawnOriginsPrimary.empty() && m_spawnOriginsSecondary.empty();
+                const SpawnBlockReason reason = noOrigins ? SpawnBlockReason::NoOrigins : SpawnBlockReason::BlockedByPerPointCap;
+                const auto snapshot = BuildDebugSnapshot(CountLiveSweets(), m_simultaneousLiveTarget, reason);
+                LogBlockReasonTransition(reason, snapshot);
                 break;
             }
 
@@ -1006,6 +1168,17 @@ namespace SweetsSpace
             if (spawned)
             {
                 RegisterSpawnOrigin(spawned, *originSelection);
+                std::ostringstream success;
+                success << "kind=" << kind << " lane=" << originSelection->laneLabel
+                    << " index=" << originSelection->index << " result=success";
+                LogSpawnDebugEvent("spawn.result.success", success.str());
+            }
+            else
+            {
+                std::ostringstream fail;
+                fail << "kind=" << kind << " lane=" << originSelection->laneLabel
+                    << " index=" << originSelection->index << " result=fail";
+                LogSpawnDebugEvent("spawn.result.fail", fail.str());
             }
         }
 
@@ -1074,7 +1247,7 @@ namespace SweetsSpace
         if (!descriptor)
         {
             std::ostringstream oss;
-            oss << kLogPrefix << "スポーン候補選びでスイーツタイプ '" << ToString(*chosenType)
+            oss << kLogPrefix << "スポーン候補選びでスイーツタイプ '" << ::SweetsSpace::ToString(*chosenType)
                 << "' のデスクリプタを見つけられなかったよ \n";
             DebugTrace(oss.str());
             return {};
@@ -1101,7 +1274,7 @@ namespace SweetsSpace
             bool first = true;
             for (const auto& entry : config.weights)
             {
-                oss << (first ? ' ' : ',') << ToString(entry.kind)
+                oss << (first ? ' ' : ',') << ::SweetsSpace::ToString(entry.kind)
                     << ':' << std::fixed << std::setprecision(2) << entry.weight;
                 first = false;
             }
@@ -1195,7 +1368,7 @@ namespace SweetsSpace
 
             std::ostringstream resolved;
             resolved << kLogPrefix << "[SpawnWeights] key='" << entry.first << "' -> type="
-                << ToString(*resolvedType) << " weight=" << spawnWeight << "\n";
+                << ::SweetsSpace::ToString(*resolvedType) << " weight=" << spawnWeight << "\n";
             Diagnostics::LogInfo(resolved.str());
 
             weights.push_back({ *resolvedType, spawnWeight });
@@ -1214,6 +1387,7 @@ namespace SweetsSpace
                 DebugTrace(std::string(kLogPrefix) + "スポーン元リストが空だから、ワールド原点を使うね \n");
                 m_warnedMissingSpawnOrigins = true;
             }
+            LogSpawnDebugEvent("origin.none", "no origins configured; using fallback origin");
             return SpawnOriginSelection{ float3{ 0.0f, 0.0f, 0.0f }, "fallback", SpawnOriginLane::Fallback, 0 };
         }
 
@@ -1284,17 +1458,58 @@ namespace SweetsSpace
                     : selectFromLane(m_spawnOriginsPrimary, m_spawnOriginLiveCountsPrimary, m_spawnOriginCursorPrimary,
                         "primary", SpawnOriginLane::Primary);
             }
+            if (!selection && !m_nextSpawnOriginSelectionFailedLogged)
+            {
+                m_nextSpawnOriginSelectionFailedLogged = true;
+                std::ostringstream oss;
+                oss << "NextSpawnOrigin unavailable primaryOcc=" << JoinCounts(m_spawnOriginLiveCountsPrimary)
+                    << " secondaryOcc=" << JoinCounts(m_spawnOriginLiveCountsSecondary)
+                    << " perPointCap=" << m_spawnPerPointCap;
+                LogSpawnDebugEvent("origin.selection.fail", oss.str());
+            }
+            else if (selection)
+            {
+                m_nextSpawnOriginSelectionFailedLogged = false;
+            }
             return selection;
         }
 
         if (hasPrimary)
         {
-            return selectFromLane(m_spawnOriginsPrimary, m_spawnOriginLiveCountsPrimary, m_spawnOriginCursorPrimary,
+            auto selection = selectFromLane(m_spawnOriginsPrimary, m_spawnOriginLiveCountsPrimary, m_spawnOriginCursorPrimary,
                 "primary", SpawnOriginLane::Primary);
+            if (!selection && !m_nextSpawnOriginSelectionFailedLogged)
+            {
+                m_nextSpawnOriginSelectionFailedLogged = true;
+                std::ostringstream oss;
+                oss << "NextSpawnOrigin unavailable primaryOcc=" << JoinCounts(m_spawnOriginLiveCountsPrimary)
+                    << " secondaryOcc=" << JoinCounts(m_spawnOriginLiveCountsSecondary)
+                    << " perPointCap=" << m_spawnPerPointCap;
+                LogSpawnDebugEvent("origin.selection.fail", oss.str());
+            }
+            else if (selection)
+            {
+                m_nextSpawnOriginSelectionFailedLogged = false;
+            }
+            return selection;
         }
 
-        return selectFromLane(m_spawnOriginsSecondary, m_spawnOriginLiveCountsSecondary, m_spawnOriginCursorSecondary,
+        auto selection = selectFromLane(m_spawnOriginsSecondary, m_spawnOriginLiveCountsSecondary, m_spawnOriginCursorSecondary,
             "secondary", SpawnOriginLane::Secondary);
+        if (!selection && !m_nextSpawnOriginSelectionFailedLogged)
+        {
+            m_nextSpawnOriginSelectionFailedLogged = true;
+            std::ostringstream oss;
+            oss << "NextSpawnOrigin unavailable primaryOcc=" << JoinCounts(m_spawnOriginLiveCountsPrimary)
+                << " secondaryOcc=" << JoinCounts(m_spawnOriginLiveCountsSecondary)
+                << " perPointCap=" << m_spawnPerPointCap;
+            LogSpawnDebugEvent("origin.selection.fail", oss.str());
+        }
+        else if (selection)
+        {
+            m_nextSpawnOriginSelectionFailedLogged = false;
+        }
+        return selection;
     }
 
     void SweetsSpawner::ResetSpawnOriginTracking()
@@ -1573,7 +1788,7 @@ namespace SweetsSpace
         warn << kLogPrefix << "[Spawn] 登録済みの種類に weight が足りないよ:";
         for (auto missing : missingTypes)
         {
-            warn << ' ' << ToString(missing);
+            warn << ' ' << ::SweetsSpace::ToString(missing);
         }
         warn << " (registered=" << registeredKindsNormalized.size()
             << " configured=" << presentNormalized.size() << ")\n";
@@ -1594,10 +1809,10 @@ namespace SweetsSpace
             }
 
             config.weights.push_back({ missing, fallbackWeight });
-            presentNormalized.insert(NormalizeKey(ToString(missing)));
+            presentNormalized.insert(NormalizeKey(::SweetsSpace::ToString(missing)));
 
             std::ostringstream added;
-            added << kLogPrefix << "[Spawn] 不足してた種類 '" << ToString(missing)
+            added << kLogPrefix << "[Spawn] 不足してた種類 '" << ::SweetsSpace::ToString(missing)
                 << "' をフォールバック weight=" << std::fixed << std::setprecision(2) << fallbackWeight
                 << " で自動追加したよ (autoInclude=" << std::boolalpha << kAutoIncludeMissingWeightKinds << ")\n";
             DebugTrace(added.str());

@@ -30,6 +30,7 @@
 #include "ISceneServices.h"
 #include "Save/PlayerData.h"
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -121,6 +122,7 @@ private:
     int GetSweetsCount() const;
     int m_gameBGMHandle = -1;
     void Initialize(const Stage::StageData& stageData);
+    void UpdateOsaraGradualMove(const Core::UpdateContext& ctx);
 
 protected:
     std::vector<StageObject> m_stageObjects;
@@ -191,6 +193,10 @@ protected:
     // クリアできたかどうかの判定
     bool m_isGameClear = false;
     int m_phaseUpCount = 0;
+    uint32_t m_baseLiveCap = 0;
+    uint32_t m_maxLiveCap = 0;
+    uint32_t m_currentLiveCap = 0;
+    bool m_liveCapDoublePerPhase = false;
     // 仮で作った何回フェーズを超えたらクリアになるかの判定
     int m_clearPhaseCount = 10;
     PlayerSpawnTransform m_playerSpawnTransform;
@@ -213,9 +219,11 @@ protected:
     int m_realtimeScore = 100;
     float m_lastApprovePeakHeight = 0.0f;
     //カウントアップ型スコア加算（ゲームにスコア表示するなら、、、）
-    bool m_isScoreCounting = false;
-    int  m_scoreToAddRemaining = 0;
-    float m_scoreAddTimer = 0.0f;
+    bool m_isOsaraCounting = false;
+    float  m_OsaraToAddRemaining = 0.0f;
+    float m_OsaraAddTimer = 0.0f;
+
+    float osaraMoveSpeed = 0.5f;
 };
 
 #endif

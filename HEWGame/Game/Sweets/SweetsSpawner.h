@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <deque>
 #include <functional>
@@ -6,6 +6,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -24,6 +25,30 @@ namespace SweetsSpace
     class SweetsSpawner
     {
     public:
+        enum class SpawnBlockReason
+        {
+            BlockedByLiveCap,
+            BlockedByPerPointCap,
+            NoOrigins,
+            NoWeights,
+            CoolingDown,
+            None,
+        };
+
+        struct SpawnDebugSnapshot
+        {
+            int liveSweets = 0;
+            int desiredLiveTarget = 0;
+            int liveSweetsCap = 0;
+            int queueSize = 0;
+            int currentBurstRemaining = 0;
+            int pendingTopUpCount = 0;
+            std::vector<int> spawnOriginLiveCountsPrimary;
+            std::vector<int> spawnOriginLiveCountsSecondary;
+            int spawnPerPointCap = 0;
+            SpawnBlockReason blockReason = SpawnBlockReason::None;
+        };
+
         using SpawnCallback = std::function<std::shared_ptr<ActiveSweets>(const std::string&, const Transform&)>;
 
         SweetsSpawner(SweetsFactory& factory, SweetsRegistry& registry, SpawnCallback spawnCallback);
@@ -44,6 +69,7 @@ namespace SweetsSpace
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
         void SetSpawnPerPointInitial(int count);
+        void SetSpawnDebugDiagnostics(bool enabled, float rateLimitSeconds);
         bool RequestSupplementalSpawn(int count, const char* context);
 
         int CountLiveSweets() const;
@@ -95,6 +121,11 @@ namespace SweetsSpace
         void EnsureRegisteredWeights(SpawnTuningConfig& config,
             const std::unordered_set<std::string>& registeredKindsNormalized,
             const std::unordered_map<SweetsType, float, SweetsTypeHash>& defaultWeightLookup) const;
+        SpawnDebugSnapshot BuildDebugSnapshot(int liveSweets, int desiredLiveTarget, SpawnBlockReason reason) const;
+        void LogBlockReasonTransition(SpawnBlockReason reason, const SpawnDebugSnapshot& snapshot);
+        void LogQueueTransition(std::size_t previousSize, std::size_t currentSize, const SpawnDebugSnapshot& snapshot);
+        void LogSpawnDebugEvent(const std::string& key, std::string_view message);
+        static const char* ToString(SpawnBlockReason reason);
 
         SweetsFactory* m_factory;
         SweetsRegistry* m_registry;
@@ -136,5 +167,16 @@ namespace SweetsSpace
         bool m_spawnPausedDueToLiveSweets{ false };
         int m_lastLiveSweetsCount{ 0 };
         bool m_creamEnabled{ true };
+        bool m_spawnDebugDiagnosticsEnabled{ false };
+        float m_spawnDebugRateLimitSeconds{ 1.0f };
+        float m_spawnDebugClockSeconds{ 0.0f };
+        SpawnBlockReason m_lastSpawnBlockReason{ SpawnBlockReason::None };
+        bool m_nextSpawnOriginSelectionFailedLogged{ false };
+        struct SpawnRateLimitState
+        {
+            float lastLogTimeSeconds = -1000.0f;
+            int suppressedCount = 0;
+        };
+        std::unordered_map<std::string, SpawnRateLimitState> m_spawnRateLimitStates;
     };
 }

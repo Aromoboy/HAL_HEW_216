@@ -107,6 +107,7 @@ namespace SweetsSpace
         void SetLiveSweetsCap(int cap);
         void SetSpawnPointCap(int cap);
         void SetSpawnPerPointInitial(int count);
+        void SetSpawnDebugDiagnostics(bool enabled, float rateLimitSeconds);
         void SetForceGeneratedColliders(bool force);
         void SetForceConfigColliders(bool force, const std::vector<std::string>& kinds = {});
         void SetColliderConfigOverridesEnabled(bool enabled);
@@ -143,6 +144,7 @@ namespace SweetsSpace
         void SetCreamEnabled(bool enabled);
         int GetSweetsCount() const;
         void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
+        void NotifyStageMoved(float minX, float maxX, float minY, float maxY, float deltaY);
         bool GetGlueDebugSnapshot(SweetsContacts::GlueDebugSnapshot& outSnapshot) const;
     private:
         Systems::DrawSystem* m_drawSystem;
