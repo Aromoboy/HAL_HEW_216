@@ -4,6 +4,7 @@
 #include "Entities/Player.h"
 #include "Entities/PlayerModel.h"
 #include "SoundManagerEX.h"
+#include "EffectSystem.h"
 
 #include <algorithm>
 #include <cmath>
@@ -85,6 +86,16 @@ namespace Entities
                         desired.z * ctx.dt
                         });
                 a_modelSystem.PlayMove(player);
+
+                if (m_effectCollTime <= 0.0f)
+                {
+                    m_effectCollTime = m_maxEffectCoolTime;
+                    m_effectSystem->SpawnEffect(EffectSystem::EffectCreateRequest("fly", player.GetTransform().position, float3()));
+                }
+                else
+                {
+                    m_effectCollTime -= ctx.dt;
+                }
             }
             else 
             {
@@ -216,6 +227,16 @@ namespace Entities
         std::ostringstream oss;
         oss << kPlayerLogPrefix << "速度倍率を " << m_speedMultiplier << "x に設定しました \n";
         PlayerDebugTrace(oss.str());
+    }
+
+    void PlayerMovement:: SetEffectSystem(EffectSystem* system)
+    {
+        m_effectSystem = system;
+    }
+
+    void PlayerMovement::SetMaxEffectCoolTime(float maxTime)
+    {
+        m_maxEffectCoolTime = maxTime;
     }
 
     float PlayerMovement::GetMoveSpeed() const

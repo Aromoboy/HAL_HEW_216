@@ -578,6 +578,7 @@ void SceneComposer::ComposeEffect(Composition& result,
     std::unordered_map<std::string, EffectCreateData> effectPathMap;
     effectPathMap.insert({ "Catch",EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.2f) });
     effectPathMap.insert({ "Purge",EffectCreateData(u"Assets/Effect/sweets_purge_effect.efkefc", 0.2f) });
+    effectPathMap.insert({ "fly", EffectCreateData(u"Assets/Effect/fly_effect_test01.efkefc", 0.2f) });
 
 
     result.effectSystem = std::make_unique<EffectSystem>(a_render, a_manager, effectPathMap);
