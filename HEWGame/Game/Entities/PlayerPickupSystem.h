@@ -9,6 +9,8 @@
 #include "Sweets/SweetsTypes.h"
 #include "Vector.h"
 
+class EffectSystem;
+
 namespace Core
 {
     struct UpdateContext;
@@ -21,6 +23,7 @@ namespace SweetsSpace
     class SweetsManager;
 }
 
+
 namespace Entities
 {
     class Player;
@@ -31,6 +34,7 @@ namespace Entities
     public:
         explicit PlayerPickupSystem(SweetsSpace::SweetsManager* manager = nullptr);
 
+        void SetEffectSystem(EffectSystem* system);
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);
         bool IsCarryingSweets() const;
         const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& GetCarriedSweets() const;
@@ -80,6 +84,7 @@ namespace Entities
         bool IsInsidePickupBox(const PickupBox& box, const float3& pos) const;
 
         SweetsSpace::SweetsManager* m_sweetsManager = nullptr;
+        EffectSystem* m_effectSystem = nullptr;
         std::vector<std::shared_ptr<SweetsSpace::BaseSweets>> m_carrieds;
         std::unordered_map<SweetsSpace::BaseSweets*, float3> m_carriedRotations;
         int m_maxCarry = 1;

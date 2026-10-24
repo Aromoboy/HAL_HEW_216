@@ -45,6 +45,11 @@ namespace Entities
         return m_modelSystem.GetRenderTransform();
     }
 
+    void Player::SetEffectSystem(EffectSystem* system)
+    {
+        m_pickupSystem.SetEffectSystem(system);
+    }
+
     void Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
     {
         m_pickupSystem.SetSweetsManager(manager);

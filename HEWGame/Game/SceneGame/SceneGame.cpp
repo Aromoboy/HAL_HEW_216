@@ -2185,6 +2185,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
 
         m_drawSystem->DebugDrawQueued(activeCamera);
 
+        m_effectSystem->Draw(activeCamera.get());
+
 #if defined(_DEBUG)
         DrawPhysicsDebugOverlay(activeCamera);
 #endif
@@ -2789,6 +2791,7 @@ void SceneGame::ResetPlaySession()
         m_player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         m_player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         m_player->SetPickupOriginOffset(m_playerPickupOriginOffset);
+        m_player->SetEffectSystem(m_effectSystem.get());
 
         const Transform& spawnTransform = m_playerSpawnTransform.transform;
         m_player->SetTransformViaPhysics(spawnTransform.position, spawnTransform.rotation);
