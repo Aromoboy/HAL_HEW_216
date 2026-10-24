@@ -331,11 +331,12 @@ namespace Entities
         RefreshRenderTransform();
     }
 
-    void PlayerModel::UpdateAnimation(Player& player)
+    void PlayerModel::UpdateAnimation(Player& player, float deltaTime)
     {
         if (m_activeAnimation)
         {
-            m_activeAnimation->Step(1.0f / 60.0f);
+            // 越智TODO とりあえずここまでDeltaTimeを持ってくる
+            m_activeAnimation->Step(deltaTime);
 
             if (m_activeAnimation == m_stabAnimation && m_activeAnimation->IsPlayEnd())
             {

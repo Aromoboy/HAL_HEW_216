@@ -697,11 +697,14 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
 
 
 
-    //if (m_pendingRetryReset)
-    //{
-    //    m_pendingRetryReset = false;
-    //    SetStageState(StageState::Playing);
-    //}
+    if (m_pendingRetryReset)
+    {
+        if (auto* sm = SoundManagerEX::GetInstance())
+            sm->StopAllSounds();
+        m_pendingRetryReset = false;
+        SetStageState(StageState::Playing);
+        
+    }
 }
 
 void SceneGame::Draw()
@@ -1376,6 +1379,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
 // --- タイムアップ判定 ---
 
+#ifdef _DEBUG
+
+
         if (input)
         {
             PlayerController::SpeedInput speedInput{
@@ -1392,6 +1398,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 m_player->SetSpeedMultiplier(m_playerSpeedMultiplier);
             }
         }
+#endif // _DEBUG
 
         const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
             - m_gameplayRules.GetRemainingCountdownSeconds();
