@@ -388,10 +388,8 @@ namespace Entities
         if (dropTriggered && !m_carrieds.empty())
         {
             PlayerDebugTrace(std::string(kPlayerLogPrefix) + "DropCarriedSweets invoked\n");
-            if (DropCarriedSweets(player))
-            {
-                model.PlayUnCarry(player);
-            }
+            DropCarriedSweets(player);
+            if(m_carrieds.empty()) model.PlayUnCarry(player);
             return;
         }
 

@@ -24,7 +24,7 @@ namespace Entities
             m_movementSystem.Update(*this, m_modelSystem, ctx, *m_input);
         }
         m_pickupSystem.SetFacingSign(m_movementSystem.GetFacingSign());
-        m_modelSystem.UpdateAnimation(*this);
+        m_modelSystem.UpdateAnimation(*this, ctx.dt);
         m_physicsBinder.ClampVerticalPosition(*this);
         m_physicsBinder.ClampScreenBounds(*this);
         m_modelSystem.SyncVisualTransformFromPhysics(*this);

@@ -31,7 +31,7 @@ namespace Entities
 
         void Initialize(Player& player, std::shared_ptr<Render::Model> model);
         void SyncVisualTransformFromPhysics(Player& player);
-        void UpdateAnimation(Player& player);
+        void UpdateAnimation(Player& player, float deltaTime);
         void Draw(const Player& player, Render::ModelRenderer& renderer, const CameraSpace::ICamera& camera);
         void PlayIdle(Player& player);
         void PlayStabAnimation(Player& player);
