@@ -398,6 +398,11 @@ namespace SweetsSpace
         return m_contacts.IsAnchoredToCake(sweets);
     }
 
+    const std::unordered_set<ActiveSweets*>& SweetsManager::GetCakeAnchoredSweets() const
+    {
+        return m_contacts.GetCakeAnchoredSweets();
+    }
+
     void SweetsManager::SetCreamEnabled(bool enabled)
     {
         m_contacts.SetCreamEnabled(enabled);

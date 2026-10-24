@@ -339,7 +339,7 @@ namespace SweetsSpace
             return;
         }
 
-        const int pendingRequests = static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
+        const int pendingRequests = static_cast<int>(m_spawnQueue.size());
         const int projectedLive = liveSweets + pendingRequests;
         const int remainingToStack = std::max(0, m_batchStackTarget - m_stackedInBatch);
         const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
@@ -896,7 +896,7 @@ namespace SweetsSpace
         }
 
         const int liveSweets = CountLiveSweets();
-        const int pendingRequests = static_cast<int>(m_spawnQueue.size()) + m_currentBurstRemaining;
+        const int pendingRequests = static_cast<int>(m_spawnQueue.size());
         int allowedCount = count;
         if (m_liveSweetsCap > 0)
         {
@@ -1008,6 +1008,11 @@ namespace SweetsSpace
 
     void SweetsSpawner::ReleaseSpawnOriginOnStacked(const std::shared_ptr<ActiveSweets>& sweets)
     {
+        ReleaseSpawnOrigin(sweets);
+    }
+
+    void SweetsSpawner::ReleaseSpawnOrigin(const std::shared_ptr<ActiveSweets>& sweets)
+    {
         if (!sweets)
         {
             return;
@@ -1024,7 +1029,7 @@ namespace SweetsSpace
     void SweetsSpawner::OnSweetsRemoved(const std::shared_ptr<ActiveSweets>& sweets, int remainingToStack,
         int liveAfterRemoval, const char* context)
     {
-        UnregisterSpawnOrigin(sweets);
+        ReleaseSpawnOrigin(sweets);
         const int desiredLiveTarget = ComputeDesiredLiveTarget(remainingToStack);
         if (!m_batchCoolingDown && desiredLiveTarget > 0 && liveAfterRemoval < desiredLiveTarget)
         {
@@ -1139,9 +1144,16 @@ namespace SweetsSpace
             return;
         }
 
+        int liveSweets = CountLiveSweets();
         m_burstTimer += deltaSeconds;
         while (!m_spawnQueue.empty() && m_burstTimer >= m_activeBurstInterval)
         {
+            // ミカ：同じフレーム内の生成分も上限に含め未発行の要求を残す
+            if (m_liveSweetsCap > 0 && liveSweets >= m_liveSweetsCap)
+            {
+                break;
+            }
+
             const std::string requestedKind = m_spawnQueue.front();
             const std::string resolvedKind = m_factory ? m_factory->ResolveKindKey(requestedKind) : requestedKind;
             const std::string kind = NormalizeKey(resolvedKind);
@@ -1167,6 +1179,7 @@ namespace SweetsSpace
             const auto spawned = m_spawnCallback(kind, transform);
             if (spawned)
             {
+                ++liveSweets;
                 RegisterSpawnOrigin(spawned, *originSelection);
                 std::ostringstream success;
                 success << "kind=" << kind << " lane=" << originSelection->laneLabel

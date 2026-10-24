@@ -74,7 +74,7 @@ namespace Entities
         float3 ComputeCarryAnchor(Player& player) const;
         PickupOrigin ComputePickupOrigin(Player& player) const;
         void TryPickupNearest(Player& player);
-        void DropCarriedSweets(Player& player);
+        bool DropCarriedSweets(Player& player);
         //掴み判定の枠
         PickupBox MakePickupBox(Player& player) const;
         bool IsInsidePickupBox(const PickupBox& box, const float3& pos) const;

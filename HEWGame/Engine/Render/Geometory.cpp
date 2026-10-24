@@ -29,7 +29,8 @@ void Geometory::Init()
 }
 void Geometory::Uninit()
 {
-	SAFE_DELETE_ARRAY(m_pLineVtx);
+	delete[] static_cast<LineVertex*>(m_pLineVtx);
+	m_pLineVtx = nullptr;
 	SAFE_DELETE(m_pLineShader[1]);
 	SAFE_DELETE(m_pLineShader[0]);
 	SAFE_DELETE(m_pPS);
@@ -65,6 +66,8 @@ void Geometory::AddLine(DirectX::XMFLOAT3 start, DirectX::XMFLOAT3 end, DirectX:
 }
 void Geometory::DrawLines()
 {
+	// ミカ：線がないフレームはバッファ転送と描画状態の変更を行わない
+	if (m_lineCnt == 0) return;
 	m_pLineShader[0]->WriteBuffer(0, m_WVP);
 	m_pLineShader[0]->Bind();
 	m_pLineShader[1]->Bind();

@@ -21,6 +21,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 extern int s_TitleBGMHandle;
 
@@ -52,6 +53,11 @@ namespace SceneSpace
         {
         }
 
+        ScenePowerUp::~ScenePowerUp()
+        {
+                UpdatePlayerSave(true);
+        }
+
         bool ScenePowerUp::Load(Core::Input& input)
         {
                 (void)input;
@@ -75,13 +81,10 @@ namespace SceneSpace
                 cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("BackFrame", GetDevice(), L"Assets/Texture/UI_Cakeblock.png");
                 cache.Load("Number", GetDevice(), L"Assets/Texture/number.png");
-                cache.Load("PowerUpBG", GetDevice(), L"Assets/Texture/upgrade_menu_background.png");
-                cache.Load("Frame", GetDevice(), L"Assets/Texture/UI_whiteblock.png");
                 cache.Load("SweetsSpawnSpeed", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_Speed_icon.png");
                 cache.Load("SweetsSpawnQuantity", GetDevice(), L"Assets/Texture/upgrade_UI_fruit_UP_icon.png");
                 cache.Load("PointAmount", GetDevice(), L"Assets/Texture/upgrade_UI_pointUP_icon _remake.png");
                 cache.Load("Timer", GetDevice(), L"Assets/Texture/upgrade_UI_time_bonus_icon.png");
-                cache.Load("Fairy", GetDevice(), L"Assets/Texture/PowerUpBackFairy.png");
 
                 std::unordered_map<std::string, EffectCreateData> effectDatas;
                 effectDatas.try_emplace("PowerUp", EffectCreateData(u"Assets/Effect/sweets_catch_effect.efkefc", 0.03f));
@@ -115,8 +118,7 @@ namespace SceneSpace
                         PlayerData::Data& entry = m_playerEntries.front();
                         entry.levels[effectEntry->type] = m_powerUpManager->GetLevel(index);
                         entry.nPoints = m_cost;
-                        m_playerData.SetEntries(m_playerEntries);
-                        m_playerData.SaveData();
+                        QueuePlayerSave();
                 };
                 m_cursor = std::make_unique<PowerUpCursor>(cache.Get("Star"), m_powerUpManager.get(), PowerUpManager::NodeFormat(3, 2), m_cost, input, *m_effectSystem, std::move(onPurchase));
                 m_target = std::make_shared<PowerUpTarget>(float3{ 0.0f, 0.0f, 0.0f });
@@ -228,11 +230,9 @@ namespace SceneSpace
                 }
             }
             entry.nPoints = m_cost;
-            m_playerData.SetEntries(m_playerEntries);
-            if (!m_playerData.SaveData())
-            {
-                DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to save player data on exit.\n");
-            }
+            QueuePlayerSave();
+            // ミカ：次のシーンが読む前に最後の保存まで完了させる
+            UpdatePlayerSave(true);
 
                 if (m_videoBackground)
                 {
@@ -289,6 +289,7 @@ namespace SceneSpace
 
         void ScenePowerUp::Update(const Core::UpdateContext& ctx)
         {
+                UpdatePlayerSave();
                 if (m_videoBackground)
                 {
                     m_videoBackground->Update(ctx.dt);
@@ -447,6 +448,72 @@ namespace SceneSpace
                 }
 
                 return true;
+        }
+
+        void ScenePowerUp::QueuePlayerSave()
+        {
+                // ミカ：設定の初期化を主スレッドで終え、保存中は所有する複製だけを読む
+                if (PowerUpEffectConfig::Entries().empty())
+                {
+                        DebugLog::DebugMessage(std::string(kLogPrefix) + "Save refused: power-up effect config is unavailable.\n");
+                        return;
+                }
+                m_playerData.SetEntries(m_playerEntries);
+                m_pendingPlayerSave = m_playerData;
+                UpdatePlayerSave();
+        }
+
+        void ScenePowerUp::UpdatePlayerSave(bool waitForCompletion)
+        {
+                do
+                {
+                        if (m_playerSave.valid())
+                        {
+                                if (!waitForCompletion && m_playerSave.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                                {
+                                        return;
+                                }
+                                try
+                                {
+                                        if (!m_playerSave.get())
+                                        {
+                                                DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to save player data; previous file was preserved.\n");
+                                        }
+                                }
+                                catch (const std::exception& ex)
+                                {
+                                        DebugLog::DebugMessage(std::string(kLogPrefix) + "Player save failed: " + ex.what() + "\n");
+                                }
+                        }
+                        if (!m_pendingPlayerSave)
+                        {
+                                return;
+                        }
+                        try
+                        {
+                                // ミカ：同時保存を一つに制限し、待機中の変更は最新の状態へまとめる
+                                m_playerSave = std::async(std::launch::async, [snapshot = *m_pendingPlayerSave]()
+                                {
+                                        return snapshot.SaveData();
+                                });
+                        }
+                        catch (const std::exception& ex)
+                        {
+                                DebugLog::DebugMessage(std::string(kLogPrefix) + "Background save unavailable; saving synchronously: " + ex.what() + "\n");
+                                try
+                                {
+                                        if (!m_pendingPlayerSave->SaveData())
+                                        {
+                                                DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to save player data; previous file was preserved.\n");
+                                        }
+                                }
+                                catch (const std::exception& saveError)
+                                {
+                                        DebugLog::DebugMessage(std::string(kLogPrefix) + "Player save failed: " + saveError.what() + "\n");
+                                }
+                        }
+                        m_pendingPlayerSave.reset();
+                } while (waitForCompletion);
         }
 
         void ScenePowerUp::ShutdownPowerUpSystems()

@@ -127,7 +127,7 @@ void ShaderList::SetMaterial(const Model::Material& material)
 	}
 }
 
-void ShaderList::SetMaterial(const MaterialDX& material)
+void ShaderList::SetMaterial(const MaterialDX& material, PixelShader* target)
 {
 	const float lightResponse = material.GetLightResponse();
 	const float sssIntensity = material.GetSssIntensity();
@@ -142,6 +142,13 @@ void ShaderList::SetMaterial(const MaterialDX& material)
 	};
 	// objFlags.x は「テクスチャ有無フラグ」（1.0f = テクスチャあり）として使用。
 	param[3].x = material.GetTexture() ? 1.0f : 0.0f;
+	// ミカ：静止モデルは使用中のシェーダーだけへマテリアルを転送する
+	if (target)
+	{
+		target->SetTexture(0, material.GetTexture());
+		target->WriteBuffer(0, param);
+		return;
+	}
 	for (int i = 0; i < PS_KIND_MAX; ++i)
 	{
 		if (m_pPS[i])

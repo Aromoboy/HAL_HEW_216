@@ -181,6 +181,12 @@ namespace Entities
         Transform m_lastBoundsTransform{};
         Transform m_lastTransform{};
         bool m_transformDirty{ false };
+        b2BodyId m_boundsBodyId{ b2_nullBodyId };
+        b2Transform m_boundsBodyTransform{};
+        std::uint64_t m_boundsDefinitionRevision = 0;
+        float m_boundsWorldScale = 0.0f;
+        int m_boundsShapeCount = 0;
+        bool m_bodyBoundsCached = false;
 
         std::vector<std::vector<b2Vec2>> m_box2dPolygons;
         std::vector<b2Vec2> m_box2dBoundary;

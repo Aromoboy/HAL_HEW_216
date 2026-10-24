@@ -80,6 +80,8 @@ namespace Systems
         Core::UpdateNode* GetContactDispatchNode() const;
         const std::vector<Entities::PhysicalEntity*>& GetBodies() const;
         const PhysicsTuningParameters& GetTuningParameters() const;
+        std::uint64_t GetContactRevision() const noexcept { return m_contactRevision; }
+        void NotifyContactsChanged() noexcept { ++m_contactRevision; }
 
         void SetGravity(float gravity);
         void RegisterBody(Entities::PhysicalEntity& body);
@@ -127,6 +129,7 @@ namespace Systems
         b2BodyDef m_defaultBodyDef{ b2DefaultBodyDef() };
         b2ShapeDef m_defaultShapeDef{ b2DefaultShapeDef() };
         PhysicsTuningParameters m_tuning{};
+        std::uint64_t m_contactRevision = 0;
         int m_subStepCount = 4;
         bool m_loggedMissingSystem = false;
         bool m_loggedMissingWorld = false;

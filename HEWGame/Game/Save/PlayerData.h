@@ -34,4 +34,6 @@ public:
 
 private:
 	std::vector<Data> m_entries;
+	// ミカ：読込に失敗した既存データを初期値で上書きしない
+	bool m_canSave = true;
 };

@@ -26,6 +26,14 @@ namespace Core
             m_frameIndex = 0;
         }
 
+        void ResetElapsedTime()
+        {
+            // ミカ：休止時間だけを除外し、フレーム番号と固定刻み設定は保持する
+            m_lastTick = Clock::now();
+            m_hasLastTick = false;
+            m_deltaTime = 0.0f;
+        }
+
         float Tick()
         {
             const auto now = Clock::now();

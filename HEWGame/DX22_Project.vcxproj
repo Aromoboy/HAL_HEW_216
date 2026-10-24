@@ -184,6 +184,14 @@ xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)assets" &gt;NUL</Command>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <!-- ミカ：x64版Assimpを構成に合わせて実行ファイルと同じ場所へ配置する -->
+  <Target Name="CopyAssimpRuntime" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <PropertyGroup>
+      <AssimpRuntimeSuffix Condition="'$(Configuration)'=='Debug'">d</AssimpRuntimeSuffix>
+    </PropertyGroup>
+    <Copy SourceFiles="$(ProjectDir)ThirdParty\lib\assimp-vc143-mt$(AssimpRuntimeSuffix).dll"
+          DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
   <ItemGroup>
     <ClCompile Include="Engine\Camera\BaseCamera.cpp" />
     <ClCompile Include="Engine\Camera\CameraMath.cpp" />

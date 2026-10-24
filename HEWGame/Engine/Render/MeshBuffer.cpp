@@ -12,8 +12,8 @@ MeshBuffer::MeshBuffer()
 }
 MeshBuffer::~MeshBuffer()
 {
-        SAFE_DELETE_ARRAY(m_desc.pIdx);
-        SAFE_DELETE_ARRAY(m_desc.pVtx);
+        delete[] static_cast<const char*>(m_desc.pIdx);
+        delete[] static_cast<const char*>(m_desc.pVtx);
         m_indexBuffer.Shutdown();
         m_vertexBuffer.Shutdown();
 }

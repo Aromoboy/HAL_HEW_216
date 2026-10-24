@@ -1,6 +1,8 @@
 #include "SoundSystem.h"
 #include "Debug.h"
 #include "Main.h"
+#include <limits>
+#include <new>
 
 #ifdef _XBOX //Big-Endian
 #define fourccRIFF 'RIFF'
@@ -125,8 +127,9 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
         return true;
     }
 
-    delete[] outData->m_soundBuffer;
-    outData->m_soundBuffer = nullptr;
+    // ミカ：失敗した読込のポインタとサイズを次回へ持ち越さない
+    outData->Cleanup();
+    outData->m_wavFormat = {};
 
     HMMIO mmioHandle = mmioOpenA(const_cast<LPSTR>(a_wFilePath.c_str()), nullptr, MMIO_READ | MMIO_ALLOCBUF);
     if (!mmioHandle)
@@ -134,6 +137,20 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 #ifdef _DEBUG
         DebugLog::DebugMessage("Failed to open wave file.");
 #endif
+        return false;
+    }
+
+    // ミカ：MMIOが切り詰める前にRIFFの宣言長を実ファイル長と照合する
+    DWORD riffHeader[3]{};
+    const LONG headerSize = static_cast<LONG>(sizeof(riffHeader));
+    const LONG headerBytes = mmioRead(mmioHandle, reinterpret_cast<HPSTR>(riffHeader), headerSize);
+    const LONG fileBytes = mmioSeek(mmioHandle, 0, SEEK_END);
+    const LONG rewindPosition = mmioSeek(mmioHandle, 0, SEEK_SET);
+    if (headerBytes != headerSize || fileBytes < headerSize || rewindPosition != 0
+        || riffHeader[0] != mmioFOURCC('R', 'I', 'F', 'F') || riffHeader[2] != mmioFOURCC('W', 'A', 'V', 'E')
+        || riffHeader[1] < 4 || riffHeader[1] > static_cast<DWORD>(fileBytes) - 8)
+    {
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
@@ -146,7 +163,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 #ifdef _DEBUG
         DebugMessage("Sound.cpp:Riffチャンクに侵入失敗しました");
 #endif
-        mmioClose(mmioHandle, MMIO_FHOPEN);
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
@@ -156,23 +173,39 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 #ifdef _DEBUG
         DebugMessage("Sound.cpp:fmtチャンクが存在しません");
 #endif
-        mmioClose(mmioHandle, MMIO_FHOPEN);
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
-    DWORD readSize = mmioRead(mmioHandle, (HPSTR)&outData->m_wavFormat, chunkInfo.cksize);
-    if (readSize != chunkInfo.cksize)
+    // ミカ：PCMの形式領域を検証し、構造体の範囲を超える読込を防ぐ
+    if (chunkInfo.cksize != sizeof(PCMWAVEFORMAT) && chunkInfo.cksize != sizeof(WAVEFORMATEX))
+    {
+        mmioClose(mmioHandle, 0);
+        return false;
+    }
+    WAVEFORMATEX waveFormat{};
+    LONG readSize = mmioRead(mmioHandle, reinterpret_cast<HPSTR>(&waveFormat),
+        static_cast<LONG>(chunkInfo.cksize));
+    if (readSize != static_cast<LONG>(chunkInfo.cksize))
     {
 #ifdef _DEBUG
         DebugMessage("Sound.h:読み込みサイズが一致していません");
 #endif
-        mmioClose(mmioHandle, MMIO_FHOPEN);
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
-    if (outData->m_wavFormat.wFormatTag != WAVE_FORMAT_PCM)
+    const bool supportedBits = waveFormat.wBitsPerSample == 8 || waveFormat.wBitsPerSample == 16
+        || waveFormat.wBitsPerSample == 24 || waveFormat.wBitsPerSample == 32;
+    const DWORD blockAlign = static_cast<DWORD>(waveFormat.nChannels) * waveFormat.wBitsPerSample / 8;
+    const unsigned long long averageBytes = static_cast<unsigned long long>(waveFormat.nSamplesPerSec) * blockAlign;
+    if (waveFormat.wFormatTag != WAVE_FORMAT_PCM || waveFormat.cbSize != 0
+        || waveFormat.nChannels == 0 || waveFormat.nChannels > XAUDIO2_MAX_AUDIO_CHANNELS
+        || !supportedBits || waveFormat.nSamplesPerSec < XAUDIO2_MIN_SAMPLE_RATE
+        || waveFormat.nSamplesPerSec > XAUDIO2_MAX_SAMPLE_RATE
+        || waveFormat.nBlockAlign != blockAlign || averageBytes != waveFormat.nAvgBytesPerSec)
     {
-        mmioClose(mmioHandle, MMIO_FHOPEN);
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
@@ -181,7 +214,7 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 #ifdef _DEBUG
         DebugMessage("Sound.h:fmtチャンクからの退出に失敗しました");
 #endif
-        mmioClose(mmioHandle, MMIO_FHOPEN);
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
@@ -191,30 +224,48 @@ bool SoundSystem::LoadWaveFile(const std::string& a_wFilePath, WaveData* outData
 #ifdef _DEBUG
         DebugMessage("Sound.cpp:dataチャンクへの侵入に失敗しました");
 #endif
-        mmioClose(mmioHandle, MMIO_FHOPEN);
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
-    outData->m_size = chunkInfo.cksize;
-    outData->m_soundBuffer = new char[chunkInfo.cksize];
-    readSize = mmioRead(mmioHandle, (HPSTR)outData->m_soundBuffer, chunkInfo.cksize);
+    if (chunkInfo.cksize == 0 || chunkInfo.cksize > static_cast<DWORD>((std::numeric_limits<LONG>::max)())
+        || chunkInfo.cksize > XAUDIO2_MAX_BUFFER_BYTES || chunkInfo.cksize % waveFormat.nBlockAlign != 0)
+    {
+        mmioClose(mmioHandle, 0);
+        return false;
+    }
+    // ミカ：読込完了までバッファを局所所有し、失敗時に解放済みポインタを公開しない
+    std::unique_ptr<char[]> buffer(new (std::nothrow) char[chunkInfo.cksize]);
+    if (!buffer)
+    {
+        mmioClose(mmioHandle, 0);
+        return false;
+    }
+    readSize = mmioRead(mmioHandle, buffer.get(), static_cast<LONG>(chunkInfo.cksize));
 
-    if (readSize != chunkInfo.cksize)
+    if (readSize != static_cast<LONG>(chunkInfo.cksize))
     {
 #ifdef _DEBUG
         DebugMessage("Sound.cpp:dataチャンクの読み込みに失敗しました");
 #endif
-        mmioClose(mmioHandle, MMIO_FHOPEN);
-        delete[] outData->m_soundBuffer;
+        mmioClose(mmioHandle, 0);
         return false;
     }
 
-    mmioClose(mmioHandle, MMIO_FHOPEN);
+    mmioClose(mmioHandle, 0);
+    outData->m_wavFormat = waveFormat;
+    outData->m_size = chunkInfo.cksize;
+    outData->m_soundBuffer = buffer.release();
     return true;
 }
 
 int SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, bool loop, float volume)
 {
+    // ミカ：音声初期化に失敗した環境では再生要求だけを安全に拒否する
+    if (!m_pAudio2 || !m_pMasterVoice)
+    {
+        return -1;
+    }
     CleanupFinishedVoices();
 
     if (!LoadWaveFile(fileName, outData))
@@ -224,7 +275,6 @@ int SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, b
 
     WAVEFORMATEX waveFormat{};
     memcpy(&waveFormat, &outData->m_wavFormat, sizeof(outData->m_wavFormat));
-    waveFormat.wBitsPerSample = outData->m_wavFormat.nBlockAlign * 8 / outData->m_wavFormat.nChannels;
 
     IXAudio2SourceVoice* pNewSourceVoice = nullptr;
     HRESULT result = m_pAudio2->CreateSourceVoice(&pNewSourceVoice, (WAVEFORMATEX*)&waveFormat);
@@ -234,7 +284,12 @@ int SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, b
         return -1;
     }
 
-    pNewSourceVoice->SetVolume(volume);
+    result = pNewSourceVoice->SetVolume(volume);
+    if (FAILED(result))
+    {
+        pNewSourceVoice->DestroyVoice();
+        return -1;
+    }
 
     XAUDIO2_BUFFER xAudio2Buffer{};
     xAudio2Buffer.pAudioData = (BYTE*)outData->m_soundBuffer;
@@ -242,8 +297,17 @@ int SoundSystem::PlayWabeSound(const std::string& fileName, WaveData* outData, b
     xAudio2Buffer.AudioBytes = outData->m_size;
     xAudio2Buffer.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
 
-    pNewSourceVoice->SubmitSourceBuffer(&xAudio2Buffer);
-    pNewSourceVoice->Start();
+    // ミカ：投入や再生開始の失敗時はボイスを登録せず破棄する
+    result = pNewSourceVoice->SubmitSourceBuffer(&xAudio2Buffer);
+    if (SUCCEEDED(result))
+    {
+        result = pNewSourceVoice->Start();
+    }
+    if (FAILED(result))
+    {
+        pNewSourceVoice->DestroyVoice();
+        return -1;
+    }
 
     // ハンドルを生成して管理
     int handle = m_nextHandle++;

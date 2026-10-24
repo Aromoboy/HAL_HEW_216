@@ -214,14 +214,13 @@ namespace Core
 
     float InputMap::GetAxisValue(int axis, const XINPUT_STATE& state, float sign) const
     {
-        constexpr float kStickNorm = 32767.0f;
         float value = 0.0f;
         switch (axis)
         {
-        case 0: value = state.Gamepad.sThumbLX / kStickNorm; break;
-        case 1: value = state.Gamepad.sThumbRX / kStickNorm; break;
-        case 2: value = state.Gamepad.sThumbLY / kStickNorm; break;
-        case 3: value = state.Gamepad.sThumbRY / kStickNorm; break;
+        case 0: value = Gamepad::NormalizeStickAxis(state.Gamepad.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE); break;
+        case 1: value = Gamepad::NormalizeStickAxis(state.Gamepad.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE); break;
+        case 2: value = Gamepad::NormalizeStickAxis(state.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE); break;
+        case 3: value = Gamepad::NormalizeStickAxis(state.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE); break;
         default: value = 0.0f; break;
         }
         return value * sign;

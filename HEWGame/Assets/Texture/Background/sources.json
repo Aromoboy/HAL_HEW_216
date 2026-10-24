@@ -1,0 +1,291 @@
+{
+  "source_folder": "https://drive.google.com/drive/folders/1e2zCWMiD1E3l57l1bQ81qI-gnr_BcSp4",
+  "assets": {
+    "Aurora": {
+      "sha256": "eb3d1fcfe2e00b8ad9c30d023f4df7fb4754a4a1f06af44d5d6cd20f9384b775",
+      "source_size": [
+        2000,
+        12288
+      ],
+      "alpha_bounds": [
+        1,
+        787,
+        2000,
+        3629
+      ]
+    },
+    "Blue Balloon": {
+      "sha256": "5b013d587837841e25abfe5baee107e86ce86b16438d6a0d03d10564de70ad0c",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        1014,
+        5177,
+        1109,
+        5394
+      ]
+    },
+    "Bridge": {
+      "sha256": "d285e7746524a6194629b8c54f7f6ab445d6f221974b91efe6f330a3c9e1a2c7",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        0,
+        7734,
+        551,
+        7994
+      ]
+    },
+    "Bubble1": {
+      "sha256": "85c249530b9b15944b5ee9362390650f411237701eba5e2ba7b2039742efb1de",
+      "source_size": [
+        2000,
+        12288
+      ],
+      "alpha_bounds": [
+        36,
+        7400,
+        114,
+        7487
+      ]
+    },
+    "Castle": {
+      "sha256": "8b1ca86e9feef5b081914df889f850bfc0686dda1320235738cd11ddae3e2447",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        534,
+        6629,
+        1725,
+        7906
+      ]
+    },
+    "Chocolate": {
+      "sha256": "67842e3d00230e3a33e8aebc443012cbaf6aa3f0f5e8bdf795f503728a367e3b",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        0,
+        7605,
+        545,
+        8192
+      ]
+    },
+    "Cloud": {
+      "sha256": "02fc71fb946e1f4f1a5b554bd6672376067dbb38ba603b38c1f178d537384fe6",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        1182,
+        6204,
+        2000,
+        6662
+      ]
+    },
+    "Cloud4": {
+      "sha256": "d04300ba75858d7c04f37972931419ddbf786770611b1294ee5afba220999c9a",
+      "source_size": [
+        2000,
+        12288
+      ],
+      "alpha_bounds": [
+        0,
+        4868,
+        1286,
+        5394
+      ]
+    },
+    "Hot air balloon": {
+      "sha256": "084c24172fab4ac364839893329b65c720706cc2b540fa14493f87f6f197e0ba",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        281,
+        5292,
+        602,
+        5831
+      ]
+    },
+    "moon": {
+      "sha256": "abb22a98ea2b750ef178d36efbb04cfa5d01b64d11f706da21da6b6630b8d476",
+      "source_size": [
+        2000,
+        12288
+      ],
+      "alpha_bounds": [
+        1394,
+        3425,
+        1912,
+        3952
+      ]
+    },
+    "PineappleCloud": {
+      "sha256": "2ed24b3bfb453d8342285c4253bb2301f9a2908be053d2ac1f0d8c2c617f1c59",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        218,
+        5383,
+        1375,
+        6022
+      ]
+    },
+    "Rainbow": {
+      "sha256": "381f3ccc225456f09441a9927638479197f8fde612d83ffbbdee8341e52028ea",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        0,
+        6371,
+        2000,
+        7636
+      ]
+    },
+    "RainbowPlanet": {
+      "sha256": "eac9c8c9d0e3b7889ad973cb25e5e4088524d8b9bc289acc548d97dc30f102b7",
+      "source_size": [
+        2000,
+        12288
+      ],
+      "alpha_bounds": [
+        341,
+        266,
+        737,
+        678
+      ]
+    },
+    "Red Balloon": {
+      "sha256": "6d4083571525715499780661c8225b52a4741f94663f250aec3eb67c5847e3fc",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        1665,
+        4945,
+        1760,
+        5162
+      ]
+    },
+    "Road": {
+      "sha256": "81d37262f957ff610b0b7716e8f0e9b26ab65acc9f0094522791420bc3e7ef93",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        0,
+        7597,
+        1198,
+        8179
+      ]
+    },
+    "Saturn": {
+      "sha256": "8eb47ba777e21cd4885b0eaeb25f80fa771ee4a4091946565f4e1b8f2a5010b9",
+      "source_size": [
+        2000,
+        12288
+      ],
+      "alpha_bounds": [
+        11,
+        2337,
+        876,
+        2939
+      ]
+    },
+    "Star1": {
+      "sha256": "9b2402fe17ccf5c849c035cd3fc2d6ad6fe42ef77fa4755fd633f18de44af71b",
+      "source_size": [
+        2000,
+        12288
+      ],
+      "alpha_bounds": [
+        1875,
+        1863,
+        1980,
+        1977
+      ]
+    },
+    "StrawberryCloud": {
+      "sha256": "a40c948186e93570b38e2441abc7661b400b1743e4dd638680169d313d5a4566",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        9,
+        5950,
+        652,
+        6495
+      ]
+    },
+    "StrawberryHouse": {
+      "sha256": "be8f01c6cc4c8abfaff73ee0dda8c140ab7f7c1bffae4930424a5a0e863f5be8",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        256,
+        7520,
+        339,
+        7621
+      ]
+    },
+    "StrawberryHouse2": {
+      "sha256": "552575631a380cc073b6a2489a1a04c1b738e5b1c9232b40647fed3baf0ff466",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        0,
+        7615,
+        88,
+        7759
+      ]
+    },
+    "StrawberryHouse3": {
+      "sha256": "69e479986df455bbc4336d460eb9a816dfd5a013e3500de2f3cb4f714896913e",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        1653,
+        7822,
+        1948,
+        8183
+      ]
+    },
+    "Sun": {
+      "sha256": "dd364db4aa69da2446d72d04422206c65ba4e294775ed7f4f3f4f4a33e8bc24d",
+      "source_size": [
+        2000,
+        8192
+      ],
+      "alpha_bounds": [
+        1240,
+        5857,
+        1902,
+        6337
+      ]
+    }
+  }
+}

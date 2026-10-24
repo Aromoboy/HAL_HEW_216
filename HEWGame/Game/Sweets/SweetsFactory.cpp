@@ -458,8 +458,19 @@ namespace
     {
         try
         {
-            *out = std::stof(token);
-            return std::isfinite(*out);
+            size_t consumed = 0;
+            const float parsed = std::stof(token, &consumed);
+            // ミカ：数値の後ろに空白以外が残る場合は設定エラーとし、既存の値を保持する
+            while (consumed < token.size() && std::isspace(static_cast<unsigned char>(token[consumed])))
+            {
+                ++consumed;
+            }
+            if (consumed != token.size() || !std::isfinite(parsed))
+            {
+                return false;
+            }
+            *out = parsed;
+            return true;
         }
         catch (const std::exception&)
         {

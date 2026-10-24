@@ -11,6 +11,7 @@
 #include <cmath>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <sstream>
 
 namespace
@@ -131,18 +132,13 @@ namespace GameplayProgression
             SweetsSpace::SweetsState::Active,
             SweetsSpace::SweetsState::Stacked,
             SweetsSpace::SweetsState::Ground,
-            SweetsSpace::SweetsState::Carried,
         };
 
         std::shared_ptr<SweetsSpace::ActiveSweets> crossedSweets;
+        const std::unordered_set<SweetsSpace::ActiveSweets*>* anchoredSweets = nullptr;
 
         for (SweetsSpace::SweetsState stateValue : states)
         {
-            if (stateValue == SweetsSpace::SweetsState::Carried)
-            {
-                continue;
-            }
-
             auto& list = input.sweetsManager->GetByState(stateValue);
             for (const auto& sweets : list)
             {
@@ -151,20 +147,18 @@ namespace GameplayProgression
                     continue;
                 }
 
-                if (!input.sweetsManager->HasEverCollidedWithSweets(*sweets))
-                {
-                    continue;
-                }
-
-                if (!input.sweetsManager->IsAnchoredToCake(*sweets))
-                {
-                    continue;
-                }
-
                 sweets->SyncColliderBounds();
                 const AABB bounds = sweets->GetAABB();
                 if (bounds.max.y >= result.state.heightMeters)
                 {
+                    if (!anchoredSweets)
+                    {
+                        anchoredSweets = &input.sweetsManager->GetCakeAnchoredSweets();
+                    }
+                    if (!anchoredSweets->contains(sweets.get()))
+                    {
+                        continue;
+                    }
                     if (result.state.triggeredThisHeight.insert(sweets.get()).second)
                     {
                         crossedSweets = sweets;
@@ -292,6 +286,8 @@ namespace GameplayProgression
             SweetsSpace::SweetsState::Ground,
         };
 
+        // ミカ：ガイドラインと同じくケーキにつながるスイーツだけを高さに含める
+        const auto& anchoredSweets = input.sweetsManager->GetCakeAnchoredSweets();
         float highestTop = 0.0f;
 
         for (SweetsSpace::SweetsState stateValue : states)
@@ -299,7 +295,7 @@ namespace GameplayProgression
             auto& list = input.sweetsManager->GetByState(stateValue);
             for (const auto& sweets : list)
             {
-                if (!sweets || sweets->IsPendingDestroy())
+                if (!sweets || sweets->IsPendingDestroy() || !anchoredSweets.contains(sweets.get()))
                 {
                     continue;
                 }

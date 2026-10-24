@@ -176,6 +176,23 @@ namespace Entities
 
     void PhysicalEntity::SyncColliderBounds()
     {
+        const b2BodyId bodyId = m_physicsMachine ? m_physicsMachine->FindBody(*this) : b2_nullBodyId;
+        const bool validBody = b2Body_IsValid(bodyId);
+        const int shapeCount = validBody ? b2Body_GetShapeCount(bodyId) : 0;
+        const b2Transform bodyTransform = validBody ? b2Body_GetTransform(bodyId) : b2Transform{};
+        // ミカ：実ボディと定義が同じなら、眠っている物体や同一フレームの境界再計算を省く
+        if (m_bodyBoundsCached && validBody && shapeCount > 0 && !m_transformDirty
+            && B2_ID_EQUALS(bodyId, m_boundsBodyId) && shapeCount == m_boundsShapeCount
+            && m_boundsDefinitionRevision == m_physicsDefinitionRevision
+            && m_boundsWorldScale == GetBox2DToWorldScale()
+            && AreFloat3Equal(m_transform.position, m_lastBoundsTransform.position)
+            && AreFloat3Equal(m_transform.rotation, m_lastBoundsTransform.rotation)
+            && AreFloat3Equal(m_transform.scale, m_lastBoundsTransform.scale)
+            && bodyTransform.p.x == m_boundsBodyTransform.p.x && bodyTransform.p.y == m_boundsBodyTransform.p.y
+            && bodyTransform.q.c == m_boundsBodyTransform.q.c && bodyTransform.q.s == m_boundsBodyTransform.q.s)
+        {
+            return;
+        }
         float3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
         float3 max{ std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
         bool hasPoints = false;
@@ -295,6 +312,12 @@ namespace Entities
         m_aabb.max = max;
         m_lastBoundsTransform = transform;
         m_transformDirty = false;
+        m_bodyBoundsCached = validBody && shapeCount > 0;
+        m_boundsBodyId = bodyId;
+        m_boundsBodyTransform = bodyTransform;
+        m_boundsDefinitionRevision = m_physicsDefinitionRevision;
+        m_boundsWorldScale = GetBox2DToWorldScale();
+        m_boundsShapeCount = shapeCount;
     }
 
     void PhysicalEntity::MarkTransformDirty()
@@ -699,7 +722,8 @@ namespace Entities
 
         if (m_physical.HasBody())
         {
-            m_physicsMachine->UnregisterBody(*this);
+            // ミカ：再作成ではコライダー定義を残し、新しいボディにも同じ形状を登録する
+            m_physicsMachine->UnregisterBody(*this, true);
             m_physical.Reset();
         }
 

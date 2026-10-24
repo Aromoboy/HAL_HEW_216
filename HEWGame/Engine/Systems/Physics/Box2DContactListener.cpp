@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <algorithm>
+#include <cmath>
 #include <sstream>
 #include <span>
 #include <string>
@@ -44,7 +46,7 @@ namespace Systems
         {
         }
 
-        void Box2DContactListener::ProcessContacts()
+        void Box2DContactListener::CaptureContacts()
         {
                 if (!b2World_IsValid(m_worldId))
                 {
@@ -53,8 +55,44 @@ namespace Systems
 
                 const b2ContactEvents events = b2World_GetContactEvents(m_worldId);
 
-                // イベントバッファ（beginEvents/endEvents/hitEvents）は Box2D 所有で、
-                // 次のワールドステップまで有効。リスナー側で解放しない。
+                // ミカ：次のステップで失効するイベントと解決済み接触情報を値で保存する
+                for (int i = 0; i < events.beginCount; ++i)
+                {
+                        const b2ContactBeginTouchEvent& event = events.beginEvents[i];
+                        ContactEventInfo info{ event.shapeIdA, event.shapeIdB, event.contactId };
+                        if (b2Contact_IsValid(event.contactId))
+                        {
+                                const b2ContactData data = b2Contact_GetData(event.contactId);
+                                info.manifold = data.manifold;
+                                info.hasManifold = info.manifold.pointCount > 0;
+                                for (int point = 0; point < info.manifold.pointCount; ++point)
+                                {
+                                        const float impulse = info.manifold.points[point].totalNormalImpulse;
+                                        if (std::isfinite(impulse))
+                                        {
+                                                info.normalImpulse += std::max(0.0f, impulse);
+                                        }
+                                }
+                        }
+                        m_pendingContacts.push_back({ info, true });
+                }
+                for (int i = 0; i < events.endCount; ++i)
+                {
+                        const b2ContactEndTouchEvent& event = events.endEvents[i];
+                        m_pendingContacts.push_back({ { event.shapeIdA, event.shapeIdB, event.contactId }, false });
+                }
+        }
+
+        void Box2DContactListener::ProcessContacts()
+        {
+                std::vector<PendingContact> pendingContacts;
+                pendingContacts.swap(m_pendingContacts);
+                const std::uint64_t eventEpoch = m_eventEpoch;
+                if (!b2World_IsValid(m_worldId))
+                {
+                        ClearDestroyedCaches();
+                        return;
+                }
 
                 constexpr int kMaxLogsPerFrame = 4;
                 constexpr int kMaxDroppedEventLogsPerFrame = 8;
@@ -243,32 +281,33 @@ namespace Systems
                         }
                     };
 
-                const std::span<const b2ContactBeginTouchEvent> beginEvents =
-                    (events.beginEvents && events.beginCount > 0)
-                        ? std::span<const b2ContactBeginTouchEvent>(
-                              events.beginEvents, static_cast<size_t>(events.beginCount))
-                        : std::span<const b2ContactBeginTouchEvent>();
-                for (const b2ContactBeginTouchEvent& evt : beginEvents)
+                // ミカ：ステップ順に配信し、先行コールバックが破棄したボディを毎回検証する
+                for (const PendingContact& pending : pendingContacts)
                 {
-                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
-                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
+                        if (eventEpoch != m_eventEpoch)
+                        {
+                                break;
+                        }
+                        const ContactEventInfo& info = pending.info;
+                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(info.shapeIdA);
+                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(info.shapeIdB);
                         if (!shapeAValidation.valid || !shapeBValidation.valid)
                         {
                                 const std::string reason = shapeAValidation.reason
                                     ? shapeAValidation.reason
                                     : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
-                                recordDroppedEvent("begin", evt.shapeIdA, evt.shapeIdB, reason,
+                                recordDroppedEvent(pending.begin ? "begin" : "end", info.shapeIdA, info.shapeIdB, reason,
                                     shapeAValidation.bodyKey, shapeBValidation.bodyKey);
                                 continue;
                         }
 
-                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
-                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
+                        Entities::PhysicalEntity* entityA = GetEntityForShape(info.shapeIdA);
+                        Entities::PhysicalEntity* entityB = GetEntityForShape(info.shapeIdB);
 
                         const bool entitiesValid = (entityA && entityB);
                         const bool bodiesMatchShapes = entitiesValid
-                            && shapeMatchesEntity(entityA, evt.shapeIdA)
-                            && shapeMatchesEntity(entityB, evt.shapeIdB);
+                            && shapeMatchesEntity(entityA, info.shapeIdA)
+                            && shapeMatchesEntity(entityB, info.shapeIdB);
                         const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
 
                         if (!fixturesValid)
@@ -276,65 +315,35 @@ namespace Systems
                                 continue;
                         }
 
-                        const ContactEventInfo info{ evt.shapeIdA, evt.shapeIdB, evt.contactId };
-                        BeginContact(entityA, entityB, info);
-
-                        if (m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
+                        if (pending.begin && m_logMeshContacts && loggedMeshContacts < kMaxLogsPerFrame)
                         {
                                 const bool meshContact = (entityA && entityA->HasBox2DMesh())
                                         || (entityB && entityB->HasBox2DMesh());
                                 if (meshContact)
                                 {
-                                        LogMeshContact(evt);
+                                        LogMeshContact({ info.shapeIdA, info.shapeIdB, info.contactId });
                                         ++loggedMeshContacts;
                                 }
                         }
-                }
-
-                const std::span<const b2ContactEndTouchEvent> endEvents =
-                    (events.endEvents && events.endCount > 0)
-                        ? std::span<const b2ContactEndTouchEvent>(
-                              events.endEvents, static_cast<size_t>(events.endCount))
-                        : std::span<const b2ContactEndTouchEvent>();
-                for (const b2ContactEndTouchEvent& evt : endEvents)
-                {
-                        const ShapeValidationResult shapeAValidation = validateShapeAndBody(evt.shapeIdA);
-                        const ShapeValidationResult shapeBValidation = validateShapeAndBody(evt.shapeIdB);
-                        if (!shapeAValidation.valid || !shapeBValidation.valid)
+                        if (pending.begin)
                         {
-                                const std::string reason = shapeAValidation.reason
-                                    ? shapeAValidation.reason
-                                    : (shapeBValidation.reason ? shapeBValidation.reason : "invalid shape or body");
-                                recordDroppedEvent("end", evt.shapeIdA, evt.shapeIdB, reason,
-                                    shapeAValidation.bodyKey, shapeBValidation.bodyKey);
-                                continue;
+                                BeginContact(entityA, entityB, info);
                         }
-
-                        Entities::PhysicalEntity* entityA = GetEntityForShape(evt.shapeIdA);
-                        Entities::PhysicalEntity* entityB = GetEntityForShape(evt.shapeIdB);
-
-                        const bool entitiesValid = (entityA && entityB);
-                        const bool bodiesMatchShapes = entitiesValid
-                            && shapeMatchesEntity(entityA, evt.shapeIdA)
-                            && shapeMatchesEntity(entityB, evt.shapeIdB);
-                        const bool fixturesValid = bodiesMatchShapes && hasValidFixtures(entityA) && hasValidFixtures(entityB);
-
-                        if (!fixturesValid)
+                        else
                         {
-                                continue;
+                                EndContact(entityA, entityB, info);
                         }
-
-                        const ContactEventInfo info{ evt.shapeIdA, evt.shapeIdB, evt.contactId };
-                        EndContact(entityA, entityB, info);
                 }
-
-                // 接触ヒットイベントは当面無視。バッファは Box2D が所有する。
-                (void)events.hitEvents;
-                (void)events.hitCount;
 
                 flushDroppedEventLogs();
                 m_destroyedBodyIds.clear();
                 m_destroyedShapeIds.clear();
+
+                if (m_pendingContacts.empty())
+                {
+                        pendingContacts.clear();
+                        pendingContacts.swap(m_pendingContacts);
+                }
 
         }
 
@@ -360,6 +369,7 @@ namespace Systems
 
         void Box2DContactListener::SetWorld(b2WorldId worldId)
         {
+                ClearDestroyedCaches();
                 m_worldId = worldId;
         }
 
@@ -381,6 +391,8 @@ namespace Systems
 
         void Box2DContactListener::ClearDestroyedCaches()
         {
+                ++m_eventEpoch;
+                m_pendingContacts.clear();
                 m_destroyedBodyIds.clear();
                 m_destroyedShapeIds.clear();
         }

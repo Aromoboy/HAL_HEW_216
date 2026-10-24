@@ -136,10 +136,15 @@ namespace
 bool PlayerData::LoadData()
 {
 	m_entries.clear();
+	m_canSave = false;
 
 	std::ifstream file(kPlayerDataPath);
 	if (!file.is_open())
 	{
+		// ミカ：新規作成はファイルが存在しない場合だけ許可する
+		const DWORD attributes = GetFileAttributesA(kPlayerDataPath);
+		const DWORD error = attributes == INVALID_FILE_ATTRIBUTES ? GetLastError() : ERROR_SUCCESS;
+		m_canSave = error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND;
 		DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to open '" + kPlayerDataPath + "'.\n");
 		return false;
 	}
@@ -239,16 +244,36 @@ bool PlayerData::LoadData()
 		DebugLog::DebugMessage(std::string(kLogPrefix) + "No player data entries found.\n");
 	}
 
-	return !hadError;
+	m_canSave = !hadError && anyEntry && !file.bad();
+	return m_canSave;
 }
 
 bool PlayerData::SaveData() const
 {
-	std::ofstream out(kPlayerDataPath, std::ios::trunc);
+	if (!m_canSave)
+	{
+		DebugLog::DebugMessage(std::string(kLogPrefix) + "Save refused: existing player data could not be loaded.\n");
+		return false;
+	}
+
+	// ミカ：同じディレクトリの一時ファイルへ書き、成功した場合だけ保存先を置き換える
+	char temporaryPath[MAX_PATH]{};
+	if (GetTempFileNameA("Assets/Data", "mka", 0, temporaryPath) == 0)
+	{
+		DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to create temporary save file.\n");
+		return false;
+	}
+	const auto failSave = [&]()
+	{
+		DeleteFileA(temporaryPath);
+		DebugLog::DebugMessage(std::string(kLogPrefix) + "Save failed; previous file was preserved.\n");
+		return false;
+	};
+
+	std::ofstream out(temporaryPath, std::ios::trunc);
 	if (!out.is_open())
 	{
-		DebugLog::DebugMessage(std::string(kLogPrefix) + "Failed to write '" + kPlayerDataPath + "'.\n");
-		return false;
+		return failSave();
 	}
 
 	out << kSectionHeader << "\n";
@@ -262,6 +287,27 @@ bool PlayerData::SaveData() const
 			out << "," << powerUpEntry.key << "=" << level;
 		}
 		out << "\n";
+	}
+
+	out.close();
+	if (!out)
+	{
+		return failSave();
+	}
+
+	// ミカ：書込エラーとディスクへの反映を確認してから置換する
+	HANDLE temporaryFile = CreateFileA(temporaryPath, GENERIC_WRITE, 0, nullptr,
+		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (temporaryFile == INVALID_HANDLE_VALUE)
+	{
+		return failSave();
+	}
+	const bool flushed = FlushFileBuffers(temporaryFile) != FALSE;
+	const bool closed = CloseHandle(temporaryFile) != FALSE;
+	if (!flushed || !closed || !MoveFileExA(temporaryPath, kPlayerDataPath,
+		MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+	{
+		return failSave();
 	}
 
 	return true;

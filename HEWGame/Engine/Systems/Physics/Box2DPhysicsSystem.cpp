@@ -94,6 +94,11 @@ namespace Systems
                 while (m_stepAccumulator >= maxStep)
                 {
                         b2World_Step(m_worldId, maxStep, m_subStepCount);
+                        m_physicsMachine->NotifyContactsChanged();
+                        if (m_contactListener)
+                        {
+                                m_contactListener->CaptureContacts();
+                        }
                         m_stepAccumulator -= maxStep;
                         ++stepsSimulated;
                 }
@@ -101,6 +106,11 @@ namespace Systems
                 if (stepsSimulated == 0 && m_stepAccumulator > 0.0f)
                 {
                         b2World_Step(m_worldId, m_stepAccumulator, m_subStepCount);
+                        m_physicsMachine->NotifyContactsChanged();
+                        if (m_contactListener)
+                        {
+                                m_contactListener->CaptureContacts();
+                        }
                         m_stepAccumulator = 0.0f;
                         ++stepsSimulated;
                 }
