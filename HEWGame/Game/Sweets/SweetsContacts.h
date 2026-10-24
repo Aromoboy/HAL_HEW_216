@@ -31,6 +31,7 @@ namespace SweetsSpace
                 b2Vec2 anchorWorld{};
                 ActiveSweets* cream{ nullptr };
                 ActiveSweets* fruit{ nullptr };
+                // ミカ：旧デバッグ表示との互換性を保ち、動的な接着フルーツは凍結扱いにしない
                 bool fruitFrozen{ false };
             };
 
@@ -50,8 +51,10 @@ namespace SweetsSpace
         void OnContactEnd(Entities::PhysicalEntity* a, Entities::PhysicalEntity* b, const Systems::ContactEventInfo& info);
 
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
+        bool HasAnyContact(const ActiveSweets& sweets) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
         bool IsAnchoredToCake(const ActiveSweets& sweets) const;
+        const std::unordered_set<ActiveSweets*>& GetCakeAnchoredSweets() const;
 
         void ClearContactState(ActiveSweets* sweets);
         void ClearSweetsContact(ActiveSweets* sweets);
@@ -94,6 +97,7 @@ namespace SweetsSpace
         {
             ActiveSweets* cream{ nullptr };
             ActiveSweets* fruit{ nullptr };
+            Entities::PhysicalEntity* cake{ nullptr };
             b2ContactId contactId{ b2_nullContactId };
             b2ShapeId shapeIdA{ b2_nullShapeId };
             b2ShapeId shapeIdB{ b2_nullShapeId };
@@ -105,12 +109,6 @@ namespace SweetsSpace
             ActiveSweets* fruit{ nullptr };
             b2JointId jointId{ b2_nullJointId };
             b2Vec2 anchorWorld{};
-        };
-
-        struct FrozenBodyState
-        {
-            b2BodyType bodyType{ b2_dynamicBody };
-            float gravityScale{ 1.0f };
         };
 
         struct GlueStats
@@ -128,6 +126,12 @@ namespace SweetsSpace
         {
             int foundationContacts{ 0 };
             int sweetsContacts{ 0 };
+        };
+
+        struct ContactGraphNode
+        {
+            std::vector<ActiveSweets*> neighbors;
+            bool visited = false;
         };
 
         struct ContactIdHash
@@ -154,15 +158,12 @@ namespace SweetsSpace
 
         void UpdateContactStateBegin(ActiveSweets* sweets, Entities::PhysicalEntity* other);
         void UpdateContactStateEnd(ActiveSweets* sweets, Entities::PhysicalEntity* other);
-        bool TryGetContactAnchorData(const Systems::ContactEventInfo& info, ContactAnchorData& outAnchor) const;
         bool TryGetContactAnchorData(const b2ContactId& contactId, b2ShapeId shapeIdA, b2ShapeId shapeIdB,
             ContactAnchorData& outAnchor) const;
         bool ApplyGluePushOut(Entities::PhysicalEntity& movingBody, bool movingIsShapeA,
             const ContactAnchorData& anchorData, b2Vec2& outAnchor) const;
         bool DoesShapeBelongToEntity(const Entities::PhysicalEntity& entity, b2ShapeId shapeId) const;
         Entities::PhysicalEntity* GetEntityForShape(b2ShapeId shapeId) const;
-        void FreezeFruitBody(ActiveSweets& fruit);
-        void UnfreezeFruitBody(ActiveSweets& fruit);
         bool IsGlueSpeedTooFast(const Entities::PhysicalEntity& entity) const;
         bool IsGlueBreakForceExceeded(b2JointId jointId) const;
         void UpdateBreakableJoints();
@@ -174,6 +175,8 @@ namespace SweetsSpace
         void CleanupInvalidAnchor(ActiveSweets* cream);
         void RemoveFruitCreamLink(ActiveSweets* fruit, ActiveSweets* cream);
         void RemovePendingGlueForSweets(ActiveSweets* sweets);
+        void QueueGlue(ActiveSweets* cream, ActiveSweets* fruit, Entities::PhysicalEntity* cake,
+            const Systems::ContactEventInfo& info);
         void TickGlueCooldowns(float dt);
         bool IsGlueCooldownActive(const ActiveSweets& fruit) const;
 
@@ -187,9 +190,15 @@ namespace SweetsSpace
         std::unordered_map<b2ContactId, CreamWeldEntry, ContactIdHash, ContactIdEqual> m_creamWeldJoints;
         std::unordered_map<ActiveSweets*, b2JointId> m_creamAnchorJoints;
         std::unordered_map<ActiveSweets*, b2Vec2> m_creamAnchorPoints;
-        std::unordered_map<ActiveSweets*, std::unordered_set<ActiveSweets*>> m_fruitToCreams;
-        std::unordered_map<ActiveSweets*, FrozenBodyState> m_frozenFruitStates;
+        // ミカ：複数コライダーの同じ組み合わせを数え、最後の接着だけで関連を外す
+        std::unordered_map<ActiveSweets*, std::unordered_map<ActiveSweets*, std::size_t>> m_fruitToCreams;
         std::unordered_map<ActiveSweets*, float> m_glueCooldown;
         bool m_creamEnabled{ true };
+        mutable bool m_cakeAnchorsDirty = true;
+        mutable std::uint64_t m_cachedContactRevision = 0;
+        mutable std::unordered_map<ActiveSweets*, ContactGraphNode> m_contactGraph;
+        mutable std::unordered_set<ActiveSweets*> m_cakeAnchoredSweets;
+        mutable std::vector<ActiveSweets*> m_contactQueue;
+        mutable std::vector<b2ContactData> m_contactScratch;
     };
 }

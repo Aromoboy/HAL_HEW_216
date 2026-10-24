@@ -944,10 +944,11 @@
     </ClCompile>
     <ClCompile Include="Game\Save\PlayerData.cpp">
       <Filter>Game\Save</Filter>
-	</ClCompile>
+    </ClCompile>
     <ClCompile Include="Game\Title\TitleManager.cpp">
       <Filter>Game\Title</Filter>
     </ClCompile>
+    <ClCompile Include="Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\postprocess.hlsl">
@@ -959,6 +960,8 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\video.hlsl" />
+    <FxCompile Include="shaders\postprocess.hlsl" />
+    <FxCompile Include="shaders\video.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Title\TitleCursor.h">
@@ -967,15 +970,16 @@
     <ClInclude Include="Game\PowerUp\PowerUpNode.h">
       <Filter>Game\PowerUp</Filter>
     </ClInclude>
-	  <ClInclude Include="Game\Save\Save.h">
-		  <Filter>Game\Save</Filter>
-	  </ClInclude>
-	  <ClInclude Include="Game\Save\PlayerData.h">
-		  <Filter>Game\Save</Filter>
-	  </ClInclude>
-	  <ClInclude Include="SceneResult.h">
-		  <Filter>Game\UI</Filter>
-	  </ClInclude>
+    <ClInclude Include="Game\Save\Save.h">
+      <Filter>Game\Save</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Save\PlayerData.h">
+      <Filter>Game\Save</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneResult.h">
+      <Filter>Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Title\TitleCursor.h">

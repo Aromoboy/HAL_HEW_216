@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <memory>
+#include <future>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -28,7 +30,7 @@ namespace SceneSpace
         {
         public:
                 explicit ScenePowerUp(SceneSpace::SceneManager& manager);
-                ~ScenePowerUp() = default;
+                ~ScenePowerUp() override;
 
                 bool Load(Core::Input& input) override;
                 void Update(Core::StepTimer& timer, Core::Input& input) override;
@@ -43,6 +45,8 @@ namespace SceneSpace
         private:
                 bool LoadPowerUpFile();
                 void ShutdownPowerUpSystems();
+                void QueuePlayerSave();
+                void UpdatePlayerSave(bool waitForCompletion = false);
 
                 float m_backUVProgress;
                 SceneManager* m_manager = nullptr;
@@ -60,5 +64,7 @@ namespace SceneSpace
                 int m_cost;
                 PlayerData m_playerData;
                 std::vector<PlayerData::Data> m_playerEntries;
+                std::future<bool> m_playerSave;
+                std::optional<PlayerData> m_pendingPlayerSave;
         };
 }

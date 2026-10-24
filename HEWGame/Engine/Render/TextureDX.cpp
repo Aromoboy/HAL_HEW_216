@@ -6,6 +6,9 @@
 #include <vector>
 #include <iostream>
 #include <cstring>
+#include <limits>
+#include <new>
+#include <memory>
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "shlwapi.lib")
 
@@ -13,6 +16,12 @@ namespace
 {
     bool CreateTexture(ID3D11Device* device, UINT width, UINT height, const void* data, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
     {
+        // ミカ：無効な入力と行サイズのオーバーフローをGPUへ渡さない
+        if (!device || !data || width == 0 || height == 0
+            || width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION || height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
+        {
+            return false;
+        }
         D3D11_TEXTURE2D_DESC desc = {};
         desc.Width = width;
         desc.Height = height;
@@ -35,18 +44,24 @@ namespace
             return false;
         }
 
-        hr = device->CreateShaderResourceView(texture.Get(), nullptr, outTextureView.GetAddressOf());
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> view;
+        hr = device->CreateShaderResourceView(texture.Get(), nullptr, view.GetAddressOf());
         if (FAILED(hr))
         {
             DebugLog::DebugMessage("[Texture2D] SRV̍쐬Ɏs");
             return false;
         }
 
+        outTextureView = std::move(view);
         return true;
     }
 
     bool DecodeWICToTexture(ID3D11Device* device, IWICImagingFactory* factory, IStream* stream, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outTextureView)
     {
+        if (!device || !factory || !stream)
+        {
+            return false;
+        }
         Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
         if (FAILED(factory->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnLoad, &decoder)))
         {
@@ -54,21 +69,43 @@ namespace
         }
 
         Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
-        decoder->GetFrame(0, &frame);
+        // ミカ：各デコード段階の失敗を確認し、未初期化の画像サイズを使わない
+        if (FAILED(decoder->GetFrame(0, &frame)))
+        {
+            return false;
+        }
 
         Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
-        factory->CreateFormatConverter(&converter);
-        converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
+        if (FAILED(factory->CreateFormatConverter(&converter))
+            || FAILED(converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
             WICBitmapDitherTypeNone, nullptr, 0.0f,
-            WICBitmapPaletteTypeCustom);
+            WICBitmapPaletteTypeCustom)))
+        {
+            return false;
+        }
 
-        UINT width, height;
-        converter->GetSize(&width, &height);
+        UINT width = 0;
+        UINT height = 0;
+        if (FAILED(converter->GetSize(&width, &height)) || width == 0 || height == 0
+            || width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION || height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
+        {
+            return false;
+        }
 
-        std::vector<BYTE> pixels(width * height * 4);
-        converter->CopyPixels(nullptr, width * 4, pixels.size(), pixels.data());
+        const size_t stride = static_cast<size_t>(width) * 4;
+        const size_t byteCount = stride * height;
+        if (byteCount > (std::numeric_limits<UINT>::max)())
+        {
+            return false;
+        }
+        std::unique_ptr<BYTE[]> pixels(new (std::nothrow) BYTE[byteCount]);
+        if (!pixels || FAILED(converter->CopyPixels(nullptr, static_cast<UINT>(stride),
+            static_cast<UINT>(byteCount), pixels.get())))
+        {
+            return false;
+        }
 
-        return CreateTexture(device, width, height, pixels.data(), outTextureView);
+        return CreateTexture(device, width, height, pixels.get(), outTextureView);
     }
 }
 
@@ -97,14 +134,19 @@ bool Texture2D::LoadFromFile(ID3D11Device* device, const std::wstring& path)
 
 bool Texture2D::LoadFromMemory(ID3D11Device* device, const uint8_t* data, size_t size, unsigned int width, unsigned int height)
 {
-    if (!data || size == 0)
+    if (!device || !data || size == 0)
     {
         return false;
     }
 
-    // 生の RGBA データ
-    if (height != 0 && width != 0)
+    // ミカ：高さゼロはAssimpの圧縮画像として扱い、生のRGBAだけ寸法と長さを確認する
+    if (height != 0)
     {
+        if (width == 0 || height == 0 || width > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION
+            || height > D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION || size < static_cast<size_t>(width) * height * 4)
+        {
+            return false;
+        }
         return CreateTexture(device, width, height, data, textureView);
     }
 

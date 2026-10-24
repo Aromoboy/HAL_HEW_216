@@ -21,12 +21,12 @@ float AxisLY() const;
 float AxisRX() const;
 float AxisRY() const;
 
+static float NormalizeStickAxis(short value, int deadZone);
+
 const XINPUT_STATE& GetState() const { return m_state; }
 const XINPUT_STATE& GetPreviousState() const { return m_prevState; }
 
 private:
-float Normalize(short value) const;
-
 XINPUT_STATE m_state;
 XINPUT_STATE m_prevState;
 bool m_connected;

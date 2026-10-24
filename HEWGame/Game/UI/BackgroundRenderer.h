@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
 
 #include <DirectXMath.h>
 
@@ -28,6 +29,9 @@ struct BackgroundRendererConfig
     };
 
     std::vector<BackgroundLayer> layers;
+    bool layeredScene = false;
+    std::array<float, 4> transitionHeights{ 5.0f, 15.0f, 25.0f, 35.0f };
+    float minimumTransitionSeconds = 13.0f;
 };
 
 class BackgroundRenderer
@@ -38,10 +42,13 @@ public:
 
     bool Initialize(const BackgroundRendererConfig& config);
     void Shutdown();
-    // Aspect correction is handled via the UV window; sprite size stays at 2x2 in clip space.
+    void Update(float dt, float scrollOffset);
+    // ミカ：分割背景は画面比率に合わせ、一枚背景はUVの表示範囲で補正する
     void Draw(float scrollOffset, float pixelsPerUnit) const;
 
 private:
+    struct LayeredScene;
+    std::unique_ptr<LayeredScene> m_scene;
     std::unique_ptr<Texture> LoadTexture(const std::string& path) const;
 
     struct LoadedLayer

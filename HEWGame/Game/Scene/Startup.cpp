@@ -3,6 +3,7 @@
 #include "Main.h"
 #include <crtdbg.h>
 #include <string>
+#include <chrono>
 #include "DebugConsole.h"
 #include "Diagnostics/Logger.h"
 #include "DirectX.h"
@@ -18,6 +19,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 namespace
 {
         bool g_canRender = true;
+
+        void SetCanRender(bool canRender)
+        {
+                if (canRender && !g_canRender)
+                {
+                        ResetElapsedTime();
+                }
+                g_canRender = canRender;
+        }
 }
 
 
@@ -90,60 +100,50 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 	//--- フレームレート制御
-	timeBeginPeriod(1);
-	DWORD countStartTime = timeGetTime();
-	DWORD preExecTime = countStartTime;
-	DWORD fpsOldTime = countStartTime;
-	float processingTime = 0.0f;
-	int fpsCount = 0;
-    
+    timeBeginPeriod(1);
+    using FrameClock = std::chrono::steady_clock;
+    const auto frameInterval = std::chrono::duration_cast<FrameClock::duration>(
+        std::chrono::duration<double>(1.0 / FPS));
+    auto nextFrame = FrameClock::now() + frameInterval;
 
-	//--- ウィンドウの管理
-	while (true)
-	{
-		if (PeekMessage(&message, NULL, 0, 0, PM_NOREMOVE))
-		{
-			if (!GetMessage(&message, NULL, 0, 0))
-			{
-				break;
-			}
-			else
-			{
-				TranslateMessage(&message);
-				DispatchMessage(&message);
-			}
-		}
-		else
-		{
-			DWORD nowTime = timeGetTime();
-			float diff = static_cast<float>(nowTime - preExecTime);
-                        if (diff >= 1000.0f / fFPS)
-                        {
-                                if (g_canRender)
-                                {
-                                        Update();
-                                        Draw();
-                                        
-                                        if (nowTime - fpsOldTime >= 1000)
-                                        {
-                                                processingTime = static_cast<float>(timeGetTime() - nowTime);
-                                        }
-                                        if (IsEnd()) PostMessage(hWnd, WM_CLOSE, 0, 0);
-                                        fpsCount++;
-                                }
+    while (true)
+    {
+        if (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE))
+        {
+            if (message.message == WM_QUIT) break;
+            TranslateMessage(&message);
+            DispatchMessage(&message);
+            continue;
+        }
 
-                                preExecTime = nowTime;
-                        }
-                        if (nowTime - fpsOldTime >= 1000)
-                        {
-                                fpsCount = 0;
-				fpsOldTime = nowTime;
-			}
-		}
-	}
+        // ミカ：非表示中は入力を待ち、復帰時に古い描画予定を持ち越さない
+        if (!g_canRender)
+        {
+            MsgWaitForMultipleObjectsEx(0, nullptr, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+            nextFrame = FrameClock::now() + frameInterval;
+            continue;
+        }
 
+        const auto now = FrameClock::now();
+        if (now < nextFrame)
+        {
+            // ミカ：次のフレームか入力まで待機し、空回りでCPUを占有しない
+            const auto wait = std::chrono::ceil<std::chrono::milliseconds>(nextFrame - now);
+            MsgWaitForMultipleObjectsEx(0, nullptr, static_cast<DWORD>(wait.count()),
+                QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+            continue;
+        }
 
-	// 終了時
+        Update();
+        Draw();
+        if (IsEnd()) PostMessage(hWnd, WM_CLOSE, 0, 0);
+
+        // ミカ：予定時刻を基準に60Hzを保ち、長い停止後の連続描画は省く
+        nextFrame += frameInterval;
+        const auto finished = FrameClock::now();
+        if (nextFrame < finished) nextFrame = finished;
+    }
+
 	timeEndPeriod(1);
 	Uninit();
 	UnregisterClass(wcex.lpszClassName, hInstance);
@@ -160,12 +160,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 PostQuitMessage(0);
                 break;
         case WM_ACTIVATEAPP:
-                g_canRender = (wParam != FALSE) && !IsIconic(hWnd);
+                SetCanRender((wParam != FALSE) && !IsIconic(hWnd));
                 break;
         case WM_ACTIVATE:
         {
                 const WORD state = LOWORD(wParam);
-                g_canRender = (state != WA_INACTIVE) && !IsIconic(hWnd);
+                SetCanRender((state != WA_INACTIVE) && !IsIconic(hWnd));
                 break;
         }
         case WM_SIZE:
@@ -175,11 +175,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 if (wParam == SIZE_MINIMIZED || width == 0 || height == 0)
                 {
-                        g_canRender = false;
+                        SetCanRender(false);
                         break;
                 }
 
-                g_canRender = (GetActiveWindow() == hWnd);
+                SetCanRender(GetActiveWindow() == hWnd);
                 if (!IsDirectXReady())
                 {
                         break;

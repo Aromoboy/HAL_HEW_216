@@ -694,14 +694,23 @@ void SceneGame::Update(Core::StepTimer& timer, Core::Input& input)
         return;
     }
     RootUpdate(timer, input);
+    // ミカ：カメラ更新後の高さで背景を一度だけ進め、描画回数で切替速度を変えない
+    if (m_backgroundRenderer)
+    {
+        if (auto camera = std::dynamic_pointer_cast<CameraSpace::BaseCamera>(GetActiveCamera()))
+        {
+            m_backgroundRenderer->Update(timer.DeltaTime(), camera->GetPosition().y - m_backgroundScrollOriginY);
+        }
+    }
 
-
-
-    //if (m_pendingRetryReset)
-    //{
-    //    m_pendingRetryReset = false;
-    //    SetStageState(StageState::Playing);
-    //}
+    if (m_pendingRetryReset)
+    {
+        if (auto* sm = SoundManagerEX::GetInstance())
+            sm->StopAllSounds();
+        m_pendingRetryReset = false;
+        SetStageState(StageState::Playing);
+        
+    }
 }
 
 void SceneGame::Draw()
@@ -1376,6 +1385,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
 // --- タイムアップ判定 ---
 
+#ifdef _DEBUG
+
+
         if (input)
         {
             PlayerController::SpeedInput speedInput{
@@ -1392,6 +1404,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
                 m_player->SetSpeedMultiplier(m_playerSpeedMultiplier);
             }
         }
+#endif // _DEBUG
 
         const float elapsedSeconds = m_gameplayRules.GetTotalPlaySeconds()
             - m_gameplayRules.GetRemainingCountdownSeconds();
@@ -1434,7 +1447,8 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
             if (guidelineDelta > 0.01f)
             {
                 m_isOsaraCounting = true;
-                m_OsaraToAddRemaining = guidelineDelta;
+                // ミカ：前の上昇が終わる前に次のラインを通過しても移動残量を失わない
+                m_OsaraToAddRemaining += guidelineDelta;
    //             DebugTrace("Remaining SET = " + std::to_string(m_OsaraToAddRemaining) + "\n");
             }
             if (guidelineDelta != 0.0f)

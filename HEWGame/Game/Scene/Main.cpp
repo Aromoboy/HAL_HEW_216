@@ -221,6 +221,11 @@ void Uninit()
         }
 }
 
+void ResetElapsedTime()
+{
+        g_stepTimer.ResetElapsedTime();
+}
+
 void Update()
 {
         if (g_sceneManager)

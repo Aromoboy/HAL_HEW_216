@@ -36,7 +36,8 @@ namespace Core
 
         void Input::Shutdown()
         {
-                // UpdateScheduler から除外される前提だが、保険として状態をリセットして無効化する 
+                // ミカ：シーンのスケジューラが破棄される前に登録を解除する
+                ReleaseRegistrationHandle();
                 m_initialized = false;
                 m_currentKeys.fill(0);
                 m_previousKeys.fill(0);

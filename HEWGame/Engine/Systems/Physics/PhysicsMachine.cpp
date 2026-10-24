@@ -353,13 +353,18 @@ namespace Systems
         jointDef.base.bodyIdB = bodyIdB;
         jointDef.base.localFrameA.p = b2Body_GetLocalPoint(bodyIdA, worldAnchor);
         jointDef.base.localFrameB.p = b2Body_GetLocalPoint(bodyIdB, worldAnchor);
+        // ミカ：両フレームのワールド回転を揃えて接着時の相対角度を保つ
+        jointDef.base.localFrameA.q = b2InvMulRot(b2Body_GetRotation(bodyIdA), b2Rot_identity);
+        jointDef.base.localFrameB.q = b2InvMulRot(b2Body_GetRotation(bodyIdB), b2Rot_identity);
         jointDef.base.collideConnected = collideConnected;
         jointDef.linearHertz = linearHertz;
         jointDef.linearDampingRatio = linearDampingRatio;
         jointDef.angularHertz = angularHertz;
         jointDef.angularDampingRatio = angularDampingRatio;
 
-        return b2CreateWeldJoint(worldId, &jointDef);
+        const b2JointId jointId = b2CreateWeldJoint(worldId, &jointDef);
+        NotifyContactsChanged();
+        return jointId;
     }
 
     void PhysicsMachine::DestroyJoint(b2JointId jointId, bool wakeAttached)
@@ -370,10 +375,12 @@ namespace Systems
         }
 
         b2DestroyJoint(jointId, wakeAttached);
+        NotifyContactsChanged();
     }
 
     void PhysicsMachine::RegisterBody(Entities::PhysicalEntity& body)
     {
+        NotifyContactsChanged();
         auto* bodyPtr = &body;
         if (body.HasBodyCreationFailed() && !body.CanAttemptBodyCreation())
         {
@@ -1149,6 +1156,7 @@ namespace Systems
 
     void PhysicsMachine::DestroyBody(const Entities::PhysicalEntity& body, bool preserveColliderData)
     {
+        NotifyContactsChanged();
         auto it = m_bodyMap.find(const_cast<Entities::PhysicalEntity*>(&body));
         if (it == m_bodyMap.end())
         {

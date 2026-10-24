@@ -7,15 +7,12 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <chrono>
-#include <future>
 #include <cstdlib>
 #include <cctype>
 #include <string>
 #include <string_view>
 #include <sstream>
 #include <vector>
-#include <thread>
 #include <unordered_map>
 #include "Debug.h"
 #include "TextureCache.h"
@@ -331,13 +328,6 @@ namespace
     }
 
 
-    struct ImportResult
-    {
-        std::unique_ptr<Assimp::Importer> importer;
-        const aiScene* scene = nullptr;
-        std::string error;
-    };
-
 }
 
 // モデル読み込み
@@ -374,36 +364,9 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     }
 
     DebugLog::DebugMessage("[AssimpModelLoader][CHECKPOINT A] ロード開始 path=" + path + " normalized=" + normalizedPath + " resolved=" + resolvedFullPath);
-    auto future = std::async(std::launch::async, [path, flag]() -> ImportResult
-        {
-            ImportResult result;
-            result.importer = std::make_unique<Assimp::Importer>();
-            result.scene = result.importer->ReadFile(path.c_str(), flag);
-            if (!result.scene)
-            {
-                result.error = result.importer->GetErrorString();
-            }
-            return result;
-        });
-
-    constexpr auto kImportTimeout = std::chrono::milliseconds(400);
-    if (future.wait_for(kImportTimeout) == std::future_status::timeout)
-    {
-        DebugLog::DebugMessage(
-            "[AssimpModelLoader][ERROR] [CHECKPOINT B] インポートがタイムアウト 取り消して終了 path=" + path);
-
-        std::thread([f = std::move(future)]() mutable
-            {
-                if (f.valid())
-                {
-                    f.wait();
-                }
-            }).detach();
-        return nullptr;
-    }
-
-    ImportResult importResult = future.get();
-    const aiScene* pScene = importResult.scene;
+    // ミカ：同期ロードの完了を待ち、変換が終わるまでインポーターとシーンを保持する
+    Assimp::Importer importer;
+    const aiScene* pScene = importer.ReadFile(path.c_str(), flag);
     {
         std::ostringstream oss;
         oss << "[AssimpModelLoader][CHECKPOINT B] シーン=" << (pScene ? "ok" : "null")
@@ -411,7 +374,7 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
             << " マテリアル=" << (pScene ? pScene->mNumMaterials : 0);
         if (!pScene)
         {
-            oss << " error='" << importResult.error << "'";
+            oss << " error='" << importer.GetErrorString() << "'";
         }
         DebugLog::DebugMessage(oss.str());
     }
@@ -419,9 +382,6 @@ std::shared_ptr<ModelDX> AssimpModelLorder::Load(
     {
         return nullptr;
     }
-
-    auto importer = std::move(importResult.importer);
-    (void)importer;
 
     // ディレクトリ抽出
     std::string directory = path;

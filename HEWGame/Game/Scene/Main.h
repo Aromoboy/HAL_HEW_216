@@ -5,6 +5,7 @@
 
 HRESULT Init(HWND hWnd, UINT width, UINT height);
 void Uninit();
+void ResetElapsedTime();
 void Update();
 void Draw();
 bool IsEnd();

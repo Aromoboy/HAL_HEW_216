@@ -532,6 +532,14 @@ void SceneComposer::ComposeUI(Composition& result)
         // scrollOffset is in world units (meters). See SceneGame::Draw background scroll logic.
         constexpr float kDefaultBackgroundParallax = 0.0001f;
         BackgroundRendererConfig backgroundConfig{};
+        // ミカ：標準背景は分割素材を使い、高さの切替は既存のステージ設定に合わせる
+        backgroundConfig.layeredScene = backgroundTexture == "Assets/Texture/background.png";
+        const auto& thresholds = result.stageData.GetPhaseThresholds();
+        if (thresholds.size() >= backgroundConfig.transitionHeights.size())
+        {
+            std::copy_n(thresholds.begin(), backgroundConfig.transitionHeights.size(),
+                backgroundConfig.transitionHeights.begin());
+        }
         BackgroundRendererConfig::BackgroundLayer layer;
         layer.texturePath = backgroundTexture;
         layer.parallaxFactor = kDefaultBackgroundParallax;

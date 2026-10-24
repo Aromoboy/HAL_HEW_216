@@ -165,27 +165,7 @@ namespace
         bool touching = contacts.HasSupportingContact(sweets, &foundationOnly);
         if (!touching)
         {
-            if (auto* physicsMachine = sweets.GetPhysicsMachine())
-            {
-                const b2BodyId bodyId = physicsMachine->FindBody(sweets);
-                if (b2Body_IsValid(bodyId))
-                {
-                    const int capacity = b2Body_GetContactCapacity(bodyId);
-                    if (capacity > 0)
-                    {
-                        std::vector<b2ContactData> contactsBuffer(static_cast<std::size_t>(capacity));
-                        const int count = b2Body_GetContactData(bodyId, contactsBuffer.data(), capacity);
-                        for (int i = 0; i < count; ++i)
-                        {
-                            if (contactsBuffer[i].manifold.pointCount > 0)
-                            {
-                                touching = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+            touching = contacts.HasAnyContact(sweets);
         }
 
         if (touching)
@@ -660,23 +640,7 @@ namespace SweetsSpace
 
     void SweetsLifecycle::Erase(const std::shared_ptr<ActiveSweets>& sweets)
     {
-        if (!sweets || !m_registry)
-        {
-            return;
-        }
-
-        auto found = m_registry->Lookup().find(sweets);
-        if (found == m_registry->Lookup().end())
-        {
-            return;
-        }
-
-        if (sweets->IsPendingDestroy())
-        {
-            return;
-        }
-
-        sweets->MarkPendingDestroy();
+        RemoveSweetsEntry(sweets, DeleteReason::Miss, "Erase", true, nullptr, false);
     }
 
     void SweetsLifecycle::ClearAllSweets()
@@ -803,6 +767,24 @@ namespace SweetsSpace
             return false;
         }
 
+        // ミカ：物理ボディの復元に成功した場合だけ手持ち状態を解除する
+        if (!m_physicsMachine)
+        {
+            if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
+            {
+                DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理マシンがないため解放を中止する\n");
+                *m_warnedMissingPhysicsMachine = true;
+            }
+            return false;
+        }
+
+        m_physicsMachine->RegisterBody(*sweets);
+        if (!b2Body_IsValid(sweets->GetBox2DBodyId()))
+        {
+            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理ボディを復元できないため解放を中止する\n");
+            return false;
+        }
+
         auto previous = m_registry->SetState(sweets, SweetsState::Active);
         if (previous && m_contacts)
         {
@@ -814,16 +796,6 @@ namespace SweetsSpace
         }
 
         m_grabRespawnTimers.erase(sweets);
-
-        if (m_physicsMachine)
-        {
-            m_physicsMachine->RegisterBody(*sweets);
-        }
-        else if (m_warnedMissingPhysicsMachine && !*m_warnedMissingPhysicsMachine)
-        {
-            DebugTrace(std::string(kLogPrefix) + "ReleaseCarriedSweets で物理マシンがないから、ボディがシミュレーションされないよ \n");
-            *m_warnedMissingPhysicsMachine = true;
-        }
 
         std::ostringstream oss;
         oss << kLogPrefix << "ReleaseCarriedSweets 成功 tag='" << sweets->GetTag() << "'\n";
@@ -1040,6 +1012,12 @@ namespace SweetsSpace
         {
             return;
         }
+
+        if (m_spawner)
+        {
+            m_spawner->ReleaseSpawnOrigin(sweets);
+        }
+        m_pendingStateReevaluation.erase(sweets);
 
         if (m_contacts)
         {

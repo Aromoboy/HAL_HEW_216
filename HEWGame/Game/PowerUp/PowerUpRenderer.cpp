@@ -1,7 +1,6 @@
 #include "PowerUpRenderer.h"
 #include "DirectX.h"
 #include "DirectXMath.h"
-#include "ShaderList.h"
 #include "DrawMatrix.h"
 #include "Sprite.h"
 
@@ -21,7 +20,6 @@ constexpr float2 kInfomationPositionOffset = { 0.170f,  -0.17f + kBackFramePosit
 constexpr float2 kLevelPositionOffset = { 0.50f,  -0.1155f + kBackFramePositionOffset.y };
 constexpr float2 kCostPositionOffset = { 0.50f,  -0.23f + kBackFramePositionOffset.y }; 
 constexpr float2 kCostNumberPositionOffset = { 0.68f,  0.340f };
-constexpr float2 kHudFairyPositionOffset = { -5.39f,  -0.250f };
 constexpr float kIconScaleOffset = 0.5f;
 constexpr float kFrameScaleOffset = 0.5f;
 constexpr float kBackFrameScaleOffset = 1.8f;
@@ -31,20 +29,16 @@ constexpr float kInfomationScaleOffset = 0.05f;
 constexpr float kLevelScaleOffset = 0.06f;
 constexpr float kCostScaleOffset = 0.05f;
 constexpr float kCostNumberScaleOffset = 0.08f;
-constexpr float2 kHudFairyIconScaleOffset = { 0.65f, 0.43f };
 
 constexpr float kNodeNameCharCount = 5.0f * 3.0f;
 constexpr float kInfoCharCount = 15.0f * 3.0f;
 
 constexpr float kCostNumberInterval = 0.06f;
-// 背景のY移動に対してXの移動する割合
-constexpr float kUVMoveRatioX = 2.0f / 2.0f;
 // テクスチャ名
 constexpr const char* kNumberTextureName = "Number";
 constexpr const char* kCostTextureName = "Cost";
 constexpr const char* kFrameTextureName = "Frame";
 constexpr const char* kBackFrameTexturenName = "BackFrame";
-constexpr const char* kBackgroundTextureName = "PowerUpBG";
 
 
 constexpr float2 kHudCostIconPositionOffset = { 0.35f,  0.35f };
@@ -131,10 +125,8 @@ float4 main(PS_IN pin) : SV_TARGET {
 
 	m_number = a_cache.Get(kNumberTextureName);
 	m_cost = a_cache.Get(kCostTextureName);
-	m_fairy = a_cache.Get("Fairy");
 	m_iconFrame = a_cache.Get(kFrameTextureName);
 	m_backFrame = a_cache.Get(kBackFrameTexturenName);
-	m_background = a_cache.Get(kBackgroundTextureName);
 }
 
 PowerUpRenderer::~PowerUpRenderer()
@@ -235,18 +227,6 @@ void PowerUpRenderer::DrawHud(const CameraSpace::ICamera& camera)
 	DrawSprite(m_cost, world, view, proj);
 
 
-	// バックフレーム描画
-	offset.x = kHudFairyPositionOffset.x;
-	offset.y = kHudFairyPositionOffset.y;
-	position.x = offset.x;
-	position.y = offset.y;
-	position.z = 1.0f;
-	scale.x = kHudFairyIconScaleOffset.x;
-	scale.y = kHudFairyIconScaleOffset.y;
-	scale.z = 1.0f;
-
-	DrawMatrix::CreateWorldMatrix(world, position, scale, float3{ 0.0f,0.0f,0.0f });
-	DrawSprite(m_fairy, world, view, proj);
 
 
 }
@@ -417,37 +397,6 @@ void PowerUpRenderer::DrawNode(const NodeRenderData& data, const CameraSpace::IC
 	RenderString(data, world, view, proj, NodeCost, 1.0f);
 }
 
-void PowerUpRenderer::DrawBackground(const CameraSpace::ICamera& camera, float uvProgress)
-{
-	if (!m_background)
-	{
-		return;
-	}
-
-	SetSamplerState(SAMPLER_LINEAR);
-	const DirectX::XMFLOAT4X4& view = camera.GetView();
-	const DirectX::XMFLOAT4X4& proj = camera.GetProjection();
-
-	DirectX::XMFLOAT4X4 world;
-	float3 position;
-	float3 scale;
-
-	// 画面中央・最背面
-	position = { 0.0f, 0.0f, 2.4f };
-	scale = { 3.6f, 2.0f, 1.0f };
-
-	DrawMatrix::CreateWorldMatrix(
-		world,
-		position,
-		scale,
-		float3{ 0.0f, 0.0f, 0.0f }
-	);
-	DrawSpriteData data;
-	data.uvPos.x = uvProgress * kUVMoveRatioX;
-	data.uvPos.y = uvProgress * -1.0f;
-	DrawSprite(m_background, world, view, proj, data);
-}
-
 const std::wstring PowerUpRenderer::UTF8toWString(const std::string srcUTF8) const
 {
 	//Unicodeへ変換後の文字列長を得る
@@ -485,7 +434,6 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 
 	// シェーダーをバインド
-	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
 	vs->WriteBuffer(1, param);
@@ -519,7 +467,6 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture2D> texture, const Direc
 
 
 	// シェーダーをバインド
-	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
 	vs->WriteBuffer(1, param);
@@ -554,7 +501,6 @@ void PowerUpRenderer::DrawSprite(std::shared_ptr<Texture> texture, const DirectX
 
 
 	// シェーダーをバインド
-	ShaderList::SetWVP(wvp);
 
 	vs->WriteBuffer(0, wvp);
 	vs->WriteBuffer(1, param);

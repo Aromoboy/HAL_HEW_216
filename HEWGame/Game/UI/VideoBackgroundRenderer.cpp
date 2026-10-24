@@ -1,8 +1,11 @@
 #include "VideoBackgroundRenderer.h"
 
 #include <array>
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstring>
+#include <limits>
 #include <sstream>
 
 #include "DirectX.h"
@@ -57,12 +60,21 @@ namespace
         uint32_t width = 0;
         uint32_t height = 0;
         float fps = 0.0f;
-        float clockTime = 0.0f;
-        LONGLONG videoTime = 0;
+        double clockTime = 0.0;
+        LONGLONG duration = 0;
+        LONGLONG lastSampleTime = 0;
+        LONGLONG lastSampleEnd = 0;
+        LONGLONG nextSampleTime = 0;
+        Microsoft::WRL::ComPtr<IMFSample> nextSample;
+        uint32_t nextWidth = 0;
+        uint32_t nextHeight = 0;
+        uint32_t sampleWidth = 0;
+        uint32_t sampleHeight = 0;
         bool finished = false;
         bool paused = false;
         bool autoLoop = true;
-        bool pendingTypeChange = false;
+        bool endOfStream = false;
+        bool catchingUp = false;
 
         ~MfState()
         {
@@ -111,7 +123,8 @@ namespace
             hr = nativeType->GetUINT64(MF_MT_FRAME_RATE, &frameRate);
             if (SUCCEEDED(hr))
             {
-                fps = static_cast<float>(HI32(frameRate)) / static_cast<float>(LO32(frameRate));
+                const auto denominator = LO32(frameRate);
+                fps = denominator ? static_cast<float>(HI32(frameRate)) / static_cast<float>(denominator) : 0.0f;
             }
 
             SAFE_RELEASE(nativeType);
@@ -121,7 +134,6 @@ namespace
         bool Open(const std::string& filename)
         {
             finished = false;
-            pendingTypeChange = false;
 
             wchar_t wfilename[256]{};
             mbstowcs(wfilename, filename.c_str(), sizeof(wfilename) / sizeof(wchar_t));
@@ -235,9 +247,138 @@ namespace
                 return false;
             }
 
-            clockTime = 0.0f;
-            videoTime = 0;
+            PROPVARIANT presentationDuration{};
+            if (SUCCEEDED(sourceReader->GetPresentationAttribute(MF_SOURCE_READER_MEDIASOURCE, MF_PD_DURATION, &presentationDuration))
+                && presentationDuration.vt == VT_UI8
+                && presentationDuration.uhVal.QuadPart <= static_cast<ULONGLONG>((std::numeric_limits<LONGLONG>::max)()))
+            {
+                duration = static_cast<LONGLONG>(presentationDuration.uhVal.QuadPart);
+            }
+            PropVariantClear(&presentationDuration);
+
+            clockTime = 0.0;
             return true;
+        }
+
+        bool Seek(LONGLONG time)
+        {
+            PROPVARIANT position{};
+            position.vt = VT_I8;
+            position.hVal.QuadPart = time;
+            const HRESULT hr = sourceReader->SetCurrentPosition(GUID_NULL, position);
+            nextSample.Reset();
+            if (FAILED(hr))
+            {
+                LogVideoError("SetCurrentPosition", hr);
+                finished = true;
+                return false;
+            }
+            endOfStream = false;
+            catchingUp = true;
+            lastSampleTime = time;
+            lastSampleEnd = 0;
+            return true;
+        }
+
+        Microsoft::WRL::ComPtr<IMFSample> ReadDueSample(float dt)
+        {
+            Microsoft::WRL::ComPtr<IMFSample> selected;
+            if (paused || finished || !std::isfinite(dt) || dt < 0.0f)
+            {
+                return selected;
+            }
+            clockTime += static_cast<double>(dt);
+            const double durationSeconds = static_cast<double>(duration) / kMfTimeBase;
+            if (autoLoop && duration > 0 && clockTime >= durationSeconds)
+            {
+                // ミカ：周回後も余った時間を維持して低FPSで再生速度が変わらないようにする
+                clockTime = std::fmod(clockTime, durationSeconds);
+                if (!Seek(static_cast<LONGLONG>(clockTime * kMfTimeBase)))
+                {
+                    return selected;
+                }
+            }
+
+            const double maximumSeconds = static_cast<double>((std::numeric_limits<LONGLONG>::max)() / kMfTimeBase);
+            const double targetSeconds = (std::min)(clockTime, duration > 0 ? durationSeconds : maximumSeconds);
+            const LONGLONG target = duration > 0 && clockTime >= durationSeconds
+                ? duration : static_cast<LONGLONG>(targetSeconds * kMfTimeBase);
+            constexpr LONGLONG kSeekThreshold = kMfTimeBase / 2;
+            if (duration > 0 && !endOfStream && !catchingUp && target - lastSampleTime > kSeekThreshold && !Seek(target))
+            {
+                return selected;
+            }
+
+            // ミカ：古いキーフレームから追いつく間は再シークせず一更新のデコード量を制限する
+            constexpr int kMaximumReads = 8;
+            int reads = 0;
+            for (;;)
+            {
+                if (nextSample)
+                {
+                    if (nextSampleTime > target)
+                    {
+                        catchingUp = false;
+                        break;
+                    }
+                    selected = std::move(nextSample);
+                    sampleWidth = nextWidth;
+                    sampleHeight = nextHeight;
+                }
+                if (endOfStream)
+                {
+                    if (!autoLoop && target >= duration)
+                    {
+                        finished = true;
+                    }
+                    break;
+                }
+                if (reads++ >= kMaximumReads)
+                {
+                    break;
+                }
+
+                DWORD streamIndex = 0;
+                DWORD flags = 0;
+                LONGLONG timeStamp = 0;
+                Microsoft::WRL::ComPtr<IMFSample> sample;
+                HRESULT hr = sourceReader->ReadSample(MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0,
+                    &streamIndex, &flags, &timeStamp, sample.GetAddressOf());
+                if (FAILED(hr))
+                {
+                    LogVideoError("ReadSample", hr);
+                    finished = true;
+                    break;
+                }
+                if ((flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED) && !ReadOutputMediaFormat())
+                {
+                    finished = true;
+                    break;
+                }
+                if (sample)
+                {
+                    LONGLONG sampleDuration = 0;
+                    if (FAILED(sample->GetSampleDuration(&sampleDuration)) || sampleDuration <= 0)
+                    {
+                        sampleDuration = static_cast<LONGLONG>(kMfTimeBase / (fps > 0.0f ? fps : 30.0f));
+                    }
+                    lastSampleTime = timeStamp;
+                    lastSampleEnd = (std::max)(lastSampleEnd, timeStamp + sampleDuration);
+                    nextSampleTime = timeStamp;
+                    nextWidth = width;
+                    nextHeight = height;
+                    nextSample = std::move(sample);
+                }
+                if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
+                {
+                    endOfStream = true;
+                    if (duration <= 0)
+                    {
+                        duration = (std::max)(lastSampleEnd, LONGLONG{1});
+                    }
+                }
+            }
+            return selected;
         }
     };
 }
@@ -316,81 +457,14 @@ void VideoBackgroundRenderer::Update(float dt)
     }
 
     MfState& mf = m_decoder->mf;
-    if (mf.paused || mf.finished)
-    {
-        return;
-    }
-
-    mf.clockTime += dt;
-    const LONGLONG uct = static_cast<LONGLONG>(mf.clockTime * kMfTimeBase);
-    if (uct < mf.videoTime)
-    {
-        return;
-    }
-
-    DWORD streamIndex = 0;
-    DWORD flags = 0;
-    LONGLONG timeStamp = 0;
-    IMFSample* sample = nullptr;
-    HRESULT hr = mf.sourceReader->ReadSample(
-        MF_SOURCE_READER_FIRST_VIDEO_STREAM,
-        0,
-        &streamIndex,
-        &flags,
-        &timeStamp,
-        &sample);
-
-    if (FAILED(hr))
-    {
-        LogVideoError("ReadSample", hr);
-        mf.finished = true;
-        SAFE_RELEASE(sample);
-        return;
-    }
-
-    mf.videoTime = timeStamp;
-
-    if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
-    {
-        if (mf.autoLoop)
-        {
-            PROPVARIANT var = {};
-            var.vt = VT_I8;
-            hr = mf.sourceReader->SetCurrentPosition(GUID_NULL, var);
-            mf.clockTime = 0.0f;
-            mf.videoTime = 0;
-        }
-        else
-        {
-            mf.finished = true;
-        }
-    }
-
-    if (flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
-    {
-        if (!mf.ReadOutputMediaFormat())
-        {
-            LogVideoMessage("ReadOutputMediaFormat failed after media type change.");
-            mf.finished = true;
-        }
-        else
-        {
-            mf.pendingTypeChange = true;
-        }
-    }
-
+    auto sample = mf.ReadDueSample(dt);
     if (!sample)
     {
         return;
     }
 
-    IMFMediaBuffer* buffer = nullptr;
-    DWORD bufferLength = 0;
-    hr = sample->ConvertToContiguousBuffer(&buffer);
-    if (SUCCEEDED(hr))
-    {
-        hr = buffer->GetCurrentLength(&bufferLength);
-    }
+    Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
+    HRESULT hr = sample->ConvertToContiguousBuffer(buffer.GetAddressOf());
 
     if (SUCCEEDED(hr))
     {
@@ -400,24 +474,24 @@ void VideoBackgroundRenderer::Update(float dt)
         hr = buffer->Lock(&byteBuffer, &maxLength, &currentLength);
         if (SUCCEEDED(hr))
         {
-            if (!m_texture || mf.pendingTypeChange)
+            bool textureReady = m_texture && m_srv && m_frameWidth == mf.sampleWidth && m_frameHeight == mf.sampleHeight;
+            if (!textureReady)
             {
-                if (CreateVideoTexture(mf.width, mf.height))
-                {
-                    mf.pendingTypeChange = false;
-                }
+                textureReady = CreateVideoTexture(mf.sampleWidth, mf.sampleHeight);
             }
 
-            if (m_texture)
+            if (textureReady && !UpdateTextureFromIYUV(byteBuffer, currentLength))
             {
-                UpdateTextureFromIYUV(byteBuffer, currentLength);
+                LogVideoMessage("Video frame upload failed.");
             }
             buffer->Unlock();
         }
     }
 
-    SAFE_RELEASE(buffer);
-    SAFE_RELEASE(sample);
+    if (FAILED(hr))
+    {
+        LogVideoError("Read video frame buffer", hr);
+    }
 }
 
 bool VideoBackgroundRenderer::IsFinished() const
@@ -537,9 +611,6 @@ bool VideoBackgroundRenderer::LoadShaders(const ShaderPaths& shader)
 
 bool VideoBackgroundRenderer::CreateVideoTexture(uint32_t width, uint32_t height)
 {
-    m_frameWidth = width;
-    m_frameHeight = height;
-
     if (!m_device || width == 0 || height == 0)
     {
         return false;
@@ -557,12 +628,12 @@ bool VideoBackgroundRenderer::CreateVideoTexture(uint32_t width, uint32_t height
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    m_texture.Reset();
-    m_srv.Reset();
-
-    HRESULT hr = m_device->CreateTexture2D(&desc, nullptr, m_texture.GetAddressOf());
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+    HRESULT hr = m_device->CreateTexture2D(&desc, nullptr, texture.GetAddressOf());
     if (FAILED(hr))
     {
+        LogVideoError("CreateTexture2D", hr);
         return false;
     }
 
@@ -570,8 +641,17 @@ bool VideoBackgroundRenderer::CreateVideoTexture(uint32_t width, uint32_t height
     srvDesc.Format = desc.Format;
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = desc.MipLevels;
-    hr = m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srv.GetAddressOf());
-    return SUCCEEDED(hr);
+    hr = m_device->CreateShaderResourceView(texture.Get(), &srvDesc, srv.GetAddressOf());
+    if (FAILED(hr))
+    {
+        LogVideoError("CreateShaderResourceView", hr);
+        return false;
+    }
+    m_texture = std::move(texture);
+    m_srv = std::move(srv);
+    m_frameWidth = width;
+    m_frameHeight = height;
+    return true;
 }
 
 bool VideoBackgroundRenderer::UpdateTextureFromIYUV(const uint8_t* data, size_t dataSize)

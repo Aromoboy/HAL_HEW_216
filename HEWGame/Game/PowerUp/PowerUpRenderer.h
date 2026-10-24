@@ -117,8 +117,9 @@ public:
 		
 		// ノードに描画する文字列及び数値
 		bool dirty;
-		std::string powerUpName;
-		std::string powerUpInfomation;
+		// ミカ：描画中だけノードの文字列を参照し、毎フレームの複製を避ける
+		const std::string& powerUpName;
+		const std::string& powerUpInfomation;
 		float level;
 		float maxLevel;
 		float cost;
@@ -129,8 +130,8 @@ public:
 		float2 a_drawPosition,
 		float2 a_drawScale,
 		bool a_dirty,
-		std::string a_powerUpName,
-		std::string a_powerUpInfomation,
+		const std::string& a_powerUpName,
+		const std::string& a_powerUpInfomation,
 		float a_level,
 		float a_maxLevel,
 		float a_cost)
@@ -160,7 +161,6 @@ public:
 	void DrawHud(const CameraSpace::ICamera& camera);
 	void DrawCursor(std::shared_ptr<Texture2D> texture, float2 a_position, float2 a_scale, const CameraSpace::ICamera&, float a_alpha);
 	void DrawNode(const NodeRenderData& data , const CameraSpace::ICamera&);
-	void DrawBackground(const CameraSpace::ICamera& camera, float uvProgress);
 
 
 
@@ -213,8 +213,6 @@ private:
 	std::shared_ptr<Texture2D> m_cost;
 	std::shared_ptr<Texture2D> m_iconFrame;
 	std::shared_ptr<Texture2D> m_backFrame;
-	std::shared_ptr<Texture2D> m_background;
-	std::shared_ptr<Texture2D> m_fairy;
 
 	// 文字描画用関数
 	bool CreateTextResources();

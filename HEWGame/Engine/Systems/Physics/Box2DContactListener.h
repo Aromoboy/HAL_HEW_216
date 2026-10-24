@@ -1,9 +1,11 @@
 #pragma once
 
 #include <functional>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <unordered_set>
+#include <vector>
 
 #include <box2d/box2d.h>
 
@@ -25,6 +27,7 @@ namespace Systems
 
                 explicit Box2DContactListener(PhysicsMachine& physicsMachine);
 
+                void CaptureContacts();
                 void ProcessContacts();
 
                 void SetWorld(b2WorldId worldId);
@@ -37,6 +40,12 @@ namespace Systems
                 void ClearDestroyedCaches();
 
         private:
+                struct PendingContact
+                {
+                        ContactEventInfo info;
+                        bool begin;
+                };
+
                 void BeginContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB, const ContactEventInfo& info);
                 void EndContact(Entities::PhysicalEntity* entityA, Entities::PhysicalEntity* entityB, const ContactEventInfo& info);
                 Entities::PhysicalEntity* GetEntityForBody(b2BodyId bodyId) const;
@@ -51,5 +60,7 @@ namespace Systems
                 PhysicsMachine* m_physicsMachine = nullptr;
                 std::unordered_set<uint64_t> m_destroyedBodyIds;
                 std::unordered_set<uint64_t> m_destroyedShapeIds;
+                std::vector<PendingContact> m_pendingContacts;
+                std::uint64_t m_eventEpoch{ 0 };
         };
 }

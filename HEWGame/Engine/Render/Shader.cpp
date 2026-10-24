@@ -1,5 +1,6 @@
 #include "Shader.h"
 #include <d3dcompiler.h>
+#include <wrl/client.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -58,7 +59,12 @@ HRESULT Shader::Compile(const char *pCode)
         HRESULT hr = E_FAIL;
         ID3DBlob *pBlob = nullptr;
         ID3DBlob *error = nullptr;
+        // ミカ：配布用シェーダーは最適化し、デバッグ情報はDebug構成だけに付ける
+#if defined(_DEBUG)
         UINT compileFlag = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+        UINT compileFlag = D3DCOMPILE_OPTIMIZATION_LEVEL3;
+#endif
         hr = D3DCompile(pCode, strlen(pCode), nullptr, nullptr, nullptr,
                 "main", pTargetList[m_kind], compileFlag, 0, &pBlob, &error);
         SAFE_RELEASE(error);
@@ -75,7 +81,8 @@ HRESULT Shader::Compile(const char *pCode)
 
 void Shader::WriteBuffer(UINT slot, void* pData)
 {
-	if(slot < m_pBuffers.size())
+	// ミカ：slotは反射の列挙順ではなくHLSLのbレジスター番号として扱う
+	if(slot < m_pBuffers.size() && m_pBuffers[slot])
 		GetContext()->UpdateSubresource(m_pBuffers[slot], 0, nullptr, pData, 0, 0);
 }
 void Shader::SetTexture(UINT slot, Texture* tex)
@@ -108,35 +115,55 @@ HRESULT Shader::Make(void* pData, UINT size)
 	ID3D11Device* pDevice = GetDevice();
 
 	// 解析用のリフレクション作成
-	ID3D11ShaderReflection* pReflection;
-	hr = D3DReflect(pData, size, IID_PPV_ARGS(&pReflection));
+	Microsoft::WRL::ComPtr<ID3D11ShaderReflection> pReflection;
+	hr = D3DReflect(pData, size, IID_PPV_ARGS(pReflection.GetAddressOf()));
 	if (FAILED(hr)) { return hr; }
 
-	// 定数バッファ作成
-	D3D11_SHADER_DESC shaderDesc;
-	pReflection->GetDesc(&shaderDesc);
-	m_pBuffers.resize(shaderDesc.ConstantBuffers, nullptr);
-	for (UINT i = 0; i < shaderDesc.ConstantBuffers; ++i)
+	D3D11_SHADER_DESC shaderDesc{};
+	hr = pReflection->GetDesc(&shaderDesc);
+	if (FAILED(hr)) { return hr; }
+	std::vector<Microsoft::WRL::ComPtr<ID3D11Buffer>> buffers;
+	std::vector<ID3D11ShaderResourceView*> textures;
+	// ミカ：未使用レジスターの穴と配列を保ち、実際のバインド先から領域を作る
+	for (UINT i = 0; i < shaderDesc.BoundResources; ++i)
 	{
-		// シェーダーの定数バッファの情報を取得
-		D3D11_SHADER_BUFFER_DESC shaderBufDesc;
-		ID3D11ShaderReflectionConstantBuffer* cbuf = pReflection->GetConstantBufferByIndex(i);
-		cbuf->GetDesc(&shaderBufDesc);
-
-		// 作成するバッファの情報
-		D3D11_BUFFER_DESC bufDesc = {};
-		bufDesc.ByteWidth = shaderBufDesc.Size;
-		bufDesc.Usage = D3D11_USAGE_DEFAULT;
-		bufDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-
-		// バッファの作成
-		hr = pDevice->CreateBuffer(&bufDesc, nullptr, &m_pBuffers[i]);
+		D3D11_SHADER_INPUT_BIND_DESC binding{};
+		hr = pReflection->GetResourceBindingDesc(i, &binding);
 		if (FAILED(hr)) { return hr; }
+		if (binding.Type == D3D_SIT_CBUFFER)
+		{
+			if (binding.BindCount != 1 || binding.BindPoint >= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT)
+				return E_INVALIDARG;
+			D3D11_SHADER_BUFFER_DESC shaderBufDesc{};
+			hr = pReflection->GetConstantBufferByName(binding.Name)->GetDesc(&shaderBufDesc);
+			if (FAILED(hr)) { return hr; }
+			if (buffers.size() <= binding.BindPoint) buffers.resize(binding.BindPoint + 1);
+			D3D11_BUFFER_DESC bufDesc{};
+			bufDesc.ByteWidth = shaderBufDesc.Size;
+			bufDesc.Usage = D3D11_USAGE_DEFAULT;
+			bufDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			hr = pDevice->CreateBuffer(&bufDesc, nullptr, buffers[binding.BindPoint].GetAddressOf());
+			if (FAILED(hr)) { return hr; }
+		}
+		else if (binding.Type == D3D_SIT_TEXTURE || binding.Type == D3D_SIT_TBUFFER
+			|| binding.Type == D3D_SIT_STRUCTURED || binding.Type == D3D_SIT_BYTEADDRESS)
+		{
+			if (binding.BindPoint >= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT || binding.BindCount == 0
+				|| binding.BindCount > D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT - binding.BindPoint)
+				return E_INVALIDARG;
+			const UINT endSlot = binding.BindPoint + binding.BindCount;
+			if (textures.size() < endSlot) textures.resize(endSlot, nullptr);
+		}
 	}
-	// テクスチャ領域作成
-	m_pTextures.resize(shaderDesc.TextureNormalInstructions, nullptr);
 
-	return MakeShader(pData, size);
+	hr = MakeShader(pData, size);
+	if (FAILED(hr)) { return hr; }
+	// ミカ：作成完了後に置き換え、途中失敗では既存の描画資源を維持する
+	for (auto*& buffer : m_pBuffers) SAFE_RELEASE(buffer);
+	m_pBuffers.assign(buffers.size(), nullptr);
+	for (size_t slot = 0; slot < buffers.size(); ++slot) m_pBuffers[slot] = buffers[slot].Detach();
+	m_pTextures = std::move(textures);
+	return S_OK;
 }
 
 //----------
@@ -171,7 +198,9 @@ HRESULT VertexShader::MakeShader(void* pData, UINT size)
 	ID3D11Device* pDevice = GetDevice();
 	
 	// シェーダー作成
-	hr = pDevice->CreateVertexShader(pData, size, NULL, &m_pVS);
+	Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
+	hr = pDevice->CreateVertexShader(pData, size, NULL, vertexShader.GetAddressOf());
 	if(FAILED(hr)) { return hr; }
 
 	/*
@@ -180,7 +209,7 @@ HRESULT VertexShader::MakeShader(void* pData, UINT size)
 	識別子が登録済→再利用、なければ新規作成
 	*/
 
-	ID3D11ShaderReflection *pReflection;
+	Microsoft::WRL::ComPtr<ID3D11ShaderReflection> pReflection;
 	D3D11_SHADER_DESC shaderDesc;
 	D3D11_INPUT_ELEMENT_DESC* pInputDesc;
 	D3D11_SIGNATURE_PARAMETER_DESC sigDesc;
@@ -205,7 +234,7 @@ HRESULT VertexShader::MakeShader(void* pData, UINT size)
 		},
 	};
 
-	hr = D3DReflect(pData, size, IID_PPV_ARGS(&pReflection));
+	hr = D3DReflect(pData, size, IID_PPV_ARGS(pReflection.GetAddressOf()));
 	if (FAILED(hr)) { return hr; }
 
 	pReflection->GetDesc(&shaderDesc);
@@ -240,10 +269,17 @@ HRESULT VertexShader::MakeShader(void* pData, UINT size)
 
 	hr = pDevice->CreateInputLayout(
 		pInputDesc, shaderDesc.InputParameters,
-		pData, size, &m_pInputLayout
+		pData, size, inputLayout.GetAddressOf()
 	);
 	
 	delete[] pInputDesc;
+	if (SUCCEEDED(hr))
+	{
+		SAFE_RELEASE(m_pVS);
+		SAFE_RELEASE(m_pInputLayout);
+		m_pVS = vertexShader.Detach();
+		m_pInputLayout = inputLayout.Detach();
+	}
 	return hr;
 }
 
@@ -269,5 +305,12 @@ void PixelShader::Bind(void)
 }
 HRESULT PixelShader::MakeShader(void* pData, UINT size)
 {
-	return GetDevice()->CreatePixelShader(pData, size, NULL, &m_pPS);
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
+	const HRESULT hr = GetDevice()->CreatePixelShader(pData, size, NULL, pixelShader.GetAddressOf());
+	if (SUCCEEDED(hr))
+	{
+		SAFE_RELEASE(m_pPS);
+		m_pPS = pixelShader.Detach();
+	}
+	return hr;
 }

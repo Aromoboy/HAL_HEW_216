@@ -141,6 +141,7 @@ namespace SweetsSpace
         bool HasSupportingContact(const ActiveSweets& sweets, bool* foundationOnly = nullptr) const;
         bool HasEverCollidedWithSweets(const ActiveSweets& sweets) const;
         bool IsAnchoredToCake(const ActiveSweets& sweets) const;
+        const std::unordered_set<ActiveSweets*>& GetCakeAnchoredSweets() const;
         void SetCreamEnabled(bool enabled);
         int GetSweetsCount() const;
         void OnSweetsPassedGuideline(const std::shared_ptr<ActiveSweets>& sweets);
