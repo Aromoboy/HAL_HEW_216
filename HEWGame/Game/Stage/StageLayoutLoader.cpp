@@ -5,6 +5,7 @@
 #include "ModelCache.h"
 #include "SceneGameConfigLoader.h"
 #include "Systems/Physics/ColliderBuilder.h"
+#include "Defines.h"
 
 #include <algorithm>
 #include <cctype>
@@ -106,6 +107,27 @@ namespace
         }
     }
 
+    bool TryParseAngle(const std::string& token, float& value, const std::string& logPrefix, const char* fieldName)
+    {
+        if (token.empty())
+        {
+            DebugTrace(logPrefix + "StageLayout.csv empty token for " + fieldName + "\n");
+            return false;
+        }
+
+        try
+        {
+            value = std::stof(token);
+            value *= DEG_TO_RAD;
+            return true;
+        }
+        catch (const std::exception& ex)
+        {
+            DebugTrace(logPrefix + "StageLayout.csv invalid token for " + fieldName + ": " + ex.what() + "\n");
+            return false;
+        }
+    }
+
     bool AreAllTokensEmpty(const std::vector<std::string>& values)
     {
         return std::all_of(values.begin(), values.end(), [](const std::string& token)
@@ -190,9 +212,9 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         if (!TryParseFloat(values[1], obj.transform.position.x, logPrefix, "position.x")
             || !TryParseFloat(values[2], obj.transform.position.y, logPrefix, "position.y")
             || !TryParseFloat(values[3], obj.transform.position.z, logPrefix, "position.z")
-            || !TryParseFloat(values[4], obj.transform.rotation.x, logPrefix, "rotation.x")
-            || !TryParseFloat(values[5], obj.transform.rotation.y, logPrefix, "rotation.y")
-            || !TryParseFloat(values[6], obj.transform.rotation.z, logPrefix, "rotation.z")
+            || !TryParseAngle(values[4], obj.transform.rotation.x, logPrefix, "rotation.x")
+            || !TryParseAngle(values[5], obj.transform.rotation.y, logPrefix, "rotation.y")
+            || !TryParseAngle(values[6], obj.transform.rotation.z, logPrefix, "rotation.z")
             || !TryParseFloat(values[7], obj.transform.scale.x, logPrefix, "scale.x")
             || !TryParseFloat(values[8], obj.transform.scale.y, logPrefix, "scale.y")
             || !TryParseFloat(values[9], obj.transform.scale.z, logPrefix, "scale.z"))
