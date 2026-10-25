@@ -681,7 +681,12 @@ bool SceneGame::Load(Core::Input& input)
             m_cameraRig->Attach(m_player.get());
         }
     }
-
+    Render::AnimationCache& cache = Render::AnimationCache::Instance();
+    fairyAnimation = cache.Get("Assets/Animation/npc_IdleAnimations.fbx");
+    fairyAnimation->Play();
+    fairyAnimation->SetLoop(true);
+    fairyAnimation->Step(0.01f);
+    
     m_gameplayRules.ResetSession();
     m_isComposed = true;
     return true;
@@ -1265,7 +1270,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
     for (auto& obj : m_stageObjects)
     {
         //Osara以外のモデルスキップ
-        if (!IsOsara(obj))
+        if (!IsOsara(obj) && !IsOsaraFairy(obj))
         {
             continue;
         }
@@ -1273,14 +1278,16 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         obj.swaiTime += deltaTime;
 
         obj.transform.position.y
-            = obj.baseY + std::sin(obj.swaiTime) * obj.OsaraSwayingpower.y;
+            = obj.baseY + std::sin(obj.swaiTime) * obj.OsaraSwayingpower.y * obj.transform.scale.y;
 
         //当たり判定も動かす
         if (obj.physicsEntity)
         {
             obj.physicsEntity->SetPositionViaPhysics(obj.transform.position);
         }
+
     }
+
 
     const float guidelineMaxY = m_guidelineSystem.GetHeightMeters()
         + m_stageData.GetGuidelinePlayerMaxYOffset();
@@ -1478,6 +1485,9 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
 
             }
         }
+
+        fairyAnimation->Step(ctx.dt);
+
         //+200 スコア入った時徐々に増える
         //if (m_isScoreCounting)
         //{
@@ -2103,8 +2113,10 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
                         else if (obj.spinAxis.z > 0.5f)  // Z軸回転
                             renderTransform.rotation.z += obj.currentRotation;
                     }
+                    Animation* anime = nullptr;
+                    if (IsOsaraFairy(obj)) anime = fairyAnimation.get();
 
-                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get(), nullptr);
+                    m_renderer->Draw(*obj.model, renderTransform, activeCamera.get(), anime);
                 }
                 else
                 {
@@ -2184,6 +2196,8 @@ void SceneGame::DrawWorld(const std::shared_ptr<::CameraSpace::ICamera>& activeC
         m_drawSystem->RenderQueued(activeCamera);
 
         m_drawSystem->DebugDrawQueued(activeCamera);
+
+        m_effectSystem->Draw(activeCamera.get());
 
 #if defined(_DEBUG)
         DrawPhysicsDebugOverlay(activeCamera);
@@ -2789,6 +2803,7 @@ void SceneGame::ResetPlaySession()
         m_player->SetPickupMaxDistance(m_playerPickupMaxDistance);
         m_player->SetPickupDepthThreshold(m_playerPickupDepthThreshold);
         m_player->SetPickupOriginOffset(m_playerPickupOriginOffset);
+        m_player->SetEffectSystem(m_effectSystem.get());
 
         const Transform& spawnTransform = m_playerSpawnTransform.transform;
         m_player->SetTransformViaPhysics(spawnTransform.position, spawnTransform.rotation);
@@ -2894,11 +2909,15 @@ int SceneGame::GetSweetsCount() const
 }
 
 
-
 //Osara探す？やつ
 bool SceneGame::IsOsara(const StageObject& obj)
 {
     return obj.modelPath.find("osara") != std::string::npos;
+}
+
+bool SceneGame::IsOsaraFairy(const StageObject& obj)
+{
+    return obj.modelPath.find("npc") != std::string::npos;
 }
 
 void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
@@ -2922,7 +2941,7 @@ void SceneGame::UpdateOsaraGradualMove(const Core::UpdateContext& ctx)
 
     for (auto& obj : m_stageObjects)
     {
-        if (!IsOsara(obj))
+        if (!IsOsara(obj) && !IsOsaraFairy(obj))
         {
             continue;
         }

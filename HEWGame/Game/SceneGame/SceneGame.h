@@ -99,6 +99,7 @@ public:
     Core::Input* GetInput() override;
     Core::StepTimer* GetTimer() override;
     bool IsOsara(const StageObject& obj);
+    bool IsOsaraFairy(const StageObject& obj);
 
 private:
     void ConfigureCamera(const CameraRigSettings& settings, const GameCameraConfig& gameCameraConfig);
@@ -224,6 +225,9 @@ protected:
     float m_OsaraAddTimer = 0.0f;
 
     float osaraMoveSpeed = 0.5f;
+
+    // アニメーション側を修正する時間がないのでごり押す
+    std::shared_ptr<Animation> fairyAnimation;
 };
 
 #endif

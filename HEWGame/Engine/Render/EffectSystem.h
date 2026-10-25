@@ -12,6 +12,7 @@
 #include "Vector.h"
 #include "ICamera.h"
 #include <tuple>
+#include <memory>
 
 using EffectFrame = int32_t;
 
@@ -27,6 +28,10 @@ struct EffectCreateData
 	}
 };
 
+namespace Entities
+{
+	class Entity;
+}
 
 class EffectSystem :public Core::UpdateNode
 {
@@ -38,18 +43,36 @@ public:
 		float3 spawnPosition;
 		float3 moveSpeed;
 		EffectFrame startFrame;
+		std::weak_ptr<Entities::Entity> chaseTarget;
 
 		EffectCreateRequest(
 			std::string a_effectName,
 			float3 a_spawnPosition,
 			float3 a_moveSpeed,
 			EffectFrame a_startFrame = 0
+
 		)
 			: effectName(a_effectName)
 			, spawnPosition(a_spawnPosition)
 			, moveSpeed(a_moveSpeed)
 			, startFrame(a_startFrame)
+			, chaseTarget()
 		{}
+
+		EffectCreateRequest(
+			std::string a_effectName,
+			float3 a_spawnPosition,
+			std::weak_ptr<Entities::Entity> a_chaseTarget,
+			EffectFrame a_startFrame = 0
+
+		)
+			: effectName(a_effectName)
+			, spawnPosition(a_spawnPosition)
+			, moveSpeed()
+			, startFrame(a_startFrame)
+			, chaseTarget(a_chaseTarget)
+		{
+		}
 	};
 
 	EffectSystem(
@@ -74,14 +97,17 @@ private:
 	{
 		Effekseer::Handle handle;
 		Effekseer::Vector3D move;
-		PlayingEffect(Effekseer::Handle a_handle, Effekseer::Vector3D a_move)
+		std::weak_ptr<Entities::Entity> chaseTarget;
+		PlayingEffect(Effekseer::Handle a_handle, Effekseer::Vector3D a_move, std::weak_ptr<Entities::Entity> a_chaseTarget)
 			: handle(a_handle)
 			, move(a_move)
+			, chaseTarget(a_chaseTarget)
 		{
 		}
 
-		PlayingEffect(Effekseer::Handle a_handle, float3 a_move)
+		PlayingEffect(Effekseer::Handle a_handle, float3 a_move, std::weak_ptr<Entities::Entity> a_chaseTarget)
 			: handle(a_handle)
+			, chaseTarget(a_chaseTarget)
 		{
 			move = Effekseer::Vector3D(a_move.x, a_move.y, a_move.z);
 		}

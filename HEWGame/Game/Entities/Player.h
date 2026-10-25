@@ -48,6 +48,7 @@ namespace Entities
         void OnUpdate(const Core::UpdateContext& ctx) override;
         void Draw(Render::ModelRenderer& renderer, const ::CameraSpace::ICamera& camera) override;
 
+        void SetEffectSystem(EffectSystem* system);
         void SetSweetsManager(SweetsSpace::SweetsManager* manager);
         bool IsCarryingSweets() const;
         const std::vector<std::shared_ptr<SweetsSpace::BaseSweets>>& GetCarriedSweets() const;

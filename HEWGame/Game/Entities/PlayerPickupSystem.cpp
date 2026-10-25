@@ -7,6 +7,7 @@
 #include "Sweets/BaseSweets.h"
 #include "SweetsManager.h"
 #include "SoundManagerEX.h"
+#include "EffectSystem.h"
 
 #include <algorithm>
 #include <cmath>
@@ -97,6 +98,11 @@ namespace Entities
         m_pickupDepthThreshold = kDefaultPickupDepthThreshold;
         m_carryOffset = float3{ kCarryHorizontalOffset, kCarryVerticalOffset, kCarryForwardOffset };
         m_lastCarryInputLoggedCount = m_carrieds.size();
+    }
+
+    void PlayerPickupSystem::SetEffectSystem(EffectSystem* system)
+    {
+        m_effectSystem = system;
     }
 
     void PlayerPickupSystem::SetSweetsManager(SweetsSpace::SweetsManager* manager)
@@ -532,6 +538,12 @@ namespace Entities
             {
                 sound->PlaySoundEX("Assets/Audio/SE_Catch.wav", false, 0.5f);
             }
+
+            if (m_effectSystem)
+            {
+                Transform transform = pickupResult.sweets->GetTransform();
+                m_effectSystem->SpawnEffect(EffectSystem::EffectCreateRequest("Catch", transform.position, pickupResult.sweets));
+            }
         }
 
         std::ostringstream oss;
@@ -599,6 +611,10 @@ namespace Entities
         {
             sound->PlaySoundEX("Assets/Audio/SE_FruitFall.wav", false, 0.2f);
         }
+
+        Transform transform = sweets->GetTransform();
+        m_effectSystem->SpawnEffect(EffectSystem::EffectCreateRequest("Purge", transform.position, sweets));
+
         return true;
     }
     //掴み判定枠

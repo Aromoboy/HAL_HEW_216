@@ -45,10 +45,18 @@ namespace Entities
         return m_modelSystem.GetRenderTransform();
     }
 
+    void Player::SetEffectSystem(EffectSystem* system)
+    {
+        m_pickupSystem.SetEffectSystem(system);
+        m_movementSystem.SetEffectSystem(system);
+        m_movementSystem.SetMaxEffectCoolTime(0.1f);
+    }
+
     void Player::SetSweetsManager(SweetsSpace::SweetsManager* manager)
     {
         m_pickupSystem.SetSweetsManager(manager);
     }
+
 
     bool Player::IsCarryingSweets() const
     {

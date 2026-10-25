@@ -1,5 +1,5 @@
 #include "EffectSystem.h"
-
+#include "Core/Entities/Entity.h"
 
 
 EffectSystem::EffectSystem(::EffekseerRendererDX11::RendererRef a_render, ::Effekseer::ManagerRef a_manager, const std::unordered_map<std::string, EffectCreateData>& a_effectPathMap)
@@ -40,14 +40,12 @@ void EffectSystem::SpawnEffect(const EffectCreateRequest& a_request)
 	Effekseer::Handle handle = m_manager->Play(effect, spawnPos, a_request.startFrame);
 
 	// ハンドルと情報をセットで保存
-	m_playingEffects.push_back(EffectSystem::PlayingEffect(handle, a_request.moveSpeed));
+	m_playingEffects.push_back(EffectSystem::PlayingEffect(handle, a_request.moveSpeed, a_request.chaseTarget));
 	
 }
 
 void EffectSystem::OnUpdate(const Core::UpdateContext& ctx)
 {
-	m_time += ctx.dt / 1000;
-	m_renderer->SetTime(m_time);
 	// 削除予定のエフェクト
 	std::vector<int> pendingEffectDelete;
 
@@ -72,8 +70,8 @@ void EffectSystem::OnUpdate(const Core::UpdateContext& ctx)
 		// イテレータを入れなきゃ動かないので一番前のイテレータを出して加算
 		m_playingEffects.erase(m_playingEffects.begin() + *it);
 	}
-
-	m_manager->Update();
+	// エフェクトを更新
+	m_manager->Update(ctx.dt * 60.0f);
 }
 
 void EffectSystem::Draw(const CameraSpace::ICamera* a_camera)
@@ -112,4 +110,13 @@ void EffectSystem::Draw(const CameraSpace::ICamera* a_camera)
 void EffectSystem::UpdateEffectTransform(const PlayingEffect& effect, float dt)
 {
 	m_manager->AddLocation(effect.handle, effect.move * dt);
+	
+	std::shared_ptr<Entities::Entity> entity;
+	if (entity = effect.chaseTarget.lock())
+	{
+		Transform& transform = entity->GetTransform();
+		Effekseer::Vector3D pos(transform.position.x, transform.position.y, transform.position.z);
+		m_manager->SetLocation(effect.handle, pos);
+	}
+
 }
