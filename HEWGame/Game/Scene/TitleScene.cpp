@@ -82,7 +82,7 @@ void TitleScene::OnEnter()
         shaderPaths.vertexShader = "Assets/shaders/video_vs.cso";
         shaderPaths.pixelShader = "Assets/shaders/video_ps.cso";
         m_video = std::make_unique<VideoTexturePlayer>();
-        if (!m_video->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Title.mp4"))
+        if (!m_video->Initialize(GetDevice(), GetContext(), shaderPaths, "Assets/Video/Title.mp4", 0.95f))
         {
             m_video.reset();
         }

@@ -403,7 +403,7 @@ VideoBackgroundRenderer::~VideoBackgroundRenderer()
 bool VideoBackgroundRenderer::Initialize(ID3D11Device* device,
     ID3D11DeviceContext* context,
     const ShaderPaths& shader,
-    const std::string& mp4Path)
+    const std::string& mp4Path, float brightness)
 {
     Shutdown();
 
@@ -438,7 +438,7 @@ bool VideoBackgroundRenderer::Initialize(ID3D11Device* device,
         return false;
     }
 
-    if (!CreateFullScreenQuad())
+    if (!CreateFullScreenQuad(brightness))
     {
         LogVideoMessage("CreateFullScreenQuad failed.");
         Shutdown();
@@ -550,7 +550,7 @@ void VideoBackgroundRenderer::Shutdown()
     m_frameHeight = 0;
 }
 
-bool VideoBackgroundRenderer::CreateFullScreenQuad()
+bool VideoBackgroundRenderer::CreateFullScreenQuad(float brightness)
 {
     struct Vertex
     {
@@ -559,7 +559,7 @@ bool VideoBackgroundRenderer::CreateFullScreenQuad()
         DirectX::XMFLOAT4 color;
     };
 
-    const DirectX::XMFLOAT4 white(1.0f, 1.0f, 1.0f, 1.0f);
+    const DirectX::XMFLOAT4 white(brightness, brightness, brightness, 1.0f);
     Vertex vertices[] = {
         {{-1.0f,  1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, white},
         {{ 1.0f,  1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, white},

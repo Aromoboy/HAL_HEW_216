@@ -27,7 +27,7 @@ public:
     bool Initialize(ID3D11Device* device,
         ID3D11DeviceContext* context,
         const ShaderPaths& shader,
-        const std::string& mp4Path);
+        const std::string& mp4Path, float brightness = 1.0f);
     void Update(float dt);
     bool IsFinished() const;
     void SetAutoLoop(bool enabled);
@@ -38,7 +38,7 @@ public:
 private:
     struct DecoderState;
 
-    bool CreateFullScreenQuad();
+    bool CreateFullScreenQuad(float brightness);
     bool LoadShaders(const ShaderPaths& shader);
     bool CreateVideoTexture(uint32_t width, uint32_t height);
     bool UpdateTextureFromIYUV(const uint8_t* data, size_t dataSize);

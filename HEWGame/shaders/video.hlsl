@@ -47,5 +47,6 @@ float4 PS(v2f input) : SV_Target {
   float y = txYUV.Sample(samLinear, yCoord).r;
   float u = txYUV.Sample(samLinear, uCoord).r;
   float v = txYUV.Sample(samLinear, vCoord).r;
-  return float4(YUVToRGB(float3(y,u,v)), 1.f);
+  // ミカ：シーン指定の明度だけを反映し、ボタンや他の動画の色は維持する
+  return float4(YUVToRGB(float3(y,u,v)), 1.f) * input.Color;
 }
