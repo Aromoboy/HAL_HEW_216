@@ -172,10 +172,11 @@ struct BackgroundRenderer::LayeredScene
                 speed, roll, flip, rise, twinkle, tint });
         };
         // ミカ：遠景から近景へ並べ、ゲーム領域の中央は動く装飾で埋めない
-        add("Sun", 0, 750, 24, 135, .08f, 1, 0, 0, .3f, .03f);
+        // ミカ：太陽を雲の後ろに下げ、下端を不透明な雲で隠す
+        add("Sun", 0, 750, 64, 135, .08f, 1, 0, 0, .3f, .03f);
         add("Rainbow", 0, -55, 100, 1080, .12f, .72f);
         add("PineappleCloud", 0, 45, 18, 285, .18f, .76f, 30, 0, .12f, .025f);
-        add("Cloud", 0, 720, 135, 330, .23f, .88f, 36, 0, .1f);
+        add("Cloud", 0, 720, 135, 330, .23f, 1, 36, 0, .1f);
         add("Hill", 0, -350, 390, 1200, .3f, 1, 0, 0, .25f, 0, false, false, false, { .56f, .84f, .64f });
         add("Hill", 0, 580, 405, 1100, .32f, 1, 0, 0, .25f, 0, false, false, false, { .5f, .79f, .62f });
         add("Castle", 0, 530, 165, 290, .42f, .85f);
@@ -216,7 +217,12 @@ VS_OUT main(VS_IN v) { VS_OUT o; o.pos=float4(v.pos,0,1); o.uv=v.uv; o.color=v.c
         const char* ps = R"(
 Texture2D tex : register(t0); SamplerState samp : register(s0);
 struct PS_IN { float4 pos : SV_POSITION; float2 uv : TEXCOORD; float4 color : COLOR; };
-float4 main(PS_IN p) : SV_TARGET { return tex.Sample(samp,p.uv)*p.color; }
+// ミカ：RGBを同率で下げ、彩度と透明度を保ったまま背景の明度を抑える
+float4 main(PS_IN p) : SV_TARGET {
+    float4 color = tex.Sample(samp,p.uv)*p.color;
+    color.rgb *= 0.95f;
+    return color;
+}
 )";
         if (FAILED(vertexShader.Compile(vs)) || FAILED(pixelShader.Compile(ps))) return false;
         MeshBuffer::Description desc{};
