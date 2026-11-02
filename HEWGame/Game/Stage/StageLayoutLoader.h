@@ -26,6 +26,8 @@ struct StageObject
     std::string colliderPresetId;
     std::string materialKey;
 
+    // !!!New!!!
+    float3 colliderOffset{ 0.0f, 0.0f, 0.0f };
     bool IsOsara = false;
     float swaiTime = 0.0f;
     //���M�̗h��

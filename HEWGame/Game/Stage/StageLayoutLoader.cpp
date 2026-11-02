@@ -242,6 +242,29 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
         {
             obj.colliderPresetId = NormalizeKey(values[16]);
         }
+        // !!!New!!!
+        obj.colliderOffset = float3{ 0.0f, 0.0f, 0.0f };
+        if (values.size() > 17 && !Trim(values[17]).empty())
+        {
+            if (!TryParseFloat(values[17], obj.colliderOffset.x, logPrefix, "colliderOffset.x"))
+            {
+                continue;
+            }
+        }
+        if (values.size() > 18 && !Trim(values[18]).empty())
+        {
+            if (!TryParseFloat(values[18], obj.colliderOffset.y, logPrefix, "colliderOffset.y"))
+            {
+                continue;
+            }
+        }
+        if (values.size() > 19 && !Trim(values[19]).empty())
+        {
+            if (!TryParseFloat(values[19], obj.colliderOffset.z, logPrefix, "colliderOffset.z"))
+            {
+                continue;
+            }
+        }
         if (!obj.materialKey.empty())
         {
             const std::string normalizedMaterialKey = NormalizeKey(obj.materialKey);
@@ -325,7 +348,8 @@ StageLayoutLoadResult StageLayoutLoader::LoadFromCsv(const StageLayoutLoadReques
             colliderRequest.allowRotation = kStageAllowRotation;
             colliderRequest.angularDamping = kStageAllowRotation ? 0.2f : 0.0f;
             colliderRequest.linearDamping = 0.0f;
-            colliderRequest.offset = float3{ 0.0f, 0.0f, 0.0f };
+            // !!!New!!!
+            colliderRequest.offset = obj.colliderOffset;
             colliderRequest.scaleOffset = false;
             colliderRequest.allowFallback = false;
 
