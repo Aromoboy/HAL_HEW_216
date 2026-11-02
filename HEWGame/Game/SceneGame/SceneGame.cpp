@@ -1312,7 +1312,7 @@ void SceneGame::Update(const Core::UpdateContext& ctx)
         if (!m_gameStarted)
         {
             m_startCountdownTimer += ctx.dt;
-
+            
             if (m_startCountdownTimer >= 1.5f)
             {
                 m_startCountdownTimer = 0.0f;
@@ -2220,7 +2220,8 @@ void SceneGame::DrawOverlay()
 
         // 画面中央に表示（サイズは調整）
         Sprite::SetOffset({ 0.0f, 0.0f }); 
-        Sprite::SetSize({ 1.0f, 1.0f });   
+        if (m_startCountdownNumber == 0) Sprite::SetSize({ 1.1f, 1.1f });
+        else Sprite::SetSize({ 1.376f * 0.85f, 1.751f * 0.85f });
         Sprite::SetColor({ 1,1,1,1 });
         Sprite::Draw();
     }
